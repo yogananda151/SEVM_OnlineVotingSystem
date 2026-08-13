@@ -1,0 +1,146 @@
+This is a complete, step-by-step breakdown of your project's runtime execution flow based precisely on the actual code in your workspace.
+
+PART 1 — RUNNING THE CLIENT
+When you open a terminal and run npm run dev in the client folder, here is the exact execution chain:
+
+Terminal command ↓ package.json script FILE: client/package.json The dev script is executed: "vite". ↓ Build/development tool The vite executable starts the Vite development server. ↓ Configuration Vite automatically loads vite.config.ts. ↓ Port & Server Vite starts an HTTP server on port 5173 (default). The URL http://localhost:5173/ becomes available. ↓ HTML FILE: client/index.html When the browser requests the URL, Vite serves this file. ↓ JavaScript/TypeScript entry point FILE: client/src/main.tsx The HTML file contains <script type="module" src="/src/main.tsx"></script>, telling the browser to load it. ↓ Root component FILE: client/src/App.tsx main.tsx imports the <App /> component and mounts it to the <div id="root"></div>. ↓ Router Inside App.tsx, the <BrowserRouter> component initializes the routing system. ↓ Page/component The router looks at the URL and renders the matching component (e.g., <LoginPage /> for /). ↓ Browser The browser paints the HTML output to the screen.
+
+PART 2 — RUNNING THE SERVER
+When you open another terminal and run npm run dev in the server folder:
+
+Terminal command ↓ package.json script FILE: server/package.json The dev script is executed: "tsx watch src/index.ts". ↓ Server entry point The tsx engine runs FILE: server/src/index.ts. ↓ Application initialization FILE: server/src/app.ts index.ts imports app from app.ts, where const app = express(); initializes the Express application. ↓ Configuration & Environment index.ts loads dotenv/config to read the .env file and imports config from src/config to set the port and environment. ↓ Middleware Inside app.ts, global middleware is registered: helmet() for security, cors() for cross-origin requests from the client, rateLimit() to prevent spam, express.json() to parse request bodies, and morgan() for logging. ↓ Routes Inside app.ts, route prefixes are bound to their route files. For example: app.use('/api/voting', votingRoutes);. ↓ Database connection Inside index.ts, prisma.$connect(); is called to establish the connection to MySQL. ↓ Server listening Inside index.ts, app.listen(config.port, ...) binds the server to the configured port (e.g., 5000), making the API ready to receive requests.
+
+PART 3 — WHAT HAPPENS WHEN I OPEN: http://localhost:5173/
+Browser sends request to http://localhost:5173/.
+The Vite development server receives it and returns client/index.html.
+The browser reads the script tag and loads client/src/main.tsx.
+React initializes: ReactDOM.createRoot is called, creating the React tree.
+The <App /> component executes (client/src/App.tsx).
+The <BrowserRouter> initializes.
+The <Routes> component evaluates the current path (/).
+The route <Route path="/" element={<LoginPage />} /> matches.
+LoginPage is rendered (FILE: client/src/pages/auth/LoginPage.tsx).
+Child components are rendered: <motion.div>, <form>, <input>, and the "Sign In Securely" <button>.
+Hooks execute:
+useState initializes state for selectedRole, showPassword, and loading.
+useForm (from react-hook-form) initializes form validation.
+useNavigate initializes the routing navigator.
+API Calls: NONE. The login page does NOT make any API calls automatically when it loads.
+UI Appears: The browser displays the Smart EVM login screen with the bouncing Vote icon.
+PART 4 — WHAT HAPPENS WHEN I OPEN: http://localhost:5173/voting-machine
+Browser sends request to Vite, which returns index.html, which loads main.tsx, which mounts <App />.
+Router matches: The router in App.tsx matches <Route path="/voting-machine" element={<VotingMachinePage />} />.
+VotingMachinePage is loaded (FILE: client/src/pages/voting/VotingMachinePage.tsx).
+Hooks execute: useState sets the initial screen state to 'welcome'.
+Child components rendered:
+<EVMHeader /> renders the top bar with LEDs.
+<WelcomeScreen /> renders the big "SMART EVM" title and the "BEGIN VOTING" button.
+API Calls: NONE. Explicitly noting: The /voting-machine page does NOT make any API calls when it first loads.
+Server / Database: Not touched.
+UI Appears: The browser displays the dark-themed Voting Machine welcome screen.
+PART 5 — COMPARE THE TWO URLS
+http://localhost:5173/ Router Path: / ↓ Page: LoginPage ↓ Hooks: useState, useForm, useNavigate ↓ API Calls: None on load. ↓ Server endpoints: None on load.
+
+http://localhost:5173/voting-machine Router Path: /voting-machine ↓ Page: VotingMachinePage ↓ Hooks: useState, useCallback ↓ API Calls: None on load. ↓ Server endpoints: None on load.
+
+Why do they show different screens? Because client/src/App.tsx acts like a switchboard. When the browser URL changes, the React Router <Routes> component looks for the matching <Route> tag and instructs React to only execute the component function defined in the element prop.
+
+PART 6 — IMPORTANT CONCEPT: "DOES THE FILE RUN?"
+In a modern React application, "running a file" means several different things depending on the exact stage of the lifecycle:
+
+File Loaded: The browser downloads the .tsx file via HTTP from the Vite server. (e.g., both App.tsx and LoginPage.tsx are downloaded).
+Module Evaluated: The JavaScript engine reads the file from top to bottom once. Code outside of component functions runs immediately. (e.g., const loginSchema = z.object(...) in LoginPage.tsx is evaluated exactly once).
+Component Function Executed: React literally calls your component like a standard function: LoginPage(). This happens every time state changes.
+Component Rendered: React takes the JSX returned by the component function and transforms it into real HTML DOM elements on the screen.
+useEffect Executed: Code inside useEffect(() => { ... }) runs after the component has rendered on the screen. (e.g., useEffect(() => { start(); }, []) in OTPScreen runs only after the OTP screen is visible).
+Event Handler Executed: Code inside onClick or onSubmit does not execute when the file loads or renders. It is saved in memory and only executes when the user physically clicks or types.
+Executed after API: Code inside a .then() or await block pauses execution and only resumes after the server sends a response.
+PART 7 — STARTUP TIMELINE (CLIENT)
+T = 0: I run npm run dev ↓ T = 1: Vite development server starts ↓ T = 2: Browser opens localhost:5173 ↓ T = 3: client/index.html is loaded by the browser ↓ T = 4: client/src/main.tsx is loaded and evaluated ↓ T = 5: React starts (ReactDOM.createRoot.render) ↓ T = 6: App component executes ↓ T = 7: BrowserRouter initializes ↓ T = 8: Route / is selected ↓ T = 9: LoginPage component executes ↓ T = 10: Browser paints the UI (No API requests occur)
+
+PART 8 — SERVER REQUEST TIMELINE
+When a voter enters their Voter ID on the EVM and clicks "Verify & Send OTP", here is the exact full-stack chain:
+
+React component: VerifyScreen inside VotingMachinePage.tsx ↓ Event Handler: handleSubmit executes. ↓ Service function: votingService.initiateVerification(data) in client/src/services/api.service.ts ↓ HTTP request: Axios sends a POST request to /api/voting/verify/initiate. ↓ Server port: Express receives the request on port 5000. ↓ Middleware (Global): app.ts runs cors(), express.json(), etc. ↓ Route: voting.routes.ts matches /verify/initiate. ↓ Middleware (Route-specific): validate(voterVerificationSchema) validates the payload. ↓ Controller: VotingController.initiateVerification inside voting.controller.ts. ↓ Service: verificationService.initiateVerification (handles business logic). ↓ Prisma/ORM: Prisma translates the query to SQL (prisma.voter.findUnique). ↓ MySQL: The database finds the voter and returns the record. ↓ Server response: sendSuccess(res, result) sends a 200 OK JSON response. ↓ Client: Axios resolves the Promise in the React component. ↓ State update: onVerified(result) is called, triggering setScreen('otp'). ↓ UI: The VerifyScreen unmounts, and the OTPScreen renders.
+
+PART 9 — USER ACTION AFTER PAGE LOAD
+Action on / (Login Page)
+
+Button: "Sign In Securely"
+File: client/src/pages/auth/LoginPage.tsx
+Component: LoginPage
+Event Handler: <form onSubmit={handleSubmit(onSubmit)}>
+Function executes: onSubmit
+Changes state: Yes, setLoading(true) shows the spinner.
+Navigates: Yes, if login is successful, navigate(config.route) redirects to /admin or /officer.
+Calls an API: Yes, authService.login(data).
+Server receives request: Yes.
+Database gets accessed: Yes, to verify the user's password hash.
+What the user sees: The Admin Dashboard or Officer Dashboard.
+Action on /voting-machine
+
+Button: "BEGIN VOTING"
+File: client/src/pages/voting/VotingMachinePage.tsx
+Component: WelcomeScreen
+Event Handler: onClick={onStart}
+Function executes: The anonymous function () => setScreen('method') passed down from VotingMachinePage.
+Changes state: Yes, the screen state variable changes from 'welcome' to 'method'.
+Navigates: No, the URL stays /voting-machine.
+Calls an API: No.
+Server receives request: No.
+Database gets accessed: No.
+What the user sees: The "Verify Your Identity" screen with Aadhaar and Voter ID buttons.
+PART 10 — DATABASE CONNECTION
+When you open http://localhost:5173/ or http://localhost:5173/voting-machine, the browser NEVER directly connects to MySQL.
+
+Modern web architecture strictly isolates the database from the client for security.
+
+The Actual Architecture:
+
+Browser (React Client): Runs on the user's computer. It cannot talk to MySQL. It can only make HTTP requests.
+Server (Express API): Runs in a secure environment. It receives HTTP requests from the client.
+Database (MySQL via Prisma): Only the Express server has the credentials (in .env) and the Prisma library to talk to the database over TCP.
+Execution flow: Browser (axios) ──(HTTP/JSON)──> Server (Express) ──(TCP/SQL)──> Database (MySQL)
+
+If a page (like /) does not make an API request, the server and database are completely untouched during page load.
+
+PART 11 — FILE EXECUTION MAP
+When opening http://localhost:5173/
+FILE: client/index.html
+
+WHY INVOLVED: It is the absolute root of the web app.
+WHEN LOADED: First thing the browser downloads.
+EXECUTES: Immediately by the browser.
+DOES: Sets up the DOM <div id="root"> and points to the JS entry.
+CALLS: main.tsx
+FILE: client/src/main.tsx
+
+WHY INVOLVED: Bootstraps the React framework.
+WHEN LOADED: Right after HTML.
+EXECUTES: Once, immediately.
+DOES: Connects React to the DOM.
+CALLS: App from App.tsx
+FILE: client/src/App.tsx
+
+WHY INVOLVED: The router configuration.
+EXECUTES: Every time the URL changes.
+DOES: Determines which page to show based on the URL /.
+CALLS: LoginPage
+FILE: client/src/pages/auth/LoginPage.tsx
+
+WHY INVOLVED: It is the UI assigned to the / route.
+EXECUTES: When React renders the component.
+DOES: Draws the login form.
+When opening http://localhost:5173/voting-machine
+(Files 1, 2, and 3 from above execute exactly the same, but step 4 changes):
+
+FILE: client/src/pages/voting/VotingMachinePage.tsx
+WHY INVOLVED: App.tsx maps /voting-machine to this file.
+WHEN LOADED: When the browser parses the JavaScript bundle.
+EXECUTES: When React calls the component function.
+DOES: Initializes the screen state to 'welcome'.
+CALLS: The local <WelcomeScreen> component defined in the same file.
+PART 12 — SIMPLE EXPLANATION FOR MY PROFESSOR
+"When I start the project, two isolated systems come online: Vite serves our React frontend, and Express powers our backend API connected to MySQL via Prisma. When I open localhost:5173, the browser requests the HTML, which pulls in our React code. The root App.tsx file acts as a traffic director using React Router. When it sees the /voting-machine URL, it immediately renders the VotingMachinePage component.
+
+At this exact moment, no database queries happen. The UI is completely static. It only springs into action when a user enters their Voter ID and clicks verify. At that moment, the React component uses Axios to send a POST request to our Express server. The server routes that request to a controller, which asks Prisma to check MySQL for the voter's credentials. The server responds with success, React updates its internal state, and the UI smoothly transitions to the OTP screen."
