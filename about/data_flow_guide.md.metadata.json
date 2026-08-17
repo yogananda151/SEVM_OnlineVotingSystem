@@ -1,0 +1,5 @@
+{
+  "summary": "Comprehensive guide explaining:\n1. Where data is stored (MySQL database 'voting_system' on localhost:3306)\n2. All database tables and what they store\n3. Three methods to view the data (MySQL CLI, MySQL Workbench, Prisma Studio)\n4. Complete step-by-step code flow when clicking '+ New Election' — from the React button click through API call, server routing, authentication, controller logic, repository, Prisma ORM, to the MySQL INSERT query and back\n5. Architecture diagram showing the 3-layer system (Browser → Server → Database)\n6. Quick reference table of all key files",
+  "updatedAt": "2026-08-17T13:46:34.128089Z",
+  "userFacing": true
+}
