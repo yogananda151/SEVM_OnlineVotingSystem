@@ -12,6 +12,8 @@ import { OfficerLayout } from './layouts/OfficerLayout';
 // Admin pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ElectionsPage } from './pages/admin/ElectionsPage';
+import { ElectionSetupPage } from './pages/admin/ElectionSetupPage';
+import { RegionsPage } from './pages/admin/RegionsPage';
 import { ConstituenciesPage } from './pages/admin/ConstituenciesPage';
 import { PollingStationsPage } from './pages/admin/PollingStationsPage';
 import { PartiesPage } from './pages/admin/PartiesPage';
@@ -80,6 +82,8 @@ function App() {
         {/* Admin */}
         <Route path="/admin" element={<RequireAuth role="COMMISSIONER"><AdminLayout><AdminDashboard /></AdminLayout></RequireAuth>} />
         <Route path="/admin/elections" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionsPage /></AdminLayout></RequireAuth>} />
+        <Route path="/admin/elections/:id/setup" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionSetupPage /></AdminLayout></RequireAuth>} />
+        <Route path="/admin/regions" element={<RequireAuth role="COMMISSIONER"><AdminLayout><RegionsPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/constituencies" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ConstituenciesPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/polling-stations" element={<RequireAuth role="COMMISSIONER"><AdminLayout><PollingStationsPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/parties" element={<RequireAuth role="COMMISSIONER"><AdminLayout><PartiesPage /></AdminLayout></RequireAuth>} />

@@ -1,4 +1,5 @@
 import { prisma } from '../config/database';
+import { AppError } from '../middleware/error.middleware';
 
 export class VoterRepository {
   async findAll(filters: { pollingStationId?: number; constituencyId?: number; hasVoted?: boolean; search?: string; page?: number; limit?: number }) {
@@ -47,14 +48,14 @@ export class VoterRepository {
   async findByVoterId(voterId: string) {
     return prisma.voter.findUnique({
       where: { voterId },
-      include: { pollingStation: true, constituency: { include: { election: true } } },
+      include: { pollingStation: true, constituency: { include: { region: true } } },
     });
   }
 
   async findByAadhaarHash(aadhaarHash: string) {
     return prisma.voter.findFirst({
       where: { aadhaarHash, deletedAt: null },
-      include: { pollingStation: true, constituency: { include: { election: true } } },
+      include: { pollingStation: true, constituency: { include: { region: true } } },
     });
   }
 
@@ -70,6 +71,17 @@ export class VoterRepository {
     phone?: string;
     serialNumber: number;
   }) {
+    // Pre-check: voterId must be unique among active (non-deleted) voters
+    const existingVoter = await prisma.voter.findFirst({
+      where: { voterId: data.voterId, deletedAt: null },
+    });
+    if (existingVoter) {
+      throw new AppError(
+        `Voter ID "${data.voterId}" is already registered. Please use a different Voter ID.`,
+        409,
+      );
+    }
+
     return prisma.voter.create({ data });
   }
 

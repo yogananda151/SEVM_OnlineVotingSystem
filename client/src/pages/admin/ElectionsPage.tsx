@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Vote, Play, Pause, Square, Eye, BarChart3 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Vote, Play, Pause, Square, Eye, BarChart3, Settings2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,7 +27,7 @@ export const ElectionsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchElections = useCallback(() => electionService.getAll(), []);
-  const { data: elections, loading, execute: refetch } = useAsync<{ id: number; name: string; electionType: string; scheduledDate: string; status: string; isResultPublished: boolean; _count: { constituencies: number } }[]>(fetchElections);
+  const { data: elections, loading, execute: refetch } = useAsync<{ id: number; name: string; electionType: string; scheduledDate: string; status: string; isResultPublished: boolean; _count: { electionConstituencies: number; candidates: number } }[]>(fetchElections);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) });
 
@@ -103,10 +103,13 @@ export const ElectionsPage: React.FC = () => {
                       <td className="font-medium text-white">{e.name}</td>
                       <td><span className="badge badge-blue">{e.electionType}</span></td>
                       <td>{new Date(e.scheduledDate).toLocaleDateString('en-IN')}</td>
-                      <td>{e._count?.constituencies ?? 0}</td>
+                      <td>{e._count?.electionConstituencies ?? 0}</td>
                       <td><StatusBadge status={e.status} /></td>
                       <td>
                         <div className="flex items-center gap-2">
+                          <button onClick={() => navigate(`/admin/elections/${e.id}/setup`)} className="p-1.5 text-primary-400 hover:text-primary-300" title="Setup Wizard">
+                            <Settings2 size={14} />
+                          </button>
                           <button onClick={() => navigate(`/admin/elections/${e.id}`)} className="p-1.5 text-slate-400 hover:text-white" title="View"><Eye size={14} /></button>
                           {e.status === 'CLOSED' && !e.isResultPublished && (
                             <button onClick={() => { electionService.publishResults(e.id).then(() => { toast.success('Results published!'); refetch(); }); }}

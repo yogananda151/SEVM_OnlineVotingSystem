@@ -6,17 +6,17 @@ import { auditRepository } from '../repositories/audit.repository';
 export class CandidateController {
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const electionId = req.query.electionId ? Number(req.query.electionId) : undefined;
       const constituencyId = req.query.constituencyId ? Number(req.query.constituencyId) : undefined;
-      const candidates = await candidateRepository.findAll(constituencyId);
-      sendSuccess(res, candidates);
+      sendSuccess(res, await candidateRepository.findAll(electionId, constituencyId));
     } catch (err) { next(err); }
   }
 
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const candidate = await candidateRepository.findById(Number(req.params.id));
-      if (!candidate) { res.status(404).json({ success: false, message: 'Candidate not found' }); return; }
-      sendSuccess(res, candidate);
+      const c = await candidateRepository.findById(Number(req.params.id));
+      if (!c) { res.status(404).json({ success: false, message: 'Candidate not found' }); return; }
+      sendSuccess(res, c);
     } catch (err) { next(err); }
   }
 
@@ -30,7 +30,7 @@ export class CandidateController {
         description: `Registered candidate: ${candidate.fullName}`,
         ipAddress: req.ip,
       });
-      sendSuccess(res, candidate, 'Candidate registered', 201);
+      sendSuccess(res, candidate, 'Candidate registered successfully', 201);
     } catch (err) { next(err); }
   }
 
@@ -46,14 +46,14 @@ export class CandidateController {
       if (!req.file) { res.status(400).json({ success: false, message: 'No file uploaded' }); return; }
       const photoUrl = `/uploads/candidates/${req.file.filename}`;
       const candidate = await candidateRepository.update(Number(req.params.id), { photoUrl });
-      sendSuccess(res, candidate, 'Photo uploaded');
+      sendSuccess(res, candidate, 'Photo uploaded successfully');
     } catch (err) { next(err); }
   }
 
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await candidateRepository.delete(Number(req.params.id));
-      sendSuccess(res, null, 'Candidate deleted');
+      sendSuccess(res, null, 'Candidate removed');
     } catch (err) { next(err); }
   }
 }

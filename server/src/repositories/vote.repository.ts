@@ -11,14 +11,20 @@ export class VoteRepository {
       // 1. Verify voter exists, hasn't voted, is in correct station
       const voter = await tx.voter.findUnique({
         where: { id: voterId },
-        include: { constituency: { include: { election: true } } },
+        include: { constituency: true },
       });
       if (!voter) throw new AppError('Voter not found.', 404);
       if (voter.hasVoted) throw new AppError('Voter has already cast their vote.', 409);
       if (voter.pollingStationId !== pollingStationId) throw new AppError('Voter is not registered at this polling station.', 403);
 
-      // 2. Verify election is active
-      const election = voter.constituency.election;
+      // 2. Verify election is active via ElectionConstituency
+      const electionLink = await tx.electionConstituency.findFirst({
+        where: { constituencyId: voter.constituencyId },
+        include: { election: true },
+        orderBy: { election: { scheduledDate: 'desc' } },
+      });
+      const election = electionLink?.election;
+      if (!election) throw new AppError('No election found for this constituency.', 400);
       if (election.status !== ElectionStatus.ACTIVE) throw new AppError('Election is not currently active.', 400);
 
       // 3. Verify polling station is active
@@ -87,19 +93,24 @@ export class VoteRepository {
   }
 
   async getResults(electionId: number) {
-    const constituencies = await prisma.constituency.findMany({
-      where: { electionId, deletedAt: null },
+    const electionLinks = await prisma.electionConstituency.findMany({
+      where: { electionId },
       include: {
-        candidates: {
+        constituency: {
           include: {
-            party: true,
-            _count: { select: { votes: true } },
+            candidates: {
+              where: { electionId, deletedAt: null },
+              include: {
+                party: true,
+                _count: { select: { votes: true } },
+              },
+              orderBy: { votes: { _count: 'desc' } },
+            },
           },
-          orderBy: { votes: { _count: 'desc' } },
         },
       },
     });
-    return constituencies;
+    return electionLinks.map((link) => link.constituency);
   }
 
   async getDashboardStats() {

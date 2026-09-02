@@ -10,8 +10,15 @@ import { MachineStatus } from '@prisma/client';
 export class ConstituencyController {
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const electionId = req.query.electionId ? Number(req.query.electionId) : undefined;
-      sendSuccess(res, await constituencyRepository.findAll(electionId));
+      const regionId = req.query.regionId ? Number(req.query.regionId) : undefined;
+      sendSuccess(res, await constituencyRepository.findAll(regionId));
+    } catch (err) { next(err); }
+  }
+
+  async getActive(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const regionId = req.query.regionId ? Number(req.query.regionId) : undefined;
+      sendSuccess(res, await constituencyRepository.findActive(regionId));
     } catch (err) { next(err); }
   }
 
@@ -26,7 +33,13 @@ export class ConstituencyController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const con = await constituencyRepository.create(req.body);
-      await auditRepository.create({ userId: req.user?.userId, action: 'CREATE', module: 'Constituency', description: `Created: ${con.name}`, ipAddress: req.ip });
+      await auditRepository.create({
+        userId: req.user?.userId,
+        action: 'CREATE',
+        module: 'Constituency',
+        description: `Created constituency: ${con.name} (${con.code})`,
+        ipAddress: req.ip,
+      });
       sendSuccess(res, con, 'Constituency created', 201);
     } catch (err) { next(err); }
   }
@@ -69,7 +82,13 @@ export class PollingStationController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const station = await pollingStationRepository.create(req.body);
-      await auditRepository.create({ userId: req.user?.userId, action: 'CREATE', module: 'PollingStation', description: `Created station: ${station.name}`, ipAddress: req.ip });
+      await auditRepository.create({
+        userId: req.user?.userId,
+        action: 'CREATE',
+        module: 'PollingStation',
+        description: `Created station: ${station.name} (${station.code})`,
+        ipAddress: req.ip,
+      });
       sendSuccess(res, station, 'Polling station created', 201);
     } catch (err) { next(err); }
   }

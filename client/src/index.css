@@ -66,6 +66,26 @@
     @apply border-red-500 focus:ring-red-500;
   }
 
+  /* Inline field error text rendered below an invalid input */
+  .field-error-message {
+    @apply mt-1.5 text-xs text-red-400 flex items-start gap-1 leading-snug;
+  }
+
+  /* Compact error summary banner at the top of a form */
+  .error-summary {
+    @apply rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300;
+  }
+
+  .error-summary ul {
+    @apply mt-1.5 space-y-0.5 list-none pl-0;
+  }
+
+  .error-summary li::before {
+    content: '• ';
+    @apply text-red-400;
+  }
+
+
   .label {
     @apply block text-sm font-medium text-slate-300 mb-1.5;
   }

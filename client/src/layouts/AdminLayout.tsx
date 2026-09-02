@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Vote, Users, Building2, MapPin, Award, Flag,
   FileText, Shield, Settings, Bell, Database, ChevronDown,
-  LogOut, Menu, X, TrendingUp, ClipboardList, UserCog
+  LogOut, Menu, X, TrendingUp, ClipboardList, UserCog, Globe,
 } from 'lucide-react';
 import { authService } from '../services/auth.service';
 import { toast } from 'react-hot-toast';
@@ -17,18 +17,19 @@ const navGroups = [
     ],
   },
   {
-    label: 'Election Management',
+    label: 'Elections',
     items: [
       { to: '/admin/elections', label: 'Elections', icon: Vote },
-      { to: '/admin/constituencies', label: 'Constituencies', icon: MapPin },
-      { to: '/admin/polling-stations', label: 'Polling Stations', icon: Building2 },
+      { to: '/admin/candidates', label: 'Candidates', icon: Award },
     ],
   },
   {
-    label: 'People',
+    label: 'Master Data',
     items: [
+      { to: '/admin/regions', label: 'Regions', icon: Globe },
+      { to: '/admin/constituencies', label: 'Constituencies', icon: MapPin },
+      { to: '/admin/polling-stations', label: 'Polling Stations', icon: Building2 },
       { to: '/admin/parties', label: 'Political Parties', icon: Flag },
-      { to: '/admin/candidates', label: 'Candidates', icon: Award },
       { to: '/admin/officers', label: 'Election Officers', icon: UserCog },
       { to: '/admin/voters', label: 'Voters', icon: Users },
     ],

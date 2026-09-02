@@ -1,5 +1,5 @@
 // This is the Prisma schema for the Online Voting System
-// Run: npx prisma migrate dev --name init
+// Run: npx prisma migrate dev --name refactor_master_data
 
 generator client {
   provider = "prisma-client-js"
@@ -118,7 +118,7 @@ model ElectionOfficer {
   updatedAt        DateTime       @updatedAt
   deletedAt        DateTime?
 
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   pollingStation   PollingStation? @relation(fields: [pollingStationId], references: [id], onDelete: SetNull)
 
   @@index([userId])
@@ -127,51 +127,48 @@ model ElectionOfficer {
 }
 
 // ─────────────────────────────────────────────
-// ELECTION STRUCTURE
+// MASTER DATA — LOCATION HIERARCHY
 // ─────────────────────────────────────────────
 
-model Election {
-  id               Int             @id @default(autoincrement())
-  name             String          @db.VarChar(200)
-  description      String?         @db.Text
-  electionType     String          @db.VarChar(100)
-  scheduledDate    DateTime
-  startTime        DateTime?
-  endTime          DateTime?
-  status           ElectionStatus  @default(DRAFT)
-  isResultPublished Boolean        @default(false)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  deletedAt        DateTime?
+/// A Region is the top-level geographic grouping (e.g. state or district).
+/// Constituencies belong to regions. Regions are independent of any election.
+model Region {
+  id            Int            @id @default(autoincrement())
+  name          String         @unique @db.VarChar(150)
+  code          String         @unique @db.VarChar(50)
+  description   String?        @db.Text
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
 
-  constituencies   Constituency[]
-  auditLogs        AuditLog[]
-  notifications    Notification[]
+  constituencies Constituency[]
 
-  @@index([status])
-  @@index([scheduledDate])
-  @@map("elections")
+  @@index([code])
+  @@map("regions")
 }
 
+/// A Constituency belongs to a Region and is reusable across elections.
+/// An election selects constituencies via the ElectionConstituency join table.
 model Constituency {
-  id               Int              @id @default(autoincrement())
-  electionId       Int
-  name             String           @db.VarChar(200)
-  code             String           @db.VarChar(50)
-  state            String           @db.VarChar(100)
-  district         String           @db.VarChar(100)
-  totalVoters      Int              @default(0)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id               Int                    @id @default(autoincrement())
+  regionId         Int
+  name             String                 @db.VarChar(200)
+  code             String                 @unique @db.VarChar(50)
+  description      String?                @db.Text
+  isActive         Boolean                @default(true)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
   deletedAt        DateTime?
 
-  election         Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  region           Region                 @relation(fields: [regionId], references: [id], onDelete: Restrict)
   pollingStations  PollingStation[]
+  electionLinks    ElectionConstituency[]
   candidates       Candidate[]
   voters           Voter[]
 
-  @@unique([electionId, code])
-  @@index([electionId])
+  @@index([regionId])
+  @@index([code])
   @@map("constituencies")
 }
 
@@ -179,23 +176,69 @@ model PollingStation {
   id               Int            @id @default(autoincrement())
   constituencyId   Int
   name             String         @db.VarChar(200)
-  code             String         @db.VarChar(50)
+  code             String         @unique @db.VarChar(50)
   address          String         @db.Text
+  capacity         Int            @default(1000)
   totalBooths      Int            @default(1)
   machineStatus    MachineStatus  @default(IDLE)
   isPollingActive  Boolean        @default(false)
+  isActive         Boolean        @default(true)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   deletedAt        DateTime?
 
-  constituency     Constituency   @relation(fields: [constituencyId], references: [id], onDelete: Cascade)
+  constituency     Constituency   @relation(fields: [constituencyId], references: [id], onDelete: Restrict)
   officers         ElectionOfficer[]
   voters           Voter[]
   votes            Vote[]
 
-  @@unique([constituencyId, code])
   @@index([constituencyId])
   @@map("polling_stations")
+}
+
+// ─────────────────────────────────────────────
+// ELECTION STRUCTURE
+// ─────────────────────────────────────────────
+
+model Election {
+  id                Int                    @id @default(autoincrement())
+  name              String                 @db.VarChar(200)
+  description       String?                @db.Text
+  electionType      String                 @db.VarChar(100)
+  scheduledDate     DateTime
+  startTime         DateTime?
+  endTime           DateTime?
+  status            ElectionStatus         @default(DRAFT)
+  isResultPublished Boolean                @default(false)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  deletedAt         DateTime?
+
+  electionConstituencies ElectionConstituency[]
+  candidates             Candidate[]
+  auditLogs              AuditLog[]
+  notifications          Notification[]
+
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("elections")
+}
+
+/// Join table: which constituencies participate in which election.
+/// This replaces the old Constituency.electionId FK.
+model ElectionConstituency {
+  id               Int          @id @default(autoincrement())
+  electionId       Int
+  constituencyId   Int
+  createdAt        DateTime     @default(now())
+
+  election         Election     @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  constituency     Constituency @relation(fields: [constituencyId], references: [id], onDelete: Restrict)
+
+  @@unique([electionId, constituencyId])
+  @@index([electionId])
+  @@index([constituencyId])
+  @@map("election_constituencies")
 }
 
 // ─────────────────────────────────────────────
@@ -208,7 +251,7 @@ model PoliticalParty {
   abbreviation String      @db.VarChar(20)
   symbol       String?     @db.VarChar(255)
   symbolUrl    String?     @db.VarChar(500)
-  color        String      @db.VarChar(7) @default("#1a73e8")
+  color        String      @default("#1a73e8") @db.VarChar(7)
   foundedYear  Int?
   isActive     Boolean     @default(true)
   createdAt    DateTime    @default(now())
@@ -223,6 +266,7 @@ model PoliticalParty {
 
 model Candidate {
   id               Int             @id @default(autoincrement())
+  electionId       Int
   constituencyId   Int
   partyId          Int?
   fullName         String          @db.VarChar(150)
@@ -236,11 +280,14 @@ model Candidate {
   updatedAt        DateTime        @updatedAt
   deletedAt        DateTime?
 
-  constituency     Constituency    @relation(fields: [constituencyId], references: [id], onDelete: Cascade)
+  election         Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  constituency     Constituency    @relation(fields: [constituencyId], references: [id], onDelete: Restrict)
   party            PoliticalParty? @relation(fields: [partyId], references: [id], onDelete: SetNull)
   votes            Vote[]
   vvpatRecords     DigitalVVPAT[]
 
+  @@unique([electionId, constituencyId, serialNumber])
+  @@index([electionId])
   @@index([constituencyId])
   @@index([partyId])
   @@map("candidates")
@@ -270,8 +317,8 @@ model Voter {
   updatedAt         DateTime            @updatedAt
   deletedAt         DateTime?
 
-  constituency      Constituency        @relation(fields: [constituencyId], references: [id], onDelete: Cascade)
-  pollingStation    PollingStation      @relation(fields: [pollingStationId], references: [id], onDelete: Cascade)
+  constituency      Constituency        @relation(fields: [constituencyId], references: [id], onDelete: Restrict)
+  pollingStation    PollingStation      @relation(fields: [pollingStationId], references: [id], onDelete: Restrict)
   vote              Vote?
   otpVerifications  OTPVerification[]
 
@@ -398,7 +445,7 @@ model Notification {
   electionId Int?
   title      String   @db.VarChar(200)
   message    String   @db.Text
-  type       String   @db.VarChar(50) @default("info")
+  type       String   @default("info") @db.VarChar(50)
   isRead     Boolean  @default(false)
   createdAt  DateTime @default(now())
 
@@ -413,7 +460,7 @@ model Setting {
   id        Int      @id @default(autoincrement())
   key       String   @unique @db.VarChar(100)
   value     String   @db.Text
-  group     String   @db.VarChar(50) @default("general")
+  group     String   @default("general") @db.VarChar(50)
   label     String   @db.VarChar(200)
   updatedAt DateTime @updatedAt
 

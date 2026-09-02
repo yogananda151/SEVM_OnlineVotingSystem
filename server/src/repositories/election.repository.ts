@@ -6,10 +6,14 @@ export class ElectionRepository {
     return prisma.election.findMany({
       where: { deletedAt: null },
       include: {
-        constituencies: {
-          select: { id: true, name: true, _count: { select: { voters: true, candidates: true } } },
+        electionConstituencies: {
+          include: {
+            constituency: {
+              select: { id: true, name: true, _count: { select: { voters: true, candidates: true } } },
+            },
+          },
         },
-        _count: { select: { constituencies: true } },
+        _count: { select: { electionConstituencies: true, candidates: true } },
       },
       orderBy: { scheduledDate: 'desc' },
     });
@@ -19,12 +23,18 @@ export class ElectionRepository {
     return prisma.election.findUnique({
       where: { id, deletedAt: null },
       include: {
-        constituencies: {
+        electionConstituencies: {
           include: {
-            pollingStations: true,
-            candidates: { include: { party: true } },
+            constituency: {
+              include: {
+                region: { select: { id: true, name: true } },
+                pollingStations: { where: { deletedAt: null } },
+                _count: { select: { voters: true } },
+              },
+            },
           },
         },
+        candidates: { where: { deletedAt: null }, include: { party: true, constituency: true } },
       },
     });
   }
@@ -33,10 +43,17 @@ export class ElectionRepository {
     return prisma.election.findFirst({
       where: { status: ElectionStatus.ACTIVE, deletedAt: null },
       include: {
-        constituencies: {
+        electionConstituencies: {
           include: {
-            pollingStations: { include: { officers: { include: { user: true } } } },
-            candidates: { include: { party: true } },
+            constituency: {
+              include: {
+                pollingStations: {
+                  where: { deletedAt: null },
+                  include: { officers: { where: { deletedAt: null }, include: { user: true } } },
+                },
+                candidates: { where: { deletedAt: null }, include: { party: true } },
+              },
+            },
           },
         },
       },
@@ -52,16 +69,19 @@ export class ElectionRepository {
     return prisma.election.create({ data });
   }
 
-  async update(id: number, data: Partial<{
-    name: string;
-    description: string;
-    electionType: string;
-    scheduledDate: Date;
-    status: ElectionStatus;
-    startTime: Date;
-    endTime: Date;
-    isResultPublished: boolean;
-  }>) {
+  async update(
+    id: number,
+    data: Partial<{
+      name: string;
+      description: string;
+      electionType: string;
+      scheduledDate: Date;
+      status: ElectionStatus;
+      startTime: Date;
+      endTime: Date;
+      isResultPublished: boolean;
+    }>,
+  ) {
     return prisma.election.update({ where: { id }, data });
   }
 
@@ -73,16 +93,16 @@ export class ElectionRepository {
     const election = await prisma.election.findUnique({ where: { id: electionId } });
     if (!election) return null;
 
-    const constituencies = await prisma.constituency.findMany({
-      where: { electionId, deletedAt: null },
-      select: { id: true },
+    const electionConstituencies = await prisma.electionConstituency.findMany({
+      where: { electionId },
+      select: { constituencyId: true },
     });
-    const constituencyIds = constituencies.map((c) => c.id);
+    const constituencyIds = electionConstituencies.map((ec) => ec.constituencyId);
 
     const [totalVoters, votedCount, totalCandidates, totalStations] = await Promise.all([
       prisma.voter.count({ where: { constituencyId: { in: constituencyIds }, deletedAt: null } }),
       prisma.voter.count({ where: { constituencyId: { in: constituencyIds }, hasVoted: true } }),
-      prisma.candidate.count({ where: { constituencyId: { in: constituencyIds }, deletedAt: null } }),
+      prisma.candidate.count({ where: { electionId, deletedAt: null } }),
       prisma.pollingStation.count({ where: { constituencyId: { in: constituencyIds }, deletedAt: null } }),
     ]);
 
@@ -93,7 +113,75 @@ export class ElectionRepository {
       turnoutPercent: totalVoters > 0 ? ((votedCount / totalVoters) * 100).toFixed(2) : '0.00',
       totalCandidates,
       totalStations,
-      totalConstituencies: constituencies.length,
+      totalConstituencies: constituencyIds.length,
+    };
+  }
+
+  /** Pre-publish readiness checklist */
+  async getReadiness(electionId: number) {
+    const election = await prisma.election.findUnique({ where: { id: electionId } });
+    if (!election) return null;
+
+    const electionConstituencies = await prisma.electionConstituency.findMany({
+      where: { electionId },
+      include: {
+        constituency: {
+          include: {
+            pollingStations: {
+              where: { deletedAt: null },
+              include: { officers: { where: { deletedAt: null } } },
+            },
+            _count: { select: { voters: true } },
+          },
+        },
+      },
+    });
+
+    const constituencyIds = electionConstituencies.map((ec) => ec.constituencyId);
+    const totalConstituencies = constituencyIds.length;
+
+    // Candidates per constituency
+    const candidatesByConstituency = await prisma.candidate.groupBy({
+      by: ['constituencyId'],
+      where: { electionId, deletedAt: null },
+      _count: { id: true },
+    });
+    const constituenciesWithoutCandidates = constituencyIds.filter(
+      (cid) => !candidatesByConstituency.find((c) => c.constituencyId === cid),
+    );
+
+    // Polling stations without officers
+    const allStations = electionConstituencies.flatMap((ec) => ec.constituency.pollingStations);
+    const stationsWithoutOfficer = allStations.filter((s) => s.officers.length === 0);
+
+    // Total voters
+    const totalVoters = await prisma.voter.count({
+      where: { constituencyId: { in: constituencyIds }, deletedAt: null },
+    });
+
+    const issues: string[] = [];
+    if (totalConstituencies === 0) issues.push('No constituencies selected for this election.');
+    if (constituenciesWithoutCandidates.length > 0) {
+      const names = electionConstituencies
+        .filter((ec) => constituenciesWithoutCandidates.includes(ec.constituencyId))
+        .map((ec) => ec.constituency.name);
+      issues.push(`${names.length} constituency(ies) have no candidates: ${names.join(', ')}`);
+    }
+    if (stationsWithoutOfficer.length > 0) {
+      issues.push(`${stationsWithoutOfficer.length} polling station(s) have no officer assigned.`);
+    }
+    if (totalVoters === 0) issues.push('No voters registered in the selected constituencies.');
+
+    return {
+      election,
+      totalConstituencies,
+      totalStations: allStations.length,
+      totalVoters,
+      totalCandidates: candidatesByConstituency.reduce((s, c) => s + c._count.id, 0),
+      stationsWithoutOfficer: stationsWithoutOfficer.length,
+      constituenciesWithoutCandidates: constituenciesWithoutCandidates.length,
+      issues,
+      isReady: issues.length === 0,
     };
   }
 }

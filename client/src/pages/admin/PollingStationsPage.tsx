@@ -1,76 +1,235 @@
-import React, { useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Building2, Lock, Unlock, Pause, Play } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Plus, Pencil, Trash2, Building2, Lock, Unlock, Pause, Play, ArrowRight } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
-import { pollingStationService, constituencyService } from '../../services/api.service';
+import { pollingStationService, constituencyService, regionService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner, StatusBadge } from '../../components/ui';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
-interface Station { id: number; name: string; code: string; address: string; totalBooths: number; machineStatus: string; isPollingActive: boolean; constituency: { name: string; code: string }; officers: { user: { email: string } }[]; _count: { voters: number; votes: number } }
+interface Station {
+  id: number; name: string; code: string; address: string;
+  totalBooths: number; machineStatus: string; isPollingActive: boolean;
+  constituency: { name: string; code: string; region: { name: string } };
+  officers: { user: { email: string } }[];
+  _count: { voters: number; votes: number };
+}
+interface Region { id: number; name: string }
+interface Constituency { id: number; name: string; code: string }
+type FormData = { constituencyId: number; name: string; code: string; address: string; capacity?: number; totalBooths?: number };
 
 export const PollingStationsPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Station | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Station | null>(null);
+  const [selectedRegionId, setSelectedRegionId] = useState('');
+  const [filteredConstituencies, setFilteredConstituencies] = useState<Constituency[]>([]);
+  const navigate = useNavigate();
 
   const fetchData = useCallback(() => pollingStationService.getAll(), []);
   const { data: stations, loading, execute: refetch } = useAsync<Station[]>(fetchData);
+
+  const fetchRegions = useCallback(() => regionService.getAll(), []);
+  const { data: regions } = useAsync<Region[]>(fetchRegions);
+
   const fetchConstituencies = useCallback(() => constituencyService.getAll(), []);
-  const { data: constituencies } = useAsync(fetchConstituencies);
+  const { data: allConstituencies } = useAsync<Constituency[]>(fetchConstituencies);
 
-  const { register, handleSubmit, reset, setValue } = useForm<{ constituencyId: number; name: string; code: string; address: string; totalBooths?: number }>();
+  // When region changes in the form, filter constituencies
+  useEffect(() => {
+    if (!selectedRegionId || !allConstituencies) {
+      setFilteredConstituencies(allConstituencies || []);
+      return;
+    }
+    // Re-fetch constituencies for this region
+    constituencyService.getAll(Number(selectedRegionId))
+      .then((data) => setFilteredConstituencies(data as Constituency[]))
+      .catch(() => {});
+  }, [selectedRegionId, allConstituencies]);
 
-  const { mutate: create, loading: creating } = useMutation((d: object) => pollingStationService.create(d), { onSuccess: () => { refetch(); setModalOpen(false); reset(); }, successMessage: 'Station created' });
-  const { mutate: update, loading: updating } = useMutation(({ id, d }: { id: number; d: object }) => pollingStationService.update(id, d), { onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); }, successMessage: 'Updated' });
-  const { mutate: del, loading: deleting } = useMutation((id: number) => pollingStationService.delete(id), { onSuccess: () => { refetch(); setDeleteTarget(null); }, successMessage: 'Deleted' });
+  const { register, handleSubmit, reset, setValue } = useForm<FormData>();
+
+  const { mutate: create, loading: creating } = useMutation(
+    (d: object) => pollingStationService.create(d),
+    { onSuccess: () => { refetch(); setModalOpen(false); reset(); }, successMessage: 'Station created' },
+  );
+  const { mutate: update, loading: updating } = useMutation(
+    ({ id, d }: { id: number; d: object }) => pollingStationService.update(id, d),
+    { onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); }, successMessage: 'Updated' },
+  );
+  const { mutate: del, loading: deleting } = useMutation(
+    (id: number) => pollingStationService.delete(id),
+    { onSuccess: () => { refetch(); setDeleteTarget(null); }, successMessage: 'Deleted' },
+  );
 
   const changeStatus = async (id: number, status: string, isPollingActive?: boolean) => {
-    await pollingStationService.updateMachineStatus(id, status, isPollingActive);
-    toast.success(`Machine status: ${status}`); refetch();
+    try {
+      await pollingStationService.updateMachineStatus(id, status, isPollingActive);
+      toast.success(`Machine status: ${status}`);
+      refetch();
+    } catch (e: unknown) {
+      toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Update failed');
+    }
   };
 
-  const openEdit = (s: Station) => { setEditTarget(s); setValue('name', s.name); setValue('code', s.code); setValue('address', s.address); setValue('totalBooths', s.totalBooths); setModalOpen(true); };
-  const onSubmit = (data: object) => { const d = { ...data, constituencyId: Number((data as { constituencyId: string }).constituencyId) }; if (editTarget) update({ id: editTarget.id, d }); else create(d); };
+  const openEdit = (s: Station) => {
+    setEditTarget(s);
+    setValue('name', s.name);
+    setValue('code', s.code);
+    setValue('address', s.address);
+    setValue('totalBooths', s.totalBooths);
+    setModalOpen(true);
+  };
+
+  const onSubmit = (data: FormData) => {
+    const d = { ...data, constituencyId: Number(data.constituencyId) };
+    if (editTarget) update({ id: editTarget.id, d });
+    else create(d);
+  };
+
+  const hasNoConstituencies = allConstituencies && allConstituencies.length === 0;
 
   return (
     <div className="space-y-6">
-      <div className="page-header"><div><h1 className="page-title">Polling Stations</h1><p className="page-subtitle">Manage voting locations and machine status</p></div><button onClick={() => { reset(); setEditTarget(null); setModalOpen(true); }} className="btn-primary"><Plus size={16} /> Add Station</button></div>
-      {loading ? <TableSkeleton rows={5} cols={7} /> : (
-        <div className="card overflow-hidden"><div className="table-wrapper"><table className="table">
-          <thead><tr><th>#</th><th>Name</th><th>Code</th><th>Constituency</th><th>Voters</th><th>Votes Cast</th><th>Machine</th><th>Actions</th></tr></thead>
-          <tbody>{stations?.map((s, i) => (
-            <tr key={s.id}>
-              <td className="text-slate-500">{i + 1}</td><td className="font-medium text-white">{s.name}</td>
-              <td className="font-mono text-xs"><span className="badge badge-blue">{s.code}</span></td>
-              <td className="text-xs text-slate-400">{s.constituency.name}</td>
-              <td>{s._count.voters}</td><td>{s._count.votes}</td>
-              <td><StatusBadge status={s.machineStatus} /></td>
-              <td>
-                <div className="flex items-center gap-1.5">
-                  {s.machineStatus === 'IDLE' && <button onClick={() => changeStatus(s.id, 'ACTIVE', true)} className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Activate"><Play size={13} /></button>}
-                  {s.machineStatus === 'ACTIVE' && <button onClick={() => changeStatus(s.id, 'LOCKED', false)} className="p-1.5 text-red-400 hover:text-red-300" title="Lock"><Lock size={13} /></button>}
-                  {s.machineStatus === 'LOCKED' && <button onClick={() => changeStatus(s.id, 'ACTIVE', true)} className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Unlock"><Unlock size={13} /></button>}
-                  {s.machineStatus === 'ACTIVE' && <button onClick={() => changeStatus(s.id, 'PAUSED', false)} className="p-1.5 text-amber-400 hover:text-amber-300" title="Pause"><Pause size={13} /></button>}
-                  <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400"><Pencil size={13} /></button>
-                  <button onClick={() => setDeleteTarget(s)} className="p-1.5 text-slate-400 hover:text-red-400"><Trash2 size={13} /></button>
-                </div>
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-        {(!stations || stations.length === 0) && <EmptyState icon={<Building2 size={28} />} title="No polling stations" description="Add polling stations to your constituencies" />}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Polling Stations</h1>
+          <p className="page-subtitle">Manage voting locations — each belongs to a constituency</p>
+        </div>
+        {!hasNoConstituencies && (
+          <button onClick={() => { reset(); setEditTarget(null); setSelectedRegionId(''); setModalOpen(true); }} className="btn-primary">
+            <Plus size={16} /> Add Station
+          </button>
+        )}
+      </div>
+
+      {/* Guard: no constituencies */}
+      {hasNoConstituencies && (
+        <div className="card p-8 text-center border-amber-500/20 bg-amber-500/5">
+          <Building2 size={40} className="text-amber-400 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-white mb-2">No constituencies available</h3>
+          <p className="text-slate-400 text-sm mb-4">Create constituencies before adding polling stations.</p>
+          <button onClick={() => navigate('/admin/constituencies')} className="btn-primary">
+            <ArrowRight size={16} /> Go to Constituencies
+          </button>
         </div>
       )}
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); reset(); }} title={editTarget ? 'Edit Station' : 'Add Polling Station'}>
+
+      {!hasNoConstituencies && (
+        <>
+          {loading ? <TableSkeleton rows={5} cols={8} /> : (
+            <div className="card overflow-hidden">
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Name</th><th>Code</th><th>Region / Constituency</th>
+                      <th>Officer</th><th>Voters</th><th>Votes Cast</th><th>Machine</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stations?.map((s, i) => (
+                      <tr key={s.id}>
+                        <td className="text-slate-500">{i + 1}</td>
+                        <td className="font-medium text-white">{s.name}</td>
+                        <td><span className="badge badge-blue font-mono text-xs">{s.code}</span></td>
+                        <td>
+                          <div className="text-xs">
+                            <p className="text-slate-400">{s.constituency.region?.name}</p>
+                            <p className="text-white">{s.constituency.name}</p>
+                          </div>
+                        </td>
+                        <td>
+                          {s.officers.length > 0
+                            ? <span className="badge badge-green text-xs">{s.officers[0].user.email}</span>
+                            : <span className="badge badge-red text-xs">⚠ No Officer</span>}
+                        </td>
+                        <td>{s._count.voters}</td>
+                        <td>{s._count.votes}</td>
+                        <td><StatusBadge status={s.machineStatus} /></td>
+                        <td>
+                          <div className="flex items-center gap-1.5">
+                            {s.machineStatus === 'IDLE' && <button onClick={() => changeStatus(s.id, 'ACTIVE', true)} className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Activate"><Play size={13} /></button>}
+                            {s.machineStatus === 'ACTIVE' && <button onClick={() => changeStatus(s.id, 'LOCKED', false)} className="p-1.5 text-red-400 hover:text-red-300" title="Lock"><Lock size={13} /></button>}
+                            {s.machineStatus === 'LOCKED' && <button onClick={() => changeStatus(s.id, 'ACTIVE', true)} className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Unlock"><Unlock size={13} /></button>}
+                            {s.machineStatus === 'ACTIVE' && <button onClick={() => changeStatus(s.id, 'PAUSED', false)} className="p-1.5 text-amber-400 hover:text-amber-300" title="Pause"><Pause size={13} /></button>}
+                            <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400"><Pencil size={13} /></button>
+                            <button onClick={() => setDeleteTarget(s)} className="p-1.5 text-slate-400 hover:text-red-400"><Trash2 size={13} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {(!stations || stations.length === 0) && (
+                <EmptyState icon={<Building2 size={28} />} title="No polling stations" description="Add polling stations to your constituencies" />
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); reset(); setEditTarget(null); setSelectedRegionId(''); }} title={editTarget ? 'Edit Station' : 'Add Polling Station'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div><label className="label">Constituency *</label><select {...register('constituencyId', { required: true })} className="input"><option value="">Select...</option>{(constituencies as { id: number; name: string }[] || []).map((c: { id: number; name: string }) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-          <div className="grid grid-cols-2 gap-4"><div><label className="label">Station Name *</label><input {...register('name', { required: true })} className="input" /></div><div><label className="label">Code *</label><input {...register('code', { required: true })} className="input" placeholder="PS-DL-001" /></div></div>
-          <div><label className="label">Address *</label><textarea {...register('address', { required: true })} className="input min-h-[70px] resize-none" /></div>
-          <div><label className="label">Total Booths</label><input {...register('totalBooths', { valueAsNumber: true })} type="number" className="input w-32" defaultValue={1} /></div>
-          <div className="flex gap-3 justify-end"><button type="button" className="btn-secondary" onClick={() => { setModalOpen(false); reset(); }}>Cancel</button><button type="submit" className="btn-primary" disabled={creating || updating}>{creating || updating ? <Spinner size={16} /> : null} Save</button></div>
+          {!editTarget && (
+            <>
+              <div>
+                <label className="label">Region</label>
+                <select className="input" value={selectedRegionId} onChange={(e) => setSelectedRegionId(e.target.value)}>
+                  <option value="">All Regions</option>
+                  {(regions || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                <p className="mt-1 text-xs text-slate-500">Filter constituencies by region</p>
+              </div>
+              <div>
+                <label className="label">Constituency *</label>
+                <select {...register('constituencyId', { required: true })} className="input">
+                  <option value="">{selectedRegionId ? 'Select constituency...' : 'Select (filter by region above)'}</option>
+                  {filteredConstituencies.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
+                </select>
+                {filteredConstituencies.length === 0 && selectedRegionId && (
+                  <p className="mt-1 text-xs text-amber-400">No constituencies in this region. Add constituencies first.</p>
+                )}
+              </div>
+            </>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Station Name *</label>
+              <input {...register('name', { required: true })} className="input" placeholder="e.g. Government School Hall A" />
+            </div>
+            <div>
+              <label className="label">Code *</label>
+              <input {...register('code', { required: true })} className="input" placeholder="e.g. PS-CN01-001" />
+              <p className="mt-1 text-xs text-slate-500">Must be globally unique</p>
+            </div>
+          </div>
+          <div>
+            <label className="label">Address *</label>
+            <textarea {...register('address', { required: true })} className="input min-h-[70px] resize-none" placeholder="Full address..." />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Capacity</label>
+              <input {...register('capacity', { valueAsNumber: true })} type="number" className="input" defaultValue={1000} />
+            </div>
+            <div>
+              <label className="label">Total Booths</label>
+              <input {...register('totalBooths', { valueAsNumber: true })} type="number" className="input" defaultValue={1} />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <button type="button" className="btn-secondary" onClick={() => { setModalOpen(false); reset(); }}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={creating || updating}>
+              {creating || updating ? <Spinner size={16} /> : null} Save
+            </button>
+          </div>
         </form>
       </Modal>
-      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && del(deleteTarget.id)} title="Delete Station" message={`Delete "${deleteTarget?.name}"?`} confirmText="Delete" loading={deleting} />
+
+      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && del(deleteTarget.id)}
+        title="Delete Station" message={`Delete "${deleteTarget?.name}"? This will fail if voters are registered here.`} confirmText="Delete" loading={deleting} />
     </div>
   );
 };

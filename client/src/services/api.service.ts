@@ -6,15 +6,31 @@ export const electionService = {
   getStats: async (id: number) => (await api.get(`/elections/${id}/stats`)).data.data,
   getDashboardStats: async () => (await api.get('/elections/stats/dashboard')).data.data,
   getResults: async (id: number) => (await api.get(`/elections/${id}/results`)).data.data,
+  getReadiness: async (id: number) => (await api.get(`/elections/${id}/readiness`)).data.data,
+  getConstituencies: async (id: number) => (await api.get(`/elections/${id}/constituencies`)).data.data,
+  setConstituencies: async (id: number, constituencyIds: number[]) =>
+    (await api.put(`/elections/${id}/constituencies`, { constituencyIds })).data.data,
   create: async (data: object) => (await api.post('/elections', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/elections/${id}`, data)).data.data,
-  updateStatus: async (id: number, status: string) => (await api.patch(`/elections/${id}/status`, { status })).data.data,
+  updateStatus: async (id: number, status: string) =>
+    (await api.patch(`/elections/${id}/status`, { status })).data.data,
   publishResults: async (id: number) => (await api.post(`/elections/${id}/publish-results`)).data,
   delete: async (id: number) => (await api.delete(`/elections/${id}`)).data,
 };
 
+export const regionService = {
+  getAll: async () => (await api.get('/regions')).data.data,
+  getById: async (id: number) => (await api.get(`/regions/${id}`)).data.data,
+  create: async (data: object) => (await api.post('/regions', data)).data.data,
+  update: async (id: number, data: object) => (await api.put(`/regions/${id}`, data)).data.data,
+  delete: async (id: number) => (await api.delete(`/regions/${id}`)).data,
+};
+
 export const constituencyService = {
-  getAll: async (electionId?: number) => (await api.get('/constituencies', { params: { electionId } })).data.data,
+  getAll: async (regionId?: number) =>
+    (await api.get('/constituencies', { params: { regionId } })).data.data,
+  getActive: async (regionId?: number) =>
+    (await api.get('/constituencies/active', { params: { regionId } })).data.data,
   getById: async (id: number) => (await api.get(`/constituencies/${id}`)).data.data,
   create: async (data: object) => (await api.post('/constituencies', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/constituencies/${id}`, data)).data.data,
@@ -22,7 +38,8 @@ export const constituencyService = {
 };
 
 export const pollingStationService = {
-  getAll: async (constituencyId?: number) => (await api.get('/polling-stations', { params: { constituencyId } })).data.data,
+  getAll: async (constituencyId?: number) =>
+    (await api.get('/polling-stations', { params: { constituencyId } })).data.data,
   getById: async (id: number) => (await api.get(`/polling-stations/${id}`)).data.data,
   getTurnout: async (id: number) => (await api.get(`/polling-stations/${id}/turnout`)).data.data,
   create: async (data: object) => (await api.post('/polling-stations', data)).data.data,
@@ -46,7 +63,8 @@ export const partyService = {
 };
 
 export const candidateService = {
-  getAll: async (constituencyId?: number) => (await api.get('/candidates', { params: { constituencyId } })).data.data,
+  getAll: async (electionId?: number, constituencyId?: number) =>
+    (await api.get('/candidates', { params: { electionId, constituencyId } })).data.data,
   getById: async (id: number) => (await api.get(`/candidates/${id}`)).data.data,
   create: async (data: object) => (await api.post('/candidates', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/candidates/${id}`, data)).data.data,
@@ -75,11 +93,13 @@ export const voterService = {
 
 export const votingService = {
   initiateVerification: async (data: object) => (await api.post('/voting/verify/initiate', data)).data.data,
-  verifyOTP: async (voterId: number, otp: string) => (await api.post('/voting/verify/otp', { voterId, otp })).data.data,
+  verifyOTP: async (voterId: number, otp: string) =>
+    (await api.post('/voting/verify/otp', { voterId, otp })).data.data,
   simulateBiometric: async (voterId: number, type: string) =>
     (await api.post('/voting/verify/biometric', { voterId, type })).data.data,
   castVote: async (data: object) => (await api.post('/voting/cast', data)).data.data,
-  getVVPAT: async (referenceNumber: string) => (await api.get(`/voting/vvpat/${referenceNumber}`)).data.data,
+  getVVPAT: async (referenceNumber: string) =>
+    (await api.get(`/voting/vvpat/${referenceNumber}`)).data.data,
 };
 
 export const auditService = {
