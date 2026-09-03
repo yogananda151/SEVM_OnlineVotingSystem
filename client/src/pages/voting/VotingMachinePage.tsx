@@ -31,7 +31,18 @@ interface VvpatRecord {
 // Sub-components
 // ─────────────────────────────────────────────────────────────────
 
-const EVMHeader: React.FC = () => (
+interface PollingStationInfo {
+  id: number;
+  name: string;
+  code: string;
+  machineStatus?: string;
+  isPollingActive?: boolean;
+}
+
+const EVMHeader: React.FC<{
+  station?: PollingStationInfo | null;
+  onOpenStationSelect?: () => void;
+}> = ({ station, onOpenStationSelect }) => (
   <div className="bg-slate-900 border-b border-slate-700/50 px-6 py-3 flex items-center justify-between">
     <div className="flex items-center gap-3">
       <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
@@ -39,51 +50,94 @@ const EVMHeader: React.FC = () => (
       </div>
       <div>
         <p className="text-xs font-bold text-white leading-tight">SMART ELECTRONIC VOTING MACHINE</p>
-        <p className="text-[10px] text-slate-400">Election Commission of India – Official System</p>
+        <p className="text-[10px] text-slate-400">
+          {station ? `${station.name} (${station.code})` : 'Election Commission of India – Official System'}
+        </p>
       </div>
     </div>
     <div className="flex items-center gap-4">
+      {station && (
+        <button
+          onClick={onOpenStationSelect}
+          className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+          title="Change Polling Station"
+        >
+          Station #{station.id}
+        </button>
+      )}
       <div className="flex items-center gap-1.5">
-        <div className="evm-led evm-led-green" />
-        <span className="text-[10px] text-slate-400">POWER</span>
+        <div className={`evm-led ${station?.machineStatus === 'LOCKED' ? 'evm-led-red' : station?.machineStatus === 'PAUSED' ? 'evm-led-yellow' : 'evm-led-green'}`} />
+        <span className="text-[10px] text-slate-400">{station?.machineStatus ?? 'ONLINE'}</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <div className="evm-led evm-led-green" />
-        <span className="text-[10px] text-slate-400">NETWORK</span>
-      </div>
-      <div className="text-[10px] text-slate-500 font-mono">{new Date().toLocaleString('en-IN')}</div>
+      <div className="text-[10px] text-slate-500 font-mono hidden sm:block">{new Date().toLocaleTimeString('en-IN')}</div>
     </div>
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────────
-// Screens
-// ─────────────────────────────────────────────────────────────────
+const WelcomeScreen: React.FC<{
+  onStart: () => void;
+  station?: PollingStationInfo | null;
+  allStations: PollingStationInfo[];
+  onSelectStation: (id: number) => void;
+}> = ({ onStart, station, allStations, onSelectStation }) => {
+  const isNotActive = station && station.machineStatus && station.machineStatus !== 'ACTIVE';
 
-const WelcomeScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => (
-  <motion.div className="flex flex-col items-center justify-center h-full gap-8 text-center px-8"
-    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-    <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 3 }}>
-      <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-primary-600 to-blue-700 flex items-center justify-center shadow-2xl shadow-primary-900/50 mx-auto">
-        <Vote size={56} className="text-white" />
+  return (
+    <motion.div className="flex flex-col items-center justify-center h-full gap-6 text-center px-8"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 3 }}>
+        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary-600 to-blue-700 flex items-center justify-center shadow-2xl shadow-primary-900/50 mx-auto">
+          <Vote size={48} className="text-white" />
+        </div>
+      </motion.div>
+      <div>
+        <h1 className="text-3xl font-black text-white leading-tight">SMART EVM</h1>
+        <p className="text-base text-primary-400 font-semibold mt-0.5">Electronic Voting Machine</p>
+        <p className="text-slate-400 text-xs mt-2 max-w-md">Welcome. Please verify your identity to cast your vote. Your vote is confidential and secured.</p>
       </div>
+
+      {/* Station Selector badge */}
+      {allStations.length > 0 && (
+        <div className="flex items-center gap-2 p-2 px-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs">
+          <span className="text-slate-400">Booth:</span>
+          <select
+            value={station?.id ?? ''}
+            onChange={(e) => onSelectStation(Number(e.target.value))}
+            className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
+          >
+            {allStations.map((s) => (
+              <option key={s.id} value={s.id} className="bg-slate-800 text-white">
+                {s.name} ({s.code})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {isNotActive && (
+        <div className="p-2.5 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+          <span>⚠️</span>
+          <span>Machine is currently {station?.machineStatus}. Please wait for the Election Officer to activate voting.</span>
+        </div>
+      )}
+
+      <motion.button
+        onClick={onStart}
+        disabled={isNotActive}
+        className={`px-12 py-3.5 text-white text-base font-bold rounded-2xl shadow-2xl transition-all ${
+          isNotActive
+            ? 'bg-slate-700 opacity-50 cursor-not-allowed'
+            : 'bg-gradient-to-r from-primary-600 to-blue-600 shadow-primary-900/50 hover:opacity-95'
+        }`}
+        whileTap={isNotActive ? {} : { scale: 0.97 }}
+        whileHover={isNotActive ? {} : { scale: 1.02 }}
+      >
+        BEGIN VOTING
+      </motion.button>
+      <p className="text-[11px] text-slate-500">Touch to proceed</p>
     </motion.div>
-    <div>
-      <h1 className="text-4xl font-black text-white leading-tight">SMART EVM</h1>
-      <p className="text-lg text-primary-400 font-semibold mt-1">Electronic Voting Machine</p>
-      <p className="text-slate-400 text-sm mt-3 max-w-md">Welcome. Please verify your identity to cast your vote. Your vote is confidential and secured.</p>
-    </div>
-    <motion.button
-      onClick={onStart}
-      className="px-12 py-4 bg-gradient-to-r from-primary-600 to-blue-600 text-white text-lg font-bold rounded-2xl shadow-2xl shadow-primary-900/50"
-      whileTap={{ scale: 0.97 }}
-      whileHover={{ scale: 1.02 }}
-    >
-      BEGIN VOTING
-    </motion.button>
-    <p className="text-xs text-slate-600">Touch to proceed</p>
-  </motion.div>
-);
+  );
+};
 
 const MethodScreen: React.FC<{
   onSelectAadhaar: () => void;
@@ -477,8 +531,37 @@ export const VotingMachinePage: React.FC = () => {
   const [vvpatData, setVvpatData] = useState<VvpatRecord | null>(null);
   const [castingVote, setCastingVote] = useState(false);
 
-  // Hard-coded demo station ID. In production this is set by the officer's session.
-  const POLLING_STATION_ID = 1;
+  // Dynamic Polling Station setup (defaults to query param, localStorage, or first station)
+  const [allStations, setAllStations] = useState<PollingStationInfo[]>([]);
+  const [selectedStationId, setSelectedStationId] = useState<number>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('stationId');
+    if (fromUrl) return Number(fromUrl);
+    const saved = localStorage.getItem('evm_station_id');
+    if (saved) return Number(saved);
+    return 1;
+  });
+
+  useEffect(() => {
+    votingService.getPublicStations()
+      .then((data: PollingStationInfo[]) => {
+        if (data && data.length > 0) {
+          setAllStations(data);
+          setSelectedStationId((curr) => {
+            const exists = data.some((s) => s.id === curr);
+            return exists ? curr : data[0].id;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const currentStation = allStations.find((s) => s.id === selectedStationId) || null;
+
+  const handleStationChange = (id: number) => {
+    setSelectedStationId(id);
+    localStorage.setItem('evm_station_id', id.toString());
+  };
 
   const reset = useCallback(() => {
     setScreen('welcome');
@@ -490,8 +573,13 @@ export const VotingMachinePage: React.FC = () => {
   }, []);
 
   const loadCandidates = useCallback(async (constituencyId: number) => {
-    const data = await candidateService.getAll(constituencyId);
-    setCandidates(data);
+    try {
+      const data = await votingService.getBallotCandidates(constituencyId);
+      setCandidates(data || []);
+    } catch {
+      const data = await candidateService.getAll(undefined, constituencyId);
+      setCandidates(data || []);
+    }
   }, []);
 
   const handleVoterVerified = async (verifiedVoter: VerifiedVoter) => {
@@ -507,7 +595,7 @@ export const VotingMachinePage: React.FC = () => {
       const result = await votingService.castVote({
         voterId: voter.id,
         candidateId: selectedCandidate.id,
-        pollingStationId: POLLING_STATION_ID,
+        pollingStationId: selectedStationId,
       });
       setVvpatData(result.vvpat);
       setScreen('vvpat');
@@ -520,13 +608,18 @@ export const VotingMachinePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-3xl h-[700px] bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-700/50 shadow-2xl flex flex-col">
-        <EVMHeader />
+        <EVMHeader station={currentStation} onOpenStationSelect={() => setScreen('welcome')} />
 
         <div className="flex-1 overflow-hidden relative">
           <AnimatePresence mode="wait">
             {screen === 'welcome' && (
               <div key="welcome" className="absolute inset-0">
-                <WelcomeScreen onStart={() => setScreen('method')} />
+                <WelcomeScreen
+                  onStart={() => setScreen('method')}
+                  station={currentStation}
+                  allStations={allStations}
+                  onSelectStation={handleStationChange}
+                />
               </div>
             )}
             {screen === 'method' && (
@@ -541,7 +634,7 @@ export const VotingMachinePage: React.FC = () => {
               <div key="verify" className="absolute inset-0">
                 <VerifyScreen
                   method={method}
-                  pollingStationId={POLLING_STATION_ID}
+                  pollingStationId={selectedStationId}
                   onVerified={(data) => { setInitData(data); setScreen('otp'); }}
                   onBack={() => setScreen('method')}
                 />

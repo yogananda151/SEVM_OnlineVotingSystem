@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 export declare class ConstituencyController {
     getAll(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getActive(req: Request, res: Response, next: NextFunction): Promise<void>;
     getById(req: Request, res: Response, next: NextFunction): Promise<void>;
     create(req: Request, res: Response, next: NextFunction): Promise<void>;
     update(req: Request, res: Response, next: NextFunction): Promise<void>;

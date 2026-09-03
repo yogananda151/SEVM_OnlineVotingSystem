@@ -11,6 +11,7 @@ router.use(authenticate);
 router.get('/', voterController.getAll.bind(voterController));
 router.get('/:id', voterController.getById.bind(voterController));
 router.post('/', authorize(UserRole.COMMISSIONER), validate(createVoterSchema), voterController.create.bind(voterController));
+router.post('/bulk', authorize(UserRole.COMMISSIONER), voterController.bulkCreate.bind(voterController));
 router.put('/:id', authorize(UserRole.COMMISSIONER), voterController.update.bind(voterController));
 router.post('/:id/photo', authorize(UserRole.COMMISSIONER), uploadVoterPhoto, voterController.uploadPhoto.bind(voterController));
 router.delete('/:id', authorize(UserRole.COMMISSIONER), voterController.delete.bind(voterController));

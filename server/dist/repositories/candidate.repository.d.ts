@@ -1,12 +1,12 @@
 export declare class CandidateRepository {
-    findAll(constituencyId?: number): Promise<({
+    findAll(electionId?: number, constituencyId?: number): Promise<({
         _count: {
             votes: number;
         };
         constituency: {
+            code: string;
             name: string;
             id: number;
-            code: string;
         };
         party: {
             symbol: string | null;
@@ -29,6 +29,7 @@ export declare class CandidateRepository {
         deletedAt: Date | null;
         fullName: string;
         constituencyId: number;
+        electionId: number;
         partyId: number | null;
         age: number;
         qualification: string | null;
@@ -41,16 +42,15 @@ export declare class CandidateRepository {
             votes: number;
         };
         constituency: {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            code: string;
-            electionId: number;
-            state: string;
-            district: string;
-            totalVoters: number;
+            description: string | null;
+            regionId: number;
         };
         party: {
             symbol: string | null;
@@ -73,6 +73,7 @@ export declare class CandidateRepository {
         deletedAt: Date | null;
         fullName: string;
         constituencyId: number;
+        electionId: number;
         partyId: number | null;
         age: number;
         qualification: string | null;
@@ -81,6 +82,7 @@ export declare class CandidateRepository {
         photoUrl: string | null;
     }) | null>;
     create(data: {
+        electionId: number;
         constituencyId: number;
         partyId?: number | null;
         fullName: string;
@@ -89,6 +91,17 @@ export declare class CandidateRepository {
         serialNumber: number;
         isIndependent?: boolean;
     }): Promise<{
+        constituency: {
+            code: string;
+            name: string;
+            id: number;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            description: string | null;
+            regionId: number;
+        };
         party: {
             symbol: string | null;
             name: string;
@@ -110,6 +123,7 @@ export declare class CandidateRepository {
         deletedAt: Date | null;
         fullName: string;
         constituencyId: number;
+        electionId: number;
         partyId: number | null;
         age: number;
         qualification: string | null;
@@ -121,24 +135,11 @@ export declare class CandidateRepository {
         fullName: string;
         age: number;
         qualification: string;
-        photoUrl: string;
+        serialNumber: number;
         partyId: number | null;
         isIndependent: boolean;
+        photoUrl: string;
     }>): Promise<{
-        party: {
-            symbol: string | null;
-            name: string;
-            id: number;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
-            abbreviation: string;
-            color: string;
-            foundedYear: number | null;
-            symbolUrl: string | null;
-        } | null;
-    } & {
         id: number;
         isActive: boolean;
         createdAt: Date;
@@ -146,6 +147,7 @@ export declare class CandidateRepository {
         deletedAt: Date | null;
         fullName: string;
         constituencyId: number;
+        electionId: number;
         partyId: number | null;
         age: number;
         qualification: string | null;
@@ -161,6 +163,7 @@ export declare class CandidateRepository {
         deletedAt: Date | null;
         fullName: string;
         constituencyId: number;
+        electionId: number;
         partyId: number | null;
         age: number;
         qualification: string | null;

@@ -68,6 +68,8 @@ export class RegionRepository {
   }
 
   async delete(id: number) {
+    const region = await prisma.region.findUnique({ where: { id } });
+    if (!region) throw new Error('Region not found');
     // Check if any constituencies are attached
     const count = await prisma.constituency.count({
       where: { regionId: id, deletedAt: null },
@@ -77,7 +79,17 @@ export class RegionRepository {
         `Cannot delete region. It has ${count} active constituent${count !== 1 ? 'cies' : 'cy'} attached. Remove them first.`,
       );
     }
-    return prisma.region.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
+    const now = new Date();
+    const timestamp = Date.now();
+    return prisma.region.update({
+      where: { id },
+      data: {
+        name: `${region.name}_del_${timestamp}`,
+        code: `${region.code}_del_${timestamp}`,
+        deletedAt: now,
+        isActive: false,
+      },
+    });
   }
 }
 

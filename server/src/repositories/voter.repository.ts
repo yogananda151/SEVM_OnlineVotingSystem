@@ -46,8 +46,8 @@ export class VoterRepository {
   }
 
   async findByVoterId(voterId: string) {
-    return prisma.voter.findUnique({
-      where: { voterId },
+    return prisma.voter.findFirst({
+      where: { voterId, deletedAt: null },
       include: { pollingStation: true, constituency: { include: { region: true } } },
     });
   }
@@ -94,7 +94,18 @@ export class VoterRepository {
   }
 
   async delete(id: number): Promise<void> {
-    await prisma.voter.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
+    const voter = await prisma.voter.findUnique({ where: { id } });
+    if (!voter) throw new Error('Voter not found');
+    const now = new Date();
+    const timestamp = Date.now();
+    await prisma.voter.update({
+      where: { id },
+      data: {
+        voterId: `${voter.voterId}_del_${timestamp}`,
+        deletedAt: now,
+        isActive: false,
+      },
+    });
   }
 
   async bulkCreate(voters: Array<{

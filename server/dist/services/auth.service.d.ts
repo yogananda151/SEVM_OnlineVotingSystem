@@ -14,8 +14,8 @@ export declare class AuthService {
     }>;
     logout(userId: number, ipAddress: string, userAgent?: string): Promise<void>;
     getProfile(userId: number): Promise<{
-        id: number;
         email: string;
+        id: number;
         passwordHash: string;
         role: import(".prisma/client").$Enums.UserRole;
         isActive: boolean;

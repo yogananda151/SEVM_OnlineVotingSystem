@@ -12,7 +12,7 @@ class VoteRepository {
             // 1. Verify voter exists, hasn't voted, is in correct station
             const voter = await tx.voter.findUnique({
                 where: { id: voterId },
-                include: { constituency: { include: { election: true } } },
+                include: { constituency: true },
             });
             if (!voter)
                 throw new error_middleware_1.AppError('Voter not found.', 404);
@@ -20,8 +20,15 @@ class VoteRepository {
                 throw new error_middleware_1.AppError('Voter has already cast their vote.', 409);
             if (voter.pollingStationId !== pollingStationId)
                 throw new error_middleware_1.AppError('Voter is not registered at this polling station.', 403);
-            // 2. Verify election is active
-            const election = voter.constituency.election;
+            // 2. Verify election is active via ElectionConstituency
+            const electionLink = await tx.electionConstituency.findFirst({
+                where: { constituencyId: voter.constituencyId },
+                include: { election: true },
+                orderBy: { election: { scheduledDate: 'desc' } },
+            });
+            const election = electionLink?.election;
+            if (!election)
+                throw new error_middleware_1.AppError('No election found for this constituency.', 400);
             if (election.status !== client_1.ElectionStatus.ACTIVE)
                 throw new error_middleware_1.AppError('Election is not currently active.', 400);
             // 3. Verify polling station is active
@@ -84,19 +91,24 @@ class VoteRepository {
         });
     }
     async getResults(electionId) {
-        const constituencies = await database_1.prisma.constituency.findMany({
-            where: { electionId, deletedAt: null },
+        const electionLinks = await database_1.prisma.electionConstituency.findMany({
+            where: { electionId },
             include: {
-                candidates: {
+                constituency: {
                     include: {
-                        party: true,
-                        _count: { select: { votes: true } },
+                        candidates: {
+                            where: { electionId, deletedAt: null },
+                            include: {
+                                party: true,
+                                _count: { select: { votes: true } },
+                            },
+                            orderBy: { votes: { _count: 'desc' } },
+                        },
                     },
-                    orderBy: { votes: { _count: 'desc' } },
                 },
             },
         });
-        return constituencies;
+        return electionLinks.map((link) => link.constituency);
     }
     async getDashboardStats() {
         const [totalElections, activeElection, totalStations, totalVoters, totalCandidates, totalParties, totalVotes] = await Promise.all([

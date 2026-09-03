@@ -7,9 +7,9 @@ const audit_repository_1 = require("../repositories/audit.repository");
 class CandidateController {
     async getAll(req, res, next) {
         try {
+            const electionId = req.query.electionId ? Number(req.query.electionId) : undefined;
             const constituencyId = req.query.constituencyId ? Number(req.query.constituencyId) : undefined;
-            const candidates = await candidate_repository_1.candidateRepository.findAll(constituencyId);
-            (0, response_1.sendSuccess)(res, candidates);
+            (0, response_1.sendSuccess)(res, await candidate_repository_1.candidateRepository.findAll(electionId, constituencyId));
         }
         catch (err) {
             next(err);
@@ -17,12 +17,12 @@ class CandidateController {
     }
     async getById(req, res, next) {
         try {
-            const candidate = await candidate_repository_1.candidateRepository.findById(Number(req.params.id));
-            if (!candidate) {
+            const c = await candidate_repository_1.candidateRepository.findById(Number(req.params.id));
+            if (!c) {
                 res.status(404).json({ success: false, message: 'Candidate not found' });
                 return;
             }
-            (0, response_1.sendSuccess)(res, candidate);
+            (0, response_1.sendSuccess)(res, c);
         }
         catch (err) {
             next(err);
@@ -38,7 +38,7 @@ class CandidateController {
                 description: `Registered candidate: ${candidate.fullName}`,
                 ipAddress: req.ip,
             });
-            (0, response_1.sendSuccess)(res, candidate, 'Candidate registered', 201);
+            (0, response_1.sendSuccess)(res, candidate, 'Candidate registered successfully', 201);
         }
         catch (err) {
             next(err);
@@ -61,7 +61,7 @@ class CandidateController {
             }
             const photoUrl = `/uploads/candidates/${req.file.filename}`;
             const candidate = await candidate_repository_1.candidateRepository.update(Number(req.params.id), { photoUrl });
-            (0, response_1.sendSuccess)(res, candidate, 'Photo uploaded');
+            (0, response_1.sendSuccess)(res, candidate, 'Photo uploaded successfully');
         }
         catch (err) {
             next(err);
@@ -70,7 +70,7 @@ class CandidateController {
     async delete(req, res, next) {
         try {
             await candidate_repository_1.candidateRepository.delete(Number(req.params.id));
-            (0, response_1.sendSuccess)(res, null, 'Candidate deleted');
+            (0, response_1.sendSuccess)(res, null, 'Candidate removed');
         }
         catch (err) {
             next(err);

@@ -9,8 +9,17 @@ const audit_repository_1 = require("../repositories/audit.repository");
 class ConstituencyController {
     async getAll(req, res, next) {
         try {
-            const electionId = req.query.electionId ? Number(req.query.electionId) : undefined;
-            (0, response_1.sendSuccess)(res, await constituency_repository_1.constituencyRepository.findAll(electionId));
+            const regionId = req.query.regionId ? Number(req.query.regionId) : undefined;
+            (0, response_1.sendSuccess)(res, await constituency_repository_1.constituencyRepository.findAll(regionId));
+        }
+        catch (err) {
+            next(err);
+        }
+    }
+    async getActive(req, res, next) {
+        try {
+            const regionId = req.query.regionId ? Number(req.query.regionId) : undefined;
+            (0, response_1.sendSuccess)(res, await constituency_repository_1.constituencyRepository.findActive(regionId));
         }
         catch (err) {
             next(err);
@@ -32,7 +41,13 @@ class ConstituencyController {
     async create(req, res, next) {
         try {
             const con = await constituency_repository_1.constituencyRepository.create(req.body);
-            await audit_repository_1.auditRepository.create({ userId: req.user?.userId, action: 'CREATE', module: 'Constituency', description: `Created: ${con.name}`, ipAddress: req.ip });
+            await audit_repository_1.auditRepository.create({
+                userId: req.user?.userId,
+                action: 'CREATE',
+                module: 'Constituency',
+                description: `Created constituency: ${con.name} (${con.code})`,
+                ipAddress: req.ip,
+            });
             (0, response_1.sendSuccess)(res, con, 'Constituency created', 201);
         }
         catch (err) {
@@ -87,7 +102,13 @@ class PollingStationController {
     async create(req, res, next) {
         try {
             const station = await polling_station_repository_1.pollingStationRepository.create(req.body);
-            await audit_repository_1.auditRepository.create({ userId: req.user?.userId, action: 'CREATE', module: 'PollingStation', description: `Created station: ${station.name}`, ipAddress: req.ip });
+            await audit_repository_1.auditRepository.create({
+                userId: req.user?.userId,
+                action: 'CREATE',
+                module: 'PollingStation',
+                description: `Created station: ${station.name} (${station.code})`,
+                ipAddress: req.ip,
+            });
             (0, response_1.sendSuccess)(res, station, 'Polling station created', 201);
         }
         catch (err) {
@@ -107,6 +128,14 @@ class PollingStationController {
         try {
             const { status, isPollingActive } = req.body;
             const id = Number(req.params.id);
+            // Authorization guard: Officers can ONLY control their assigned polling station machine
+            if (req.user?.role === 'OFFICER' && req.user.stationId !== id) {
+                res.status(403).json({
+                    success: false,
+                    message: 'Forbidden: You are only authorized to control your assigned polling station machine.',
+                });
+                return;
+            }
             const station = await polling_station_repository_1.pollingStationRepository.updateMachineStatus(id, status, isPollingActive);
             await audit_repository_1.auditRepository.create({
                 userId: req.user?.userId,

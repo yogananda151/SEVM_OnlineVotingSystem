@@ -79,6 +79,8 @@ export class ConstituencyRepository {
   }
 
   async delete(id: number) {
+    const con = await prisma.constituency.findUnique({ where: { id } });
+    if (!con) throw new Error('Constituency not found');
     const stationCount = await prisma.pollingStation.count({ where: { constituencyId: id, deletedAt: null } });
     const voterCount = await prisma.voter.count({ where: { constituencyId: id, deletedAt: null } });
     if (stationCount > 0 || voterCount > 0) {
@@ -86,7 +88,16 @@ export class ConstituencyRepository {
         `Cannot delete constituency. It has ${stationCount} polling station(s) and ${voterCount} voter(s). Remove them first.`,
       );
     }
-    return prisma.constituency.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
+    const now = new Date();
+    const timestamp = Date.now();
+    return prisma.constituency.update({
+      where: { id },
+      data: {
+        code: `${con.code}_del_${timestamp}`,
+        deletedAt: now,
+        isActive: false,
+      },
+    });
   }
 }
 

@@ -120,6 +120,7 @@ model ElectionOfficer {
 
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   pollingStation   PollingStation? @relation(fields: [pollingStationId], references: [id], onDelete: SetNull)
+  elections        Election[]      // elections where this officer is the assigned election officer
 
   @@index([userId])
   @@index([pollingStationId])
@@ -210,10 +211,12 @@ model Election {
   endTime           DateTime?
   status            ElectionStatus         @default(DRAFT)
   isResultPublished Boolean                @default(false)
+  officerId         Int?                   // assigned election-level supervising officer
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   deletedAt         DateTime?
 
+  officer                ElectionOfficer?       @relation(fields: [officerId], references: [id], onDelete: SetNull)
   electionConstituencies ElectionConstituency[]
   candidates             Candidate[]
   auditLogs              AuditLog[]
@@ -221,6 +224,7 @@ model Election {
 
   @@index([status])
   @@index([scheduledDate])
+  @@index([officerId])
   @@map("elections")
 }
 

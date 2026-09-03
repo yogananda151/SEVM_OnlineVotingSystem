@@ -27,8 +27,9 @@ import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 // Officer pages
 import { OfficerDashboard } from './pages/officer/OfficerDashboard';
 
-// Voting Machine
+// Voting Machine & Public VVPAT
 import { VotingMachinePage } from './pages/voting/VotingMachinePage';
+import { VvpatPage } from './pages/voting/VvpatPage';
 
 // Auth guard
 import { authService } from './services/auth.service';
@@ -37,19 +38,6 @@ const RequireAuth: React.FC<{ role: string; children: React.ReactNode }> = ({ ro
   if (!authService.isAuthenticated()) return <Navigate to="/" replace />;
   if (!authService.hasRole(role)) return <Navigate to="/" replace />;
   return <>{children}</>;
-};
-
-const VvpatPage: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="card p-8 max-w-md w-full text-center">
-        <h1 className="text-xl font-bold text-white mb-2">Digital VVPAT Lookup</h1>
-        <p className="text-slate-400 text-sm mb-4">Enter your vote reference number to verify</p>
-        <input className="input mb-3" placeholder="VOTE-XXXXXX-XXXX" />
-        <button className="btn-primary w-full justify-center">Verify Vote</button>
-      </div>
-    </div>
-  );
 };
 
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -82,6 +70,7 @@ function App() {
         {/* Admin */}
         <Route path="/admin" element={<RequireAuth role="COMMISSIONER"><AdminLayout><AdminDashboard /></AdminLayout></RequireAuth>} />
         <Route path="/admin/elections" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionsPage /></AdminLayout></RequireAuth>} />
+        <Route path="/admin/elections/:id" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionSetupPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/elections/:id/setup" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionSetupPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/regions" element={<RequireAuth role="COMMISSIONER"><AdminLayout><RegionsPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/constituencies" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ConstituenciesPage /></AdminLayout></RequireAuth>} />

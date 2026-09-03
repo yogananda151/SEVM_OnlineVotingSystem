@@ -19,7 +19,7 @@ export const AuditLogsPage: React.FC = () => {
     () => auditService.getAll({ page, limit, action: actionFilter || undefined }),
     [page, limit, actionFilter],
   );
-  const { data: logsRes, loading } = useAsync(fetchLogs);
+  const { data: logsRes, loading } = useAsync(fetchLogs, true, [fetchLogs]);
   const logs = logsRes?.data ?? [];
   const total = logsRes?.meta?.total ?? 0;
   const totalPages = Math.ceil(total / limit);

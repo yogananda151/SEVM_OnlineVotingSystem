@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Plus, Trash2, Users, Search, Filter, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Users, Search, Filter, AlertCircle, Upload, Download, FileText, CheckCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -129,6 +129,12 @@ const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message })
 export const VotersPage: React.FC = () => {
   // ── List state
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [parsedVoters, setParsedVoters] = useState<any[]>([]);
+  const [parsingError, setParsingError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
   const [deleteTarget, setDeleteTarget] = useState<Voter | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -138,6 +144,93 @@ export const VotersPage: React.FC = () => {
 
   // ── Ref to scroll/focus the first error field inside the modal
   const firstErrorRef = useRef<HTMLElement | null>(null);
+
+  // ── CSV Bulk Import handlers
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFile(file);
+    setParsingError(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        if (lines.length < 2) {
+          setParsingError('CSV file must have a header row and at least one voter record.');
+          setParsedVoters([]);
+          return;
+        }
+
+        const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, ''));
+        const rows: any[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map((v) => v.trim().replace(/^["']|["']$/g, ''));
+          const row: Record<string, any> = {};
+          headers.forEach((h, idx) => {
+            row[h] = values[idx] ?? '';
+          });
+          if (row.fullName && row.voterId && row.constituencyId && row.pollingStationId) {
+            rows.push({
+              fullName: row.fullName,
+              voterId: row.voterId,
+              constituencyId: Number(row.constituencyId),
+              pollingStationId: Number(row.pollingStationId),
+              serialNumber: Number(row.serialNumber) || i,
+              dateOfBirth: row.dateOfBirth || '2000-01-01',
+              gender: ['Male', 'Female', 'Other'].includes(row.gender) ? row.gender : 'Other',
+              address: row.address || 'Address not specified',
+              phone: row.phone || undefined,
+              aadhaarNumber: row.aadhaarNumber || undefined,
+            });
+          }
+        }
+
+        if (rows.length === 0) {
+          setParsingError('No valid voter rows found. Expected columns: fullName, voterId, constituencyId, pollingStationId, serialNumber, dateOfBirth, gender, address, phone, aadhaarNumber.');
+        } else {
+          setParsedVoters(rows);
+        }
+      } catch {
+        setParsingError('Failed to parse CSV file. Please verify CSV encoding and structure.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadSampleCsv = () => {
+    const sample = 'fullName,voterId,constituencyId,pollingStationId,serialNumber,dateOfBirth,gender,address,phone,aadhaarNumber\n' +
+      'Amit Sharma,DL1234567,1,1,1,1992-04-12,Male,123 Rajendra Prasad Marg New Delhi,9876543210,123456789012\n' +
+      'Sunita Devi,DL1234568,1,1,2,1995-09-24,Female,124 Rajendra Prasad Marg New Delhi,9876543211,123456789013';
+    const blob = new Blob([sample], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'voters_sample_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkSubmit = async () => {
+    if (parsedVoters.length === 0) return;
+    setImporting(true);
+    try {
+      await voterService.bulkCreate(parsedVoters);
+      toast.success(`Successfully imported ${parsedVoters.length} voters!`);
+      setBulkModalOpen(false);
+      setCsvFile(null);
+      setParsedVoters([]);
+      refetch();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to import voters.';
+      toast.error(msg);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // ── Data fetching
   const fetchVoters = useCallback(
@@ -151,7 +244,7 @@ export const VotersPage: React.FC = () => {
       }),
     [page, limit, search, filterStation, hasVotedFilter],
   );
-  const { data: votersRes, loading, execute: refetch } = useAsync(fetchVoters);
+  const { data: votersRes, loading, execute: refetch } = useAsync(fetchVoters, true, [fetchVoters]);
   const voters: Voter[] = votersRes?.data ?? [];
   const total: number = votersRes?.meta?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
@@ -330,16 +423,30 @@ export const VotersPage: React.FC = () => {
           <h1 className="page-title">Voters</h1>
           <p className="page-subtitle">{total.toLocaleString()} registered voters</p>
         </div>
-        <button
-          onClick={() => {
-            reset();
-            setModalOpen(true);
-          }}
-          className="btn-primary"
-          id="register-voter-btn"
-        >
-          <Plus size={16} /> Register Voter
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setCsvFile(null);
+              setParsedVoters([]);
+              setParsingError(null);
+              setBulkModalOpen(true);
+            }}
+            className="btn-secondary"
+            id="bulk-import-btn"
+          >
+            <Upload size={16} /> Bulk Import CSV
+          </button>
+          <button
+            onClick={() => {
+              reset();
+              setModalOpen(true);
+            }}
+            className="btn-primary"
+            id="register-voter-btn"
+          >
+            <Plus size={16} /> Register Voter
+          </button>
+        </div>
       </div>
 
       {/* ── Filters ── */}
@@ -714,6 +821,104 @@ export const VotersPage: React.FC = () => {
         confirmText="Remove"
         loading={deleting}
       />
+
+      {/* ── Bulk Import CSV Modal ── */}
+      <Modal
+        open={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        title="Bulk Import Voters (CSV)"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 bg-slate-800/60 border border-slate-700/60 rounded-xl">
+            <div>
+              <p className="text-sm font-semibold text-white">Download Sample CSV Template</p>
+              <p className="text-xs text-slate-400 mt-0.5">Use this template with the expected column headers to prepare voter rosters.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadSampleCsv}
+              className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+            >
+              <Download size={14} /> Download Template
+            </button>
+          </div>
+
+          <div>
+            <label className="label">Upload CSV File *</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleCsvFileChange}
+              className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-600 file:text-white file:cursor-pointer hover:file:bg-primary-700"
+            />
+          </div>
+
+          {parsingError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
+              <AlertCircle size={14} className="flex-shrink-0" />
+              <span>{parsingError}</span>
+            </div>
+          )}
+
+          {parsedVoters.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle size={14} /> {parsedVoters.length} valid voters ready to import
+                </span>
+                <span className="text-[10px] text-slate-400">Previewing first 5 rows</span>
+              </div>
+              <div className="border border-slate-700/50 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                <table className="table text-xs">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Voter ID</th>
+                      <th>Constituency ID</th>
+                      <th>Station ID</th>
+                      <th>Gender</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedVoters.slice(0, 5).map((v, i) => (
+                      <tr key={i}>
+                        <td>{i + 1}</td>
+                        <td className="font-medium text-white">{v.fullName}</td>
+                        <td className="font-mono text-primary-400">{v.voterId}</td>
+                        <td>{v.constituencyId}</td>
+                        <td>{v.pollingStationId}</td>
+                        <td>{v.gender}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end pt-2 border-t border-slate-700/50">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setBulkModalOpen(false)}
+              disabled={importing}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkSubmit}
+              disabled={importing || parsedVoters.length === 0}
+              className="btn-primary"
+            >
+              {importing ? <Spinner size={16} /> : <Upload size={16} />}
+              {importing ? 'Importing…' : `Import ${parsedVoters.length} Voters`}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

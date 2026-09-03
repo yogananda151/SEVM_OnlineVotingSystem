@@ -6,6 +6,7 @@ export declare class VoterController {
     update(req: Request, res: Response, next: NextFunction): Promise<void>;
     uploadPhoto(req: Request, res: Response, next: NextFunction): Promise<void>;
     delete(req: Request, res: Response, next: NextFunction): Promise<void>;
+    bulkCreate(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 export declare const voterController: VoterController;
 //# sourceMappingURL=voter.controller.d.ts.map

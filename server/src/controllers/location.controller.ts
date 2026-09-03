@@ -104,6 +104,16 @@ export class PollingStationController {
     try {
       const { status, isPollingActive } = req.body;
       const id = Number(req.params.id);
+
+      // Authorization guard: Officers can ONLY control their assigned polling station machine
+      if (req.user?.role === 'OFFICER' && req.user.stationId !== id) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden: You are only authorized to control your assigned polling station machine.',
+        });
+        return;
+      }
+
       const station = await pollingStationRepository.updateMachineStatus(id, status as MachineStatus, isPollingActive);
       await auditRepository.create({
         userId: req.user?.userId,

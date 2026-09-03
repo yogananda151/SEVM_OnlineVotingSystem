@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Award, Upload, User, ArrowRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Award, Upload, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { candidateService, constituencyService, partyService, electionService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { normaliseValidationErrors } from '../../lib/validationErrors';
 
 interface Candidate {
   id: number; fullName: string; age: number; qualification?: string; serialNumber: number;
@@ -31,7 +32,7 @@ export const CandidatesPage: React.FC = () => {
     () => candidateService.getAll(filterElection ? Number(filterElection) : undefined),
     [filterElection],
   );
-  const { data: candidates, loading, execute: refetch } = useAsync<Candidate[]>(fetchCandidates);
+  const { data: candidates, loading, execute: refetch } = useAsync<Candidate[]>(fetchCandidates, true, [fetchCandidates]);
 
   const fetchElections = useCallback(() => electionService.getAll(), []);
   const { data: elections } = useAsync<Election[]>(fetchElections);
@@ -55,18 +56,41 @@ export const CandidatesPage: React.FC = () => {
       .catch(() => setFilteredConstituencies([]));
   }, [selectedElectionForForm, allConstituencies]);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<{
+  type CandidateForm = {
     electionId: number; constituencyId: number; partyId?: number; fullName: string;
     age: number; qualification?: string; serialNumber: number; isIndependent: boolean;
-  }>();
+  };
+  const { register, handleSubmit, reset, setValue, setError, formState: { errors } } = useForm<CandidateForm>();
 
   const { mutate: createCandidate, loading: creating } = useMutation(
     (data: object) => candidateService.create(data),
-    { onSuccess: () => { refetch(); setModalOpen(false); reset(); setSelectedElectionForForm(''); }, successMessage: 'Candidate registered' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); reset(); setSelectedElectionForForm(''); },
+      successMessage: 'Candidate registered',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof CandidateForm, { message }));
+        } else {
+          toast.error(data.message || 'Failed to register candidate.');
+        }
+      },
+    },
   );
   const { mutate: updateCandidate, loading: updating } = useMutation(
     ({ id, data }: { id: number; data: object }) => candidateService.update(id, data),
-    { onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); }, successMessage: 'Candidate updated' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); },
+      successMessage: 'Candidate updated',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof CandidateForm, { message }));
+        } else {
+          toast.error(data.message || 'Failed to update candidate.');
+        }
+      },
+    },
   );
   const { mutate: deleteCandidate, loading: deleting } = useMutation(
     (id: number) => candidateService.delete(id),
@@ -191,47 +215,92 @@ export const CandidatesPage: React.FC = () => {
       )}
 
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditTarget(null); reset(); setSelectedElectionForForm(''); }} title={editTarget ? 'Edit Candidate' : 'Register Candidate'}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div>
-            <label className="label">Full Name *</label>
-            <input {...register('fullName', { required: 'Required' })} className="input" placeholder="Candidate full name" />
+            <label className="label" htmlFor="cand-name">Full Name *</label>
+            <input
+              id="cand-name"
+              {...register('fullName', { required: 'Candidate full name is required.' })}
+              className={`input ${errors.fullName ? 'input-error' : ''}`}
+              placeholder="Candidate full name"
+              aria-invalid={!!errors.fullName}
+              aria-describedby={errors.fullName ? 'cand-name-error' : undefined}
+            />
+            {errors.fullName && <p id="cand-name-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.fullName.message}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Election *</label>
+              <label className="label" htmlFor="cand-election">Election *</label>
               <select
-                {...register('electionId', { required: 'Election is required' })}
-                className="input"
+                id="cand-election"
+                {...register('electionId', { required: 'Please select an election.' })}
+                className={`input ${errors.electionId ? 'input-error' : ''}`}
                 onChange={(e) => { setSelectedElectionForForm(e.target.value); setValue('electionId', Number(e.target.value)); }}
+                aria-invalid={!!errors.electionId}
+                aria-describedby={errors.electionId ? 'cand-election-error' : undefined}
               >
                 <option value="">Select election...</option>
                 {(elections || []).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
               </select>
-              {errors.electionId && <p className="mt-1 text-xs text-red-400">{errors.electionId.message}</p>}
+              {errors.electionId && <p id="cand-election-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.electionId.message}</p>}
             </div>
             <div>
-              <label className="label">Constituency *</label>
-              <select {...register('constituencyId', { required: 'Required' })} className="input">
+              <label className="label" htmlFor="cand-constituency">Constituency *</label>
+              <select
+                id="cand-constituency"
+                {...register('constituencyId', { required: 'Please select a constituency.' })}
+                className={`input ${errors.constituencyId ? 'input-error' : ''}`}
+                aria-invalid={!!errors.constituencyId}
+                aria-describedby={errors.constituencyId ? 'cand-constituency-error' : undefined}
+              >
                 <option value="">{selectedElectionForForm ? 'Select constituency...' : 'Select election first'}</option>
                 {filteredConstituencies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+              {errors.constituencyId && <p id="cand-constituency-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.constituencyId.message}</p>}
               {filteredConstituencies.length === 0 && selectedElectionForForm && (
                 <p className="mt-1 text-xs text-amber-400">No constituencies in this election yet. Set them up first.</p>
               )}
             </div>
           </div>
           <div>
-            <label className="label">Political Party</label>
-            <select {...register('partyId')} className="input">
+            <label className="label" htmlFor="cand-party">Political Party</label>
+            <select id="cand-party" {...register('partyId')} className="input">
               <option value="">Independent</option>
               {(parties as { id: number; name: string }[] || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="label">Age *</label><input {...register('age', { required: true, valueAsNumber: true, min: 18 })} type="number" className="input" placeholder="35" /></div>
-            <div><label className="label">Serial No. *</label><input {...register('serialNumber', { required: true, valueAsNumber: true })} type="number" className="input" placeholder="1" /></div>
+            <div>
+              <label className="label" htmlFor="cand-age">Age *</label>
+              <input
+                id="cand-age"
+                {...register('age', { required: 'Age is required.', valueAsNumber: true, min: { value: 18, message: 'Must be at least 18 years old.' } })}
+                type="number"
+                className={`input ${errors.age ? 'input-error' : ''}`}
+                placeholder="35"
+                aria-invalid={!!errors.age}
+                aria-describedby={errors.age ? 'cand-age-error' : undefined}
+              />
+              {errors.age && <p id="cand-age-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.age.message}</p>}
+            </div>
+            <div>
+              <label className="label" htmlFor="cand-serial">Serial No. *</label>
+              <input
+                id="cand-serial"
+                {...register('serialNumber', { required: 'Serial number is required.', valueAsNumber: true, min: { value: 1, message: 'Serial number must be greater than 0.' } })}
+                type="number"
+                className={`input ${errors.serialNumber ? 'input-error' : ''}`}
+                placeholder="1"
+                aria-invalid={!!errors.serialNumber}
+                aria-describedby={errors.serialNumber ? 'cand-serial-error' : undefined}
+              />
+              {errors.serialNumber && <p id="cand-serial-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.serialNumber.message}</p>}
+            </div>
           </div>
-          <div><label className="label">Qualification</label><input {...register('qualification')} className="input" placeholder="B.Tech, LLB..." /></div>
+          <div>
+            <label className="label" htmlFor="cand-qual">Qualification</label>
+            <input id="cand-qual" {...register('qualification')} className="input" placeholder="B.Tech, LLB..." />
+          </div>
           <div className="flex items-center gap-2">
             <input {...register('isIndependent')} type="checkbox" className="w-4 h-4 rounded" id="independent" />
             <label htmlFor="independent" className="text-sm text-slate-300">Independent Candidate</label>

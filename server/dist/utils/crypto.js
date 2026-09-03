@@ -22,14 +22,14 @@ const generateVoteHash = (data) => {
     return crypto_1.default.createHash('sha256').update(payload).digest('hex');
 };
 exports.generateVoteHash = generateVoteHash;
-// ── Aadhaar hash (simulate storing hashed Aadhaar) ───────────────
+// ── Aadhaar hash (salted HMAC simulation) ─────────────────────────
 const hashAadhaar = (aadhaar) => {
-    return crypto_1.default.createHash('sha256').update(aadhaar).digest('hex');
+    return crypto_1.default.createHmac('sha256', config_1.config.jwt.secret).update(aadhaar).digest('hex');
 };
 exports.hashAadhaar = hashAadhaar;
-// ── OTP generation ────────────────────────────────────────────────
+// ── Cryptographically secure OTP generation ──────────────────────
 const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return crypto_1.default.randomInt(100000, 1000000).toString();
 };
 exports.generateOTP = generateOTP;
 // ── Reference number for VVPAT ────────────────────────────────────

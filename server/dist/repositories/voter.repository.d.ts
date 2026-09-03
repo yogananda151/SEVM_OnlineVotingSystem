@@ -9,16 +9,17 @@ export declare class VoterRepository {
     }): Promise<{
         data: ({
             pollingStation: {
+                code: string;
                 name: string;
                 id: number;
-                code: string;
             };
             constituency: {
+                code: string;
                 name: string;
                 id: number;
-                code: string;
             };
         } & {
+            voterId: string;
             id: number;
             isActive: boolean;
             createdAt: Date;
@@ -30,41 +31,41 @@ export declare class VoterRepository {
             constituencyId: number;
             address: string;
             serialNumber: number;
-            voterId: string;
             dateOfBirth: Date;
             gender: string;
             hasVoted: boolean;
-            aadhaarHash: string | null;
             photoUrl: string | null;
+            aadhaarHash: string | null;
             votedAt: Date | null;
         })[];
         total: number;
     }>;
     findById(id: number): Promise<({
         pollingStation: {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
             constituencyId: number;
-            code: string;
             address: string;
+            capacity: number;
             totalBooths: number;
             machineStatus: import(".prisma/client").$Enums.MachineStatus;
             isPollingActive: boolean;
         };
         constituency: {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            code: string;
-            electionId: number;
-            state: string;
-            district: string;
-            totalVoters: number;
+            description: string | null;
+            regionId: number;
         };
         vote: ({
             candidate: {
@@ -89,6 +90,7 @@ export declare class VoterRepository {
                 deletedAt: Date | null;
                 fullName: string;
                 constituencyId: number;
+                electionId: number;
                 partyId: number | null;
                 age: number;
                 qualification: string | null;
@@ -97,9 +99,9 @@ export declare class VoterRepository {
                 photoUrl: string | null;
             };
         } & {
+            voterId: number;
             id: number;
             pollingStationId: number;
-            voterId: number;
             candidateId: number;
             voteHash: string;
             referenceNumber: string;
@@ -107,6 +109,7 @@ export declare class VoterRepository {
             castAt: Date;
         }) | null;
     } & {
+        voterId: string;
         id: number;
         isActive: boolean;
         createdAt: Date;
@@ -118,56 +121,53 @@ export declare class VoterRepository {
         constituencyId: number;
         address: string;
         serialNumber: number;
-        voterId: string;
         dateOfBirth: Date;
         gender: string;
         hasVoted: boolean;
-        aadhaarHash: string | null;
         photoUrl: string | null;
+        aadhaarHash: string | null;
         votedAt: Date | null;
     }) | null>;
     findByVoterId(voterId: string): Promise<({
         pollingStation: {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
             constituencyId: number;
-            code: string;
             address: string;
+            capacity: number;
             totalBooths: number;
             machineStatus: import(".prisma/client").$Enums.MachineStatus;
             isPollingActive: boolean;
         };
         constituency: {
-            election: {
+            region: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
                 description: string | null;
-                electionType: string;
-                scheduledDate: Date;
-                startTime: Date | null;
-                endTime: Date | null;
-                status: import(".prisma/client").$Enums.ElectionStatus;
-                isResultPublished: boolean;
             };
         } & {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            code: string;
-            electionId: number;
-            state: string;
-            district: string;
-            totalVoters: number;
+            description: string | null;
+            regionId: number;
         };
     } & {
+        voterId: string;
         id: number;
         isActive: boolean;
         createdAt: Date;
@@ -179,56 +179,53 @@ export declare class VoterRepository {
         constituencyId: number;
         address: string;
         serialNumber: number;
-        voterId: string;
         dateOfBirth: Date;
         gender: string;
         hasVoted: boolean;
-        aadhaarHash: string | null;
         photoUrl: string | null;
+        aadhaarHash: string | null;
         votedAt: Date | null;
     }) | null>;
     findByAadhaarHash(aadhaarHash: string): Promise<({
         pollingStation: {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
             constituencyId: number;
-            code: string;
             address: string;
+            capacity: number;
             totalBooths: number;
             machineStatus: import(".prisma/client").$Enums.MachineStatus;
             isPollingActive: boolean;
         };
         constituency: {
-            election: {
+            region: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
                 description: string | null;
-                electionType: string;
-                scheduledDate: Date;
-                startTime: Date | null;
-                endTime: Date | null;
-                status: import(".prisma/client").$Enums.ElectionStatus;
-                isResultPublished: boolean;
             };
         } & {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            code: string;
-            electionId: number;
-            state: string;
-            district: string;
-            totalVoters: number;
+            description: string | null;
+            regionId: number;
         };
     } & {
+        voterId: string;
         id: number;
         isActive: boolean;
         createdAt: Date;
@@ -240,12 +237,11 @@ export declare class VoterRepository {
         constituencyId: number;
         address: string;
         serialNumber: number;
-        voterId: string;
         dateOfBirth: Date;
         gender: string;
         hasVoted: boolean;
-        aadhaarHash: string | null;
         photoUrl: string | null;
+        aadhaarHash: string | null;
         votedAt: Date | null;
     }) | null>;
     create(data: {
@@ -260,6 +256,7 @@ export declare class VoterRepository {
         phone?: string;
         serialNumber: number;
     }): Promise<{
+        voterId: string;
         id: number;
         isActive: boolean;
         createdAt: Date;
@@ -271,12 +268,11 @@ export declare class VoterRepository {
         constituencyId: number;
         address: string;
         serialNumber: number;
-        voterId: string;
         dateOfBirth: Date;
         gender: string;
         hasVoted: boolean;
-        aadhaarHash: string | null;
         photoUrl: string | null;
+        aadhaarHash: string | null;
         votedAt: Date | null;
     }>;
     update(id: number, data: Partial<{
@@ -285,6 +281,7 @@ export declare class VoterRepository {
         phone: string;
         photoUrl: string;
     }>): Promise<{
+        voterId: string;
         id: number;
         isActive: boolean;
         createdAt: Date;
@@ -296,12 +293,11 @@ export declare class VoterRepository {
         constituencyId: number;
         address: string;
         serialNumber: number;
-        voterId: string;
         dateOfBirth: Date;
         gender: string;
         hasVoted: boolean;
-        aadhaarHash: string | null;
         photoUrl: string | null;
+        aadhaarHash: string | null;
         votedAt: Date | null;
     }>;
     markVoted(id: number): Promise<void>;

@@ -19,29 +19,30 @@ export declare class VerificationService {
         verified: boolean;
         voter: {
             pollingStation: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
                 constituencyId: number;
-                code: string;
                 address: string;
+                capacity: number;
                 totalBooths: number;
                 machineStatus: import(".prisma/client").$Enums.MachineStatus;
                 isPollingActive: boolean;
             };
             constituency: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
-                code: string;
-                electionId: number;
-                state: string;
-                district: string;
-                totalVoters: number;
+                description: string | null;
+                regionId: number;
             };
             vote: ({
                 candidate: {
@@ -66,6 +67,7 @@ export declare class VerificationService {
                     deletedAt: Date | null;
                     fullName: string;
                     constituencyId: number;
+                    electionId: number;
                     partyId: number | null;
                     age: number;
                     qualification: string | null;
@@ -74,9 +76,9 @@ export declare class VerificationService {
                     photoUrl: string | null;
                 };
             } & {
+                voterId: number;
                 id: number;
                 pollingStationId: number;
-                voterId: number;
                 candidateId: number;
                 voteHash: string;
                 referenceNumber: string;
@@ -84,6 +86,7 @@ export declare class VerificationService {
                 castAt: Date;
             }) | null;
         } & {
+            voterId: string;
             id: number;
             isActive: boolean;
             createdAt: Date;
@@ -95,12 +98,11 @@ export declare class VerificationService {
             constituencyId: number;
             address: string;
             serialNumber: number;
-            voterId: string;
             dateOfBirth: Date;
             gender: string;
             hasVoted: boolean;
-            aadhaarHash: string | null;
             photoUrl: string | null;
+            aadhaarHash: string | null;
             votedAt: Date | null;
         };
     }>;
@@ -108,29 +110,30 @@ export declare class VerificationService {
         verified: boolean;
         voter: {
             pollingStation: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
                 constituencyId: number;
-                code: string;
                 address: string;
+                capacity: number;
                 totalBooths: number;
                 machineStatus: import(".prisma/client").$Enums.MachineStatus;
                 isPollingActive: boolean;
             };
             constituency: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
-                code: string;
-                electionId: number;
-                state: string;
-                district: string;
-                totalVoters: number;
+                description: string | null;
+                regionId: number;
             };
             vote: ({
                 candidate: {
@@ -155,6 +158,7 @@ export declare class VerificationService {
                     deletedAt: Date | null;
                     fullName: string;
                     constituencyId: number;
+                    electionId: number;
                     partyId: number | null;
                     age: number;
                     qualification: string | null;
@@ -163,9 +167,9 @@ export declare class VerificationService {
                     photoUrl: string | null;
                 };
             } & {
+                voterId: number;
                 id: number;
                 pollingStationId: number;
-                voterId: number;
                 candidateId: number;
                 voteHash: string;
                 referenceNumber: string;
@@ -173,6 +177,7 @@ export declare class VerificationService {
                 castAt: Date;
             }) | null;
         } & {
+            voterId: string;
             id: number;
             isActive: boolean;
             createdAt: Date;
@@ -184,12 +189,11 @@ export declare class VerificationService {
             constituencyId: number;
             address: string;
             serialNumber: number;
-            voterId: string;
             dateOfBirth: Date;
             gender: string;
             hasVoted: boolean;
-            aadhaarHash: string | null;
             photoUrl: string | null;
+            aadhaarHash: string | null;
             votedAt: Date | null;
         };
         message: string;

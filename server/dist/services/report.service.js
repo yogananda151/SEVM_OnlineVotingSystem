@@ -13,10 +13,14 @@ class ReportService {
         const election = await database_1.prisma.election.findUnique({
             where: { id: electionId },
             include: {
-                constituencies: {
+                electionConstituencies: {
                     include: {
-                        candidates: { include: { party: true, _count: { select: { votes: true } } } },
-                        _count: { select: { voters: true } },
+                        constituency: {
+                            include: {
+                                candidates: { where: { electionId }, include: { party: true, _count: { select: { votes: true } } } },
+                                _count: { select: { voters: true } },
+                            },
+                        },
                     },
                 },
             },
@@ -48,14 +52,14 @@ class ReportService {
             doc.text(`Ended: ${new Date(election.endTime).toLocaleString('en-IN')}`);
         doc.moveDown(1);
         // Constituencies
-        for (const con of election.constituencies) {
+        for (const link of election.electionConstituencies) {
+            const con = link.constituency;
             if (doc.y > 680)
                 doc.addPage();
             doc.fontSize(13).fillColor('#1a73e8').text(`Constituency: ${con.name} (${con.code})`);
             doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#e0e0e0');
             doc.moveDown(0.3);
             doc.fontSize(10).fillColor('#333');
-            doc.text(`State: ${con.state} | District: ${con.district}`);
             doc.text(`Total Voters: ${con._count.voters}`);
             doc.moveDown(0.5);
             // Candidates table header
@@ -85,11 +89,16 @@ class ReportService {
         const election = await database_1.prisma.election.findUnique({
             where: { id: electionId },
             include: {
-                constituencies: {
+                electionConstituencies: {
                     include: {
-                        candidates: {
-                            include: { party: true, _count: { select: { votes: true } } },
-                            orderBy: { votes: { _count: 'desc' } },
+                        constituency: {
+                            include: {
+                                candidates: {
+                                    where: { electionId },
+                                    include: { party: true, _count: { select: { votes: true } } },
+                                    orderBy: { votes: { _count: 'desc' } },
+                                },
+                            },
                         },
                     },
                 },
@@ -110,7 +119,8 @@ class ReportService {
         sheet.getCell('A2').value = `Generated: ${new Date().toLocaleString('en-IN')}`;
         sheet.getCell('A2').alignment = { horizontal: 'center' };
         let row = 4;
-        for (const con of election.constituencies) {
+        for (const link of election.electionConstituencies) {
+            const con = link.constituency;
             sheet.getCell(`A${row}`).value = `Constituency: ${con.name} (${con.code})`;
             sheet.getCell(`A${row}`).font = { bold: true, size: 12, color: { argb: 'FF1A73E8' } };
             row++;

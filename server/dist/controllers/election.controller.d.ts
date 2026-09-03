@@ -4,9 +4,14 @@ export declare class ElectionController {
     getById(req: Request, res: Response, next: NextFunction): Promise<void>;
     getStats(req: Request, res: Response, next: NextFunction): Promise<void>;
     getDashboardStats(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getReadiness(req: Request, res: Response, next: NextFunction): Promise<void>;
     create(req: Request, res: Response, next: NextFunction): Promise<void>;
     update(req: Request, res: Response, next: NextFunction): Promise<void>;
     updateStatus(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getConstituencies(req: Request, res: Response, next: NextFunction): Promise<void>;
+    setConstituencies(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getOfficer(req: Request, res: Response, next: NextFunction): Promise<void>;
+    setOfficer(req: Request, res: Response, next: NextFunction): Promise<void>;
     publishResults(req: Request, res: Response, next: NextFunction): Promise<void>;
     getResults(req: Request, res: Response, next: NextFunction): Promise<void>;
     delete(req: Request, res: Response, next: NextFunction): Promise<void>;

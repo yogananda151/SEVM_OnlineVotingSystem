@@ -92,24 +92,52 @@ async function main() {
   });
   console.log('✅ Election created');
 
-  // ── Constituency ──────────────────────────────────────────
-  const constituency = await prisma.constituency.upsert({
-    where: { id: 1 },
+  // ── Region ────────────────────────────────────────────────
+  const region = await prisma.region.upsert({
+    where: { code: 'REG-DL' },
     update: {},
     create: {
-      electionId: election.id,
+      name: 'National Capital Territory of Delhi',
+      code: 'REG-DL',
+      description: 'Delhi NCT Region',
+      isActive: true,
+    },
+  });
+  console.log('✅ Region created');
+
+  // ── Constituency ──────────────────────────────────────────
+  const constituency = await prisma.constituency.upsert({
+    where: { code: 'DL-01' },
+    update: {},
+    create: {
+      regionId: region.id,
       name: 'Central Delhi',
       code: 'DL-01',
-      state: 'Delhi',
-      district: 'Central Delhi',
-      totalVoters: 500,
+      description: 'Central Delhi Parliamentary Constituency',
+      isActive: true,
     },
   });
   console.log('✅ Constituency created');
 
+  // ── Link Election & Constituency ──────────────────────────
+  await prisma.electionConstituency.upsert({
+    where: {
+      electionId_constituencyId: {
+        electionId: election.id,
+        constituencyId: constituency.id,
+      },
+    },
+    update: {},
+    create: {
+      electionId: election.id,
+      constituencyId: constituency.id,
+    },
+  });
+  console.log('✅ Election constituency link created');
+
   // ── Polling Station ───────────────────────────────────────
   const station = await prisma.pollingStation.upsert({
-    where: { id: 1 },
+    where: { code: 'PS-DL-001' },
     update: {},
     create: {
       constituencyId: constituency.id,
@@ -142,13 +170,18 @@ async function main() {
   });
   console.log('✅ Officer created:', officerUser.email);
 
+  const officerRecord = await prisma.electionOfficer.findUnique({ where: { userId: officerUser.id } });
+  if (officerRecord) {
+    await prisma.election.update({ where: { id: election.id }, data: { officerId: officerRecord.id } });
+  }
+
   // ── Candidates ────────────────────────────────────────────
   await prisma.candidate.createMany({
     data: [
-      { constituencyId: constituency.id, partyId: party1.id, fullName: 'Amit Sharma', age: 52, qualification: 'MBA', serialNumber: 1 },
-      { constituencyId: constituency.id, partyId: party2.id, fullName: 'Priya Malhotra', age: 45, qualification: 'LLB', serialNumber: 2 },
-      { constituencyId: constituency.id, partyId: party3.id, fullName: 'Suresh Patel', age: 58, qualification: 'B.Com', serialNumber: 3 },
-      { constituencyId: constituency.id, partyId: null, fullName: 'Independent Candidate', age: 40, qualification: 'Graduate', serialNumber: 4, isIndependent: true },
+      { electionId: election.id, constituencyId: constituency.id, partyId: party1.id, fullName: 'Amit Sharma', age: 52, qualification: 'MBA', serialNumber: 1 },
+      { electionId: election.id, constituencyId: constituency.id, partyId: party2.id, fullName: 'Priya Malhotra', age: 45, qualification: 'LLB', serialNumber: 2 },
+      { electionId: election.id, constituencyId: constituency.id, partyId: party3.id, fullName: 'Suresh Patel', age: 58, qualification: 'B.Com', serialNumber: 3 },
+      { electionId: election.id, constituencyId: constituency.id, partyId: null, fullName: 'Independent Candidate', age: 40, qualification: 'Graduate', serialNumber: 4, isIndependent: true },
     ],
     skipDuplicates: true,
   });

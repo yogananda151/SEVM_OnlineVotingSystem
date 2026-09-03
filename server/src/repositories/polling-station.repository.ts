@@ -87,6 +87,8 @@ export class PollingStationRepository {
   }
 
   async delete(id: number) {
+    const station = await prisma.pollingStation.findUnique({ where: { id } });
+    if (!station) throw new Error('Polling station not found');
     const voterCount = await prisma.voter.count({ where: { pollingStationId: id, deletedAt: null } });
     const voteCount = await prisma.vote.count({ where: { pollingStationId: id } });
     if (voteCount > 0) {
@@ -97,7 +99,16 @@ export class PollingStationRepository {
         `Cannot delete polling station. It has ${voterCount} registered voter(s). Reassign or remove them first.`,
       );
     }
-    return prisma.pollingStation.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
+    const now = new Date();
+    const timestamp = Date.now();
+    return prisma.pollingStation.update({
+      where: { id },
+      data: {
+        code: `${station.code}_del_${timestamp}`,
+        deletedAt: now,
+        isActive: false,
+      },
+    });
   }
 
   async getTurnout(id: number) {

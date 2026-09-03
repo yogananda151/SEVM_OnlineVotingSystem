@@ -6,13 +6,12 @@ export declare class PollingStationRepository {
             votes: number;
         };
         constituency: {
+            code: string;
             name: string;
             id: number;
-            code: string;
-            election: {
+            region: {
                 name: string;
                 id: number;
-                status: import(".prisma/client").$Enums.ElectionStatus;
             };
         };
         officers: ({
@@ -20,25 +19,27 @@ export declare class PollingStationRepository {
                 email: string;
             };
         } & {
+            employeeId: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
             userId: number;
             fullName: string;
-            employeeId: string;
             phone: string;
             pollingStationId: number | null;
         })[];
     } & {
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         constituencyId: number;
-        code: string;
         address: string;
+        capacity: number;
         totalBooths: number;
         machineStatus: import(".prisma/client").$Enums.MachineStatus;
         isPollingActive: boolean;
@@ -49,36 +50,31 @@ export declare class PollingStationRepository {
             votes: number;
         };
         constituency: {
-            election: {
+            region: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
                 description: string | null;
-                electionType: string;
-                scheduledDate: Date;
-                startTime: Date | null;
-                endTime: Date | null;
-                status: import(".prisma/client").$Enums.ElectionStatus;
-                isResultPublished: boolean;
             };
         } & {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            code: string;
-            electionId: number;
-            state: string;
-            district: string;
-            totalVoters: number;
+            description: string | null;
+            regionId: number;
         };
         officers: ({
             user: {
-                id: number;
                 email: string;
+                id: number;
                 passwordHash: string;
                 role: import(".prisma/client").$Enums.UserRole;
                 isActive: boolean;
@@ -88,25 +84,27 @@ export declare class PollingStationRepository {
                 deletedAt: Date | null;
             };
         } & {
+            employeeId: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
             userId: number;
             fullName: string;
-            employeeId: string;
             phone: string;
             pollingStationId: number | null;
         })[];
     } & {
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         constituencyId: number;
-        code: string;
         address: string;
+        capacity: number;
         totalBooths: number;
         machineStatus: import(".prisma/client").$Enums.MachineStatus;
         isPollingActive: boolean;
@@ -116,29 +114,42 @@ export declare class PollingStationRepository {
         name: string;
         code: string;
         address: string;
+        capacity?: number;
         totalBooths?: number;
     }): Promise<{
         constituency: {
+            region: {
+                code: string;
+                name: string;
+                id: number;
+                isActive: boolean;
+                createdAt: Date;
+                updatedAt: Date;
+                deletedAt: Date | null;
+                description: string | null;
+            };
+        } & {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            code: string;
-            electionId: number;
-            state: string;
-            district: string;
-            totalVoters: number;
+            description: string | null;
+            regionId: number;
         };
     } & {
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         constituencyId: number;
-        code: string;
         address: string;
+        capacity: number;
         totalBooths: number;
         machineStatus: import(".prisma/client").$Enums.MachineStatus;
         isPollingActive: boolean;
@@ -146,44 +157,51 @@ export declare class PollingStationRepository {
     update(id: number, data: Partial<{
         name: string;
         address: string;
+        capacity: number;
         totalBooths: number;
         machineStatus: MachineStatus;
         isPollingActive: boolean;
     }>): Promise<{
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         constituencyId: number;
-        code: string;
         address: string;
+        capacity: number;
         totalBooths: number;
         machineStatus: import(".prisma/client").$Enums.MachineStatus;
         isPollingActive: boolean;
     }>;
     updateMachineStatus(id: number, machineStatus: MachineStatus, isPollingActive?: boolean): Promise<{
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         constituencyId: number;
-        code: string;
         address: string;
+        capacity: number;
         totalBooths: number;
         machineStatus: import(".prisma/client").$Enums.MachineStatus;
         isPollingActive: boolean;
     }>;
     delete(id: number): Promise<{
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         constituencyId: number;
-        code: string;
         address: string;
+        capacity: number;
         totalBooths: number;
         machineStatus: import(".prisma/client").$Enums.MachineStatus;
         isPollingActive: boolean;

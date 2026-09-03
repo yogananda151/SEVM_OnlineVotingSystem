@@ -25,16 +25,16 @@ export const generateVoteHash = (data: {
   return crypto.createHash('sha256').update(payload).digest('hex');
 };
 
-// ── Aadhaar hash (simulate storing hashed Aadhaar) ───────────────
+// ── Aadhaar hash (salted HMAC simulation) ─────────────────────────
 
 export const hashAadhaar = (aadhaar: string): string => {
-  return crypto.createHash('sha256').update(aadhaar).digest('hex');
+  return crypto.createHmac('sha256', config.jwt.secret).update(aadhaar).digest('hex');
 };
 
-// ── OTP generation ────────────────────────────────────────────────
+// ── Cryptographically secure OTP generation ──────────────────────
 
 export const generateOTP = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 };
 
 // ── Reference number for VVPAT ────────────────────────────────────

@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { verificationService } from '../services/verification.service';
 import { voteRepository } from '../repositories/vote.repository';
+import { candidateRepository } from '../repositories/candidate.repository';
+import { pollingStationRepository } from '../repositories/polling-station.repository';
 import { sendSuccess } from '../utils/response';
 import { auditRepository } from '../repositories/audit.repository';
 
@@ -46,6 +48,30 @@ export class VotingController {
       const vvpat = await voteRepository.getVvpat(referenceNumber);
       if (!vvpat) { res.status(404).json({ success: false, message: 'VVPAT not found' }); return; }
       sendSuccess(res, vvpat);
+    } catch (err) { next(err); }
+  }
+
+  async getBallotCandidates(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const constituencyId = req.query.constituencyId ? Number(req.query.constituencyId) : undefined;
+      const electionId = req.query.electionId ? Number(req.query.electionId) : undefined;
+      const candidates = await candidateRepository.findAll(electionId, constituencyId);
+      sendSuccess(res, candidates);
+    } catch (err) { next(err); }
+  }
+
+  async getPublicStations(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const stations = await pollingStationRepository.findAll();
+      sendSuccess(res, stations);
+    } catch (err) { next(err); }
+  }
+
+  async getPublicStationById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const station = await pollingStationRepository.findById(Number(req.params.id));
+      if (!station) { res.status(404).json({ success: false, message: 'Polling station not found' }); return; }
+      sendSuccess(res, station);
     } catch (err) { next(err); }
   }
 }

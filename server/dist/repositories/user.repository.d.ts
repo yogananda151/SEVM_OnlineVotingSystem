@@ -4,24 +4,24 @@ export declare class UserRepository {
     findById(id: number): Promise<User | null>;
     findAllOfficers(): Promise<({
         user: {
-            id: number;
             email: string;
+            id: number;
             isActive: boolean;
             lastLoginAt: Date | null;
         };
         pollingStation: {
+            code: string;
             name: string;
             id: number;
-            code: string;
         } | null;
     } & {
+        employeeId: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         userId: number;
         fullName: string;
-        employeeId: string;
         phone: string;
         pollingStationId: number | null;
     })[]>;
@@ -34,19 +34,19 @@ export declare class UserRepository {
         pollingStationId?: number | null;
     }): Promise<{
         officer: {
+            employeeId: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
             userId: number;
             fullName: string;
-            employeeId: string;
             phone: string;
             pollingStationId: number | null;
         } | null;
     } & {
-        id: number;
         email: string;
+        id: number;
         passwordHash: string;
         role: import(".prisma/client").$Enums.UserRole;
         isActive: boolean;
@@ -60,13 +60,13 @@ export declare class UserRepository {
         phone: string;
         pollingStationId: number | null;
     }>): Promise<{
+        employeeId: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
         userId: number;
         fullName: string;
-        employeeId: string;
         phone: string;
         pollingStationId: number | null;
     }>;

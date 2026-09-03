@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, MapPin, ArrowRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, ArrowRight, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { constituencyService, regionService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { normaliseValidationErrors } from '../../lib/validationErrors';
+import { toast } from 'react-hot-toast';
 
 interface Constituency {
   id: number;
@@ -36,20 +38,42 @@ export const ConstituenciesPage: React.FC = () => {
     () => constituencyService.getAll(filterRegion ? Number(filterRegion) : undefined),
     [filterRegion],
   );
-  const { data: constituencies, loading, execute: refetch } = useAsync<Constituency[]>(fetchConstituencies);
+  const { data: constituencies, loading, execute: refetch } = useAsync<Constituency[]>(fetchConstituencies, true, [fetchConstituencies]);
 
   const fetchRegions = useCallback(() => regionService.getAll(), []);
   const { data: regions } = useAsync<Region[]>(fetchRegions);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>();
+  const { register, handleSubmit, reset, setValue, watch, setError, formState: { errors } } = useForm<FormData>();
 
   const { mutate: create, loading: creating } = useMutation(
     (d: object) => constituencyService.create(d),
-    { onSuccess: () => { refetch(); setModalOpen(false); reset(); }, successMessage: 'Constituency created' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); reset(); },
+      successMessage: 'Constituency created',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+        } else {
+          toast.error(data.message || 'Failed to create constituency.');
+        }
+      },
+    },
   );
   const { mutate: update, loading: updating } = useMutation(
     ({ id, data }: { id: number; data: object }) => constituencyService.update(id, data),
-    { onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); }, successMessage: 'Constituency updated' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); },
+      successMessage: 'Constituency updated',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+        } else {
+          toast.error(data.message || 'Failed to update constituency.');
+        }
+      },
+    },
   );
   const { mutate: del, loading: deleting } = useMutation(
     (id: number) => constituencyService.delete(id),
@@ -168,31 +192,51 @@ export const ConstituenciesPage: React.FC = () => {
         onClose={() => { setModalOpen(false); reset(); setEditTarget(null); }}
         title={editTarget ? 'Edit Constituency' : 'Add Constituency'}
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div>
-            <label className="label">Region *</label>
-            <select {...register('regionId', { required: 'Please select a region' })} className="input">
+            <label className="label" htmlFor="con-region">Region *</label>
+            <select
+              id="con-region"
+              {...register('regionId', { required: 'Please select a region.' })}
+              className={`input ${errors.regionId ? 'input-error' : ''}`}
+              aria-invalid={!!errors.regionId}
+              aria-describedby={errors.regionId ? 'con-region-error' : undefined}
+            >
               <option value="">Select region...</option>
               {(regions || []).map((r) => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
             </select>
-            {errors.regionId && <p className="mt-1 text-xs text-red-400">{errors.regionId.message}</p>}
+            {errors.regionId && <p id="con-region-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.regionId.message}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Constituency Name *</label>
-              <input {...register('name', { required: 'Name is required' })} className="input" placeholder="e.g. Chennai North 01" />
-              {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
+              <label className="label" htmlFor="con-name">Constituency Name *</label>
+              <input
+                id="con-name"
+                {...register('name', { required: 'Constituency name is required.' })}
+                className={`input ${errors.name ? 'input-error' : ''}`}
+                placeholder="e.g. Chennai North 01"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'con-name-error' : undefined}
+              />
+              {errors.name && <p id="con-name-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.name.message}</p>}
             </div>
             <div>
-              <label className="label">Code *</label>
-              <input {...register('code', { required: 'Code is required' })} className="input" placeholder="e.g. CN-01" />
+              <label className="label" htmlFor="con-code">Code *</label>
+              <input
+                id="con-code"
+                {...register('code', { required: 'Constituency code is required.' })}
+                className={`input ${errors.code ? 'input-error' : ''}`}
+                placeholder="e.g. CN-01"
+                aria-invalid={!!errors.code}
+                aria-describedby={errors.code ? 'con-code-error' : undefined}
+              />
               <p className="mt-1 text-xs text-slate-500">Must be globally unique</p>
-              {errors.code && <p className="mt-1 text-xs text-red-400">{errors.code.message}</p>}
+              {errors.code && <p id="con-code-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.code.message}</p>}
             </div>
           </div>
           <div>
-            <label className="label">Description</label>
-            <textarea {...register('description')} className="input min-h-[60px] resize-none" placeholder="Optional..." />
+            <label className="label" htmlFor="con-desc">Description</label>
+            <textarea id="con-desc" {...register('description')} className="input min-h-[60px] resize-none" placeholder="Optional..." />
           </div>
           <div className="flex gap-3 justify-end">
             <button type="button" className="btn-secondary" onClick={() => { setModalOpen(false); reset(); }}>Cancel</button>

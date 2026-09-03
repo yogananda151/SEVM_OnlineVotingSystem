@@ -2,12 +2,20 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pollingStationRepository = exports.PollingStationRepository = void 0;
 const database_1 = require("../config/database");
+const error_middleware_1 = require("../middleware/error.middleware");
 class PollingStationRepository {
     async findAll(constituencyId) {
         return database_1.prisma.pollingStation.findMany({
             where: { deletedAt: null, ...(constituencyId && { constituencyId }) },
             include: {
-                constituency: { select: { id: true, name: true, code: true, election: { select: { id: true, name: true, status: true } } } },
+                constituency: {
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true,
+                        region: { select: { id: true, name: true } },
+                    },
+                },
                 officers: { where: { deletedAt: null }, include: { user: { select: { email: true } } } },
                 _count: { select: { voters: true, votes: true } },
             },
@@ -18,14 +26,28 @@ class PollingStationRepository {
         return database_1.prisma.pollingStation.findUnique({
             where: { id },
             include: {
-                constituency: { include: { election: true } },
-                officers: { include: { user: true } },
+                constituency: { include: { region: true } },
+                officers: { where: { deletedAt: null }, include: { user: true } },
                 _count: { select: { voters: true, votes: true } },
             },
         });
     }
     async create(data) {
-        return database_1.prisma.pollingStation.create({ data, include: { constituency: true } });
+        // Validate constituency exists and is active
+        const constituency = await database_1.prisma.constituency.findUnique({
+            where: { id: data.constituencyId, deletedAt: null },
+        });
+        if (!constituency) {
+            throw new Error('The selected constituency does not exist. Please select a valid constituency.');
+        }
+        // Pre-check: code must be unique among active (non-deleted) polling stations
+        const existingCode = await database_1.prisma.pollingStation.findFirst({
+            where: { code: data.code, deletedAt: null },
+        });
+        if (existingCode) {
+            throw new error_middleware_1.AppError(`A polling station with code "${data.code}" already exists. Please use a different code.`, 409);
+        }
+        return database_1.prisma.pollingStation.create({ data, include: { constituency: { include: { region: true } } } });
     }
     async update(id, data) {
         return database_1.prisma.pollingStation.update({ where: { id }, data });
@@ -37,7 +59,27 @@ class PollingStationRepository {
         });
     }
     async delete(id) {
-        return database_1.prisma.pollingStation.update({ where: { id }, data: { deletedAt: new Date() } });
+        const station = await database_1.prisma.pollingStation.findUnique({ where: { id } });
+        if (!station)
+            throw new Error('Polling station not found');
+        const voterCount = await database_1.prisma.voter.count({ where: { pollingStationId: id, deletedAt: null } });
+        const voteCount = await database_1.prisma.vote.count({ where: { pollingStationId: id } });
+        if (voteCount > 0) {
+            throw new Error('Cannot delete polling station. Votes have already been cast here.');
+        }
+        if (voterCount > 0) {
+            throw new Error(`Cannot delete polling station. It has ${voterCount} registered voter(s). Reassign or remove them first.`);
+        }
+        const now = new Date();
+        const timestamp = Date.now();
+        return database_1.prisma.pollingStation.update({
+            where: { id },
+            data: {
+                code: `${station.code}_del_${timestamp}`,
+                deletedAt: now,
+                isActive: false,
+            },
+        });
     }
     async getTurnout(id) {
         const [totalVoters, votedCount] = await Promise.all([

@@ -73,6 +73,41 @@ export class VoterController {
       sendSuccess(res, null, 'Voter deleted');
     } catch (err) { next(err); }
   }
+
+  async bulkCreate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { voters } = req.body;
+      if (!Array.isArray(voters) || voters.length === 0) {
+        res.status(400).json({ success: false, message: 'Array of voters is required.' });
+        return;
+      }
+
+      const formatted = voters.map((v: any) => ({
+        constituencyId: Number(v.constituencyId),
+        pollingStationId: Number(v.pollingStationId),
+        fullName: String(v.fullName || '').trim(),
+        voterId: String(v.voterId || '').trim(),
+        aadhaarHash: v.aadhaarNumber ? hashAadhaar(String(v.aadhaarNumber).trim()) : undefined,
+        dateOfBirth: new Date(v.dateOfBirth || '2000-01-01'),
+        gender: v.gender || 'Other',
+        address: v.address || 'Address not specified',
+        phone: v.phone ? String(v.phone).trim() : undefined,
+        serialNumber: Number(v.serialNumber) || 1,
+      }));
+
+      const count = await voterRepository.bulkCreate(formatted);
+
+      await auditRepository.create({
+        userId: req.user?.userId,
+        action: 'CREATE',
+        module: 'Voter',
+        description: `Bulk imported ${count.count} voters`,
+        ipAddress: req.ip,
+      });
+
+      sendSuccess(res, count, `Successfully imported ${count.count} voters`, 201);
+    } catch (err) { next(err); }
+  }
 }
 
 export const voterController = new VoterController();

@@ -85,11 +85,20 @@ export class CandidateRepository {
   }
 
   async delete(id: number) {
+    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    if (!candidate) throw new Error('Candidate not found');
     const voteCount = await prisma.vote.count({ where: { candidateId: id } });
     if (voteCount > 0) {
       throw new Error('Cannot remove candidate. They have already received votes.');
     }
-    return prisma.candidate.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
+    return prisma.candidate.update({
+      where: { id },
+      data: {
+        serialNumber: -candidate.id,
+        deletedAt: new Date(),
+        isActive: false,
+      },
+    });
   }
 }
 

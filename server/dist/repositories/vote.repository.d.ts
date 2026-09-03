@@ -5,9 +5,9 @@ export declare class VoteRepository {
         pollingStationId: number;
     }): Promise<{
         vote: {
+            voterId: number;
             id: number;
             pollingStationId: number;
-            voterId: number;
             candidateId: number;
             voteHash: string;
             referenceNumber: string;
@@ -48,6 +48,7 @@ export declare class VoteRepository {
             deletedAt: Date | null;
             fullName: string;
             constituencyId: number;
+            electionId: number;
             partyId: number | null;
             age: number;
             qualification: string | null;
@@ -56,6 +57,7 @@ export declare class VoteRepository {
             photoUrl: string | null;
         };
         election: {
+            officerId: number | null;
             name: string;
             id: number;
             createdAt: Date;
@@ -93,6 +95,7 @@ export declare class VoteRepository {
             deletedAt: Date | null;
             fullName: string;
             constituencyId: number;
+            electionId: number;
             partyId: number | null;
             age: number;
             qualification: string | null;
@@ -138,6 +141,7 @@ export declare class VoteRepository {
             deletedAt: Date | null;
             fullName: string;
             constituencyId: number;
+            electionId: number;
             partyId: number | null;
             age: number;
             qualification: string | null;
@@ -146,20 +150,20 @@ export declare class VoteRepository {
             photoUrl: string | null;
         })[];
     } & {
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        code: string;
-        electionId: number;
-        state: string;
-        district: string;
-        totalVoters: number;
+        description: string | null;
+        regionId: number;
     })[]>;
     getDashboardStats(): Promise<{
         totalElections: number;
         activeElection: {
+            officerId: number | null;
             name: string;
             id: number;
             createdAt: Date;

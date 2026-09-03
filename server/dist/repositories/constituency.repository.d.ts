@@ -1,82 +1,50 @@
 export declare class ConstituencyRepository {
-    findAll(electionId?: number): Promise<({
+    findAll(regionId?: number): Promise<({
         _count: {
             voters: number;
             pollingStations: number;
-            candidates: number;
         };
-        election: {
+        region: {
+            code: string;
             name: string;
             id: number;
-            status: import(".prisma/client").$Enums.ElectionStatus;
         };
     } & {
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
+        description: string | null;
+        regionId: number;
+    })[]>;
+    findActive(regionId?: number): Promise<({
+        _count: {
+            voters: number;
+            pollingStations: number;
+        };
+        region: {
+            code: string;
+            name: string;
+            id: number;
+        };
+    } & {
         code: string;
-        electionId: number;
-        state: string;
-        district: string;
-        totalVoters: number;
+        name: string;
+        id: number;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        description: string | null;
+        regionId: number;
     })[]>;
     findById(id: number): Promise<({
         _count: {
             voters: number;
         };
-        election: {
-            name: string;
-            id: number;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
-            description: string | null;
-            electionType: string;
-            scheduledDate: Date;
-            startTime: Date | null;
-            endTime: Date | null;
-            status: import(".prisma/client").$Enums.ElectionStatus;
-            isResultPublished: boolean;
-        };
-        pollingStations: ({
-            officers: ({
-                user: {
-                    id: number;
-                    email: string;
-                    passwordHash: string;
-                    role: import(".prisma/client").$Enums.UserRole;
-                    isActive: boolean;
-                    lastLoginAt: Date | null;
-                    createdAt: Date;
-                    updatedAt: Date;
-                    deletedAt: Date | null;
-                };
-            } & {
-                id: number;
-                createdAt: Date;
-                updatedAt: Date;
-                deletedAt: Date | null;
-                userId: number;
-                fullName: string;
-                employeeId: string;
-                phone: string;
-                pollingStationId: number | null;
-            })[];
-        } & {
-            name: string;
-            id: number;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
-            constituencyId: number;
-            code: string;
-            address: string;
-            totalBooths: number;
-            machineStatus: import(".prisma/client").$Enums.MachineStatus;
-            isPollingActive: boolean;
-        })[];
         candidates: ({
             party: {
                 symbol: string | null;
@@ -99,6 +67,7 @@ export declare class ConstituencyRepository {
             deletedAt: Date | null;
             fullName: string;
             constituencyId: number;
+            electionId: number;
             partyId: number | null;
             age: number;
             qualification: string | null;
@@ -106,81 +75,123 @@ export declare class ConstituencyRepository {
             isIndependent: boolean;
             photoUrl: string | null;
         })[];
-    } & {
-        name: string;
-        id: number;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
-        code: string;
-        electionId: number;
-        state: string;
-        district: string;
-        totalVoters: number;
-    }) | null>;
-    create(data: {
-        electionId: number;
-        name: string;
-        code: string;
-        state: string;
-        district: string;
-        totalVoters?: number;
-    }): Promise<{
-        election: {
+        region: {
+            code: string;
             name: string;
             id: number;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
             description: string | null;
-            electionType: string;
-            scheduledDate: Date;
-            startTime: Date | null;
-            endTime: Date | null;
-            status: import(".prisma/client").$Enums.ElectionStatus;
-            isResultPublished: boolean;
         };
+        pollingStations: ({
+            _count: {
+                voters: number;
+            };
+            officers: ({
+                user: {
+                    email: string;
+                    id: number;
+                    passwordHash: string;
+                    role: import(".prisma/client").$Enums.UserRole;
+                    isActive: boolean;
+                    lastLoginAt: Date | null;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    deletedAt: Date | null;
+                };
+            } & {
+                employeeId: string;
+                id: number;
+                createdAt: Date;
+                updatedAt: Date;
+                deletedAt: Date | null;
+                userId: number;
+                fullName: string;
+                phone: string;
+                pollingStationId: number | null;
+            })[];
+        } & {
+            code: string;
+            name: string;
+            id: number;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            constituencyId: number;
+            address: string;
+            capacity: number;
+            totalBooths: number;
+            machineStatus: import(".prisma/client").$Enums.MachineStatus;
+            isPollingActive: boolean;
+        })[];
     } & {
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
+        description: string | null;
+        regionId: number;
+    }) | null>;
+    create(data: {
+        regionId: number;
+        name: string;
         code: string;
-        electionId: number;
-        state: string;
-        district: string;
-        totalVoters: number;
+        description?: string;
+    }): Promise<{
+        region: {
+            code: string;
+            name: string;
+            id: number;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            description: string | null;
+        };
+    } & {
+        code: string;
+        name: string;
+        id: number;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        description: string | null;
+        regionId: number;
     }>;
     update(id: number, data: Partial<{
         name: string;
         code: string;
-        state: string;
-        district: string;
-        totalVoters: number;
+        description: string;
+        regionId: number;
+        isActive: boolean;
     }>): Promise<{
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        code: string;
-        electionId: number;
-        state: string;
-        district: string;
-        totalVoters: number;
+        description: string | null;
+        regionId: number;
     }>;
     delete(id: number): Promise<{
+        code: string;
         name: string;
         id: number;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        code: string;
-        electionId: number;
-        state: string;
-        district: string;
-        totalVoters: number;
+        description: string | null;
+        regionId: number;
     }>;
 }
 export declare const constituencyRepository: ConstituencyRepository;

@@ -40,18 +40,52 @@ export const errorHandler = (
 
   // Known application errors
   if (err instanceof AppError) {
+    const lower = err.message.toLowerCase();
+    const errors: Array<{ field: string; message: string }> = [];
+    if (lower.includes('email')) {
+      errors.push({ field: 'email', message: err.message });
+    } else if (lower.includes('employee id') || lower.includes('employeeid')) {
+      errors.push({ field: 'employeeId', message: err.message });
+    } else if (lower.includes('voter id') || lower.includes('voterid')) {
+      errors.push({ field: 'voterId', message: err.message });
+    } else if (lower.includes('officer')) {
+      errors.push({ field: 'officerId', message: err.message });
+    }
+
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
+      ...(errors.length > 0 ? { errors } : {}),
     });
     return;
   }
 
   // Prisma unique constraint
   if ((err as { code?: string }).code === 'P2002') {
+    const metaTarget = (err as { meta?: { target?: string[] | string } }).meta?.target;
+    const targetStr = Array.isArray(metaTarget) ? metaTarget.join(' ') : String(metaTarget || '');
+    
+    let field = '';
+    let message = 'A record with this unique value already exists.';
+
+    if (targetStr.toLowerCase().includes('employeeid') || targetStr.toLowerCase().includes('employee_id')) {
+      field = 'employeeId';
+      message = 'An officer with this Employee ID already exists. Please choose a different ID.';
+    } else if (targetStr.toLowerCase().includes('email')) {
+      field = 'email';
+      message = 'An account with this email address already exists. Please choose a different email.';
+    } else if (targetStr.toLowerCase().includes('voterid') || targetStr.toLowerCase().includes('voter_id')) {
+      field = 'voterId';
+      message = 'A voter with this Voter ID already exists.';
+    } else if (targetStr.toLowerCase().includes('code')) {
+      field = 'code';
+      message = 'This code is already in use. Please enter a unique code.';
+    }
+
     res.status(409).json({
       success: false,
-      message: 'A record with this value already exists.',
+      message,
+      ...(field ? { errors: [{ field, message }] } : {}),
     });
     return;
   }

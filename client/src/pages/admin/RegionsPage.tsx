@@ -1,10 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Globe, Search, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Globe, Search, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { regionService, constituencyService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
 import { useNavigate } from 'react-router-dom';
+import { normaliseValidationErrors } from '../../lib/validationErrors';
+import { toast } from 'react-hot-toast';
 
 interface Region {
   id: number;
@@ -28,16 +30,38 @@ export const RegionsPage: React.FC = () => {
   const fetchData = useCallback(() => regionService.getAll(), []);
   const { data: regions, loading, execute: refetch } = useAsync<Region[]>(fetchData);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>();
+  const { register, handleSubmit, reset, setValue, setError, formState: { errors } } = useForm<FormData>();
 
   const { mutate: create, loading: creating } = useMutation(
     (d: object) => regionService.create(d),
-    { onSuccess: () => { refetch(); setModalOpen(false); reset(); }, successMessage: 'Region created' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); reset(); },
+      successMessage: 'Region created',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+        } else {
+          toast.error(data.message || 'Failed to create region.');
+        }
+      },
+    },
   );
 
   const { mutate: update, loading: updating } = useMutation(
     ({ id, data }: { id: number; data: object }) => regionService.update(id, data),
-    { onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); }, successMessage: 'Region updated' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); },
+      successMessage: 'Region updated',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+        } else {
+          toast.error(data.message || 'Failed to update region.');
+        }
+      },
+    },
   );
 
   const { mutate: del, loading: deleting } = useMutation(
@@ -169,21 +193,40 @@ export const RegionsPage: React.FC = () => {
         onClose={() => { setModalOpen(false); reset(); setEditTarget(null); }}
         title={editTarget ? 'Edit Region' : 'Add Region'}
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div>
-            <label className="label">Region Name *</label>
-            <input {...register('name', { required: 'Region name is required' })} className="input" placeholder="e.g. Tamil Nadu North" />
-            {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
+            <label className="label" htmlFor="region-name">Region Name *</label>
+            <input
+              id="region-name"
+              {...register('name', { required: 'Region name is required.' })}
+              className={`input ${errors.name ? 'input-error' : ''}`}
+              placeholder="e.g. Tamil Nadu North"
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'region-name-error' : undefined}
+            />
+            {errors.name && <p id="region-name-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.name.message}</p>}
           </div>
           <div>
-            <label className="label">Region Code *</label>
-            <input {...register('code', { required: 'Code is required' })} className="input" placeholder="e.g. TN-N" />
+            <label className="label" htmlFor="region-code">Region Code *</label>
+            <input
+              id="region-code"
+              {...register('code', { required: 'Region code is required.' })}
+              className={`input ${errors.code ? 'input-error' : ''}`}
+              placeholder="e.g. TN-N"
+              aria-invalid={!!errors.code}
+              aria-describedby={errors.code ? 'region-code-error' : undefined}
+            />
             <p className="mt-1 text-xs text-slate-500">Short unique identifier (e.g. TN-N, DL-W)</p>
-            {errors.code && <p className="mt-1 text-xs text-red-400">{errors.code.message}</p>}
+            {errors.code && <p id="region-code-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.code.message}</p>}
           </div>
           <div>
-            <label className="label">Description</label>
-            <textarea {...register('description')} className="input min-h-[70px] resize-none" placeholder="Optional description..." />
+            <label className="label" htmlFor="region-description">Description</label>
+            <textarea
+              id="region-description"
+              {...register('description')}
+              className="input min-h-[70px] resize-none"
+              placeholder="Optional description..."
+            />
           </div>
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" className="btn-secondary" onClick={() => { setModalOpen(false); reset(); }}>Cancel</button>

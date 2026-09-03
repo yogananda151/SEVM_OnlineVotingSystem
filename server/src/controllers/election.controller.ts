@@ -6,6 +6,7 @@ import { auditRepository } from '../repositories/audit.repository';
 import { sendSuccess, sendError } from '../utils/response';
 import { ElectionStatus } from '@prisma/client';
 import { AppError } from '../middleware/error.middleware';
+import { prisma } from '../config/database';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -112,7 +113,7 @@ export class ElectionController {
         );
       }
 
-      // Before activating, check readiness
+      // Before activating or scheduling, check readiness
       if (status === ElectionStatus.ACTIVE || status === ElectionStatus.SCHEDULED) {
         const readiness = await electionRepository.getReadiness(id);
         if (readiness && !readiness.isReady) {
@@ -170,6 +171,62 @@ export class ElectionController {
       sendSuccess(res, links, 'Election constituencies updated');
     } catch (err) { next(err); }
   }
+
+  // ── Election Officer ───────────────────────────────────────────────
+
+  async getOfficer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      const election = await electionRepository.findById(id);
+      if (!election) { sendError(res, 'Election not found', 404); return; }
+      sendSuccess(res, election.officer ?? null, 'Election officer retrieved');
+    } catch (err) { next(err); }
+  }
+
+  async setOfficer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      const { officerId } = req.body as { officerId: number | null };
+
+      const election = await electionRepository.findById(id);
+      if (!election) throw new AppError('Election not found.', 404);
+      if (election.status !== ElectionStatus.DRAFT && election.status !== ElectionStatus.SCHEDULED) {
+        throw new AppError('Cannot change the Election Officer after the election has been activated.', 400);
+      }
+
+      if (officerId !== null && officerId !== undefined) {
+        // Validate officer exists and is active
+        const officer = await prisma.electionOfficer.findUnique({
+          where: { id: officerId },
+          include: { user: { select: { isActive: true } } },
+        });
+        if (!officer || officer.deletedAt) {
+          throw new AppError('The selected officer does not exist. Please select a valid Election Officer.', 404);
+        }
+        if (!officer.user.isActive) {
+          throw new AppError(
+            'The selected Election Officer is inactive and cannot be assigned. Please select an active officer.',
+            400,
+          );
+        }
+      }
+
+      const updated = await electionRepository.setOfficer(id, officerId ?? null);
+      await auditRepository.create({
+        userId: req.user!.userId,
+        electionId: id,
+        action: 'UPDATE',
+        module: 'Election',
+        description: officerId
+          ? `Assigned Election Officer ID ${officerId} to election: ${election.name}`
+          : `Removed Election Officer from election: ${election.name}`,
+        ipAddress: req.ip,
+      });
+      sendSuccess(res, updated.officer, 'Election officer assigned successfully');
+    } catch (err) { next(err); }
+  }
+
+  // ── Results ────────────────────────────────────────────────────────
 
   async publishResults(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

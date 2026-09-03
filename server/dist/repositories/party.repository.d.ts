@@ -19,16 +19,15 @@ export declare class PartyRepository {
     findById(id: number): Promise<({
         candidates: ({
             constituency: {
+                code: string;
                 name: string;
                 id: number;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
-                code: string;
-                electionId: number;
-                state: string;
-                district: string;
-                totalVoters: number;
+                description: string | null;
+                regionId: number;
             };
         } & {
             id: number;
@@ -38,6 +37,7 @@ export declare class PartyRepository {
             deletedAt: Date | null;
             fullName: string;
             constituencyId: number;
+            electionId: number;
             partyId: number | null;
             age: number;
             qualification: string | null;

@@ -6,6 +6,9 @@ export class ElectionRepository {
     return prisma.election.findMany({
       where: { deletedAt: null },
       include: {
+        officer: {
+          select: { id: true, fullName: true, employeeId: true },
+        },
         electionConstituencies: {
           include: {
             constituency: {
@@ -23,6 +26,12 @@ export class ElectionRepository {
     return prisma.election.findUnique({
       where: { id, deletedAt: null },
       include: {
+        officer: {
+          include: {
+            user: { select: { id: true, email: true, isActive: true } },
+            pollingStation: { select: { id: true, name: true, code: true } },
+          },
+        },
         electionConstituencies: {
           include: {
             constituency: {
@@ -80,9 +89,25 @@ export class ElectionRepository {
       startTime: Date;
       endTime: Date;
       isResultPublished: boolean;
+      officerId: number | null;
     }>,
   ) {
     return prisma.election.update({ where: { id }, data });
+  }
+
+  async setOfficer(electionId: number, officerId: number | null) {
+    return prisma.election.update({
+      where: { id: electionId },
+      data: { officerId },
+      include: {
+        officer: {
+          include: {
+            user: { select: { id: true, email: true, isActive: true } },
+            pollingStation: { select: { id: true, name: true, code: true } },
+          },
+        },
+      },
+    });
   }
 
   async delete(id: number) {
@@ -119,7 +144,12 @@ export class ElectionRepository {
 
   /** Pre-publish readiness checklist */
   async getReadiness(electionId: number) {
-    const election = await prisma.election.findUnique({ where: { id: electionId } });
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+      include: {
+        officer: { select: { id: true, fullName: true, employeeId: true } },
+      },
+    });
     if (!election) return null;
 
     const electionConstituencies = await prisma.electionConstituency.findMany({
@@ -161,6 +191,7 @@ export class ElectionRepository {
 
     const issues: string[] = [];
     if (totalConstituencies === 0) issues.push('No constituencies selected for this election.');
+    if (!election.officer) issues.push('No Election Officer assigned. Please assign an Election Officer.');
     if (constituenciesWithoutCandidates.length > 0) {
       const names = electionConstituencies
         .filter((ec) => constituenciesWithoutCandidates.includes(ec.constituencyId))
@@ -174,12 +205,14 @@ export class ElectionRepository {
 
     return {
       election,
+      officer: election.officer,
       totalConstituencies,
       totalStations: allStations.length,
       totalVoters,
       totalCandidates: candidatesByConstituency.reduce((s, c) => s + c._count.id, 0),
       stationsWithoutOfficer: stationsWithoutOfficer.length,
       constituenciesWithoutCandidates: constituenciesWithoutCandidates.length,
+      hasElectionOfficer: !!election.officer,
       issues,
       isReady: issues.length === 0,
     };

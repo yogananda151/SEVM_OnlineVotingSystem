@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 export function useAsync<T>(
   asyncFn: () => Promise<T>,
   immediate = true,
+  deps?: React.DependencyList,
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(immediate);
@@ -29,7 +30,8 @@ export function useAsync<T>(
 
   useEffect(() => {
     if (immediate) execute();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps ? [...deps] : [execute]);
 
   return { data, loading, error, execute, setData };
 }
@@ -70,13 +72,18 @@ export function useMutation<TInput, TOutput>(
         };
       };
       const responseData = axiosErr?.response?.data;
-      const msg = responseData?.message || 'Operation failed';
+      const isNetworkError = !axiosErr?.response;
+      const msg =
+        responseData?.message ||
+        (isNetworkError
+          ? 'Unable to connect to the server. Please check your connection and try again.'
+          : 'Operation failed');
 
       // Fire structured-error callback when the caller wants field-level errors
       if (options?.onServerErrors && responseData) {
         options.onServerErrors(responseData);
       } else {
-        // Fall back to generic toast only when caller is not handling field errors
+        // Fall back to generic toast when caller is not handling field errors or on network errors
         toast.error(msg);
       }
 

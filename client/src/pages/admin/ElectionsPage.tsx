@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Vote, Play, Pause, Square, Eye, BarChart3, Settings2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Vote, Play, Square, Eye, BarChart3, Settings2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { electionService } from '../../services/api.service';
 import { Modal, ConfirmDialog, StatusBadge, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { normaliseValidationErrors } from '../../lib/validationErrors';
 
 const schema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
@@ -29,16 +30,38 @@ export const ElectionsPage: React.FC = () => {
   const fetchElections = useCallback(() => electionService.getAll(), []);
   const { data: elections, loading, execute: refetch } = useAsync<{ id: number; name: string; electionType: string; scheduledDate: string; status: string; isResultPublished: boolean; _count: { electionConstituencies: number; candidates: number } }[]>(fetchElections);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const { register, handleSubmit, reset, setValue, setError, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const { mutate: createElection, loading: creating } = useMutation(
     (data: FormData) => electionService.create({ ...data, scheduledDate: new Date(data.scheduledDate).toISOString() }),
-    { onSuccess: () => { refetch(); setModalOpen(false); reset(); }, successMessage: 'Election created successfully' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); reset(); },
+      successMessage: 'Election created successfully',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+        } else {
+          toast.error(data.message || 'Failed to create election.');
+        }
+      },
+    },
   );
 
   const { mutate: updateElection, loading: updating } = useMutation(
     (data: FormData & { id: number }) => electionService.update(data.id, { ...data, scheduledDate: new Date(data.scheduledDate).toISOString() }),
-    { onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); }, successMessage: 'Election updated' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); },
+      successMessage: 'Election updated',
+      onServerErrors: (data) => {
+        const fieldErrors = normaliseValidationErrors(data);
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+        } else {
+          toast.error(data.message || 'Failed to update election.');
+        }
+      },
+    },
   );
 
   const { mutate: deleteElection, loading: deleting } = useMutation(
@@ -142,30 +165,49 @@ export const ElectionsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create/Edit Modal */}
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditTarget(null); reset(); }} title={editTarget ? 'Edit Election' : 'Create New Election'}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div>
-            <label className="label">Election Name *</label>
-            <input {...register('name')} className={`input ${errors.name ? 'input-error' : ''}`} placeholder="e.g. General Elections 2025" />
-            {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
+            <label className="label" htmlFor="el-name">Election Name *</label>
+            <input
+              id="el-name"
+              {...register('name')}
+              className={`input ${errors.name ? 'input-error' : ''}`}
+              placeholder="e.g. General Elections 2025"
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'el-name-error' : undefined}
+            />
+            {errors.name && <p id="el-name-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.name.message}</p>}
           </div>
           <div>
-            <label className="label">Description</label>
-            <textarea {...register('description')} className="input min-h-[80px] resize-none" placeholder="Brief description..." />
+            <label className="label" htmlFor="el-description">Description</label>
+            <textarea id="el-description" {...register('description')} className="input min-h-[80px] resize-none" placeholder="Brief description..." />
           </div>
           <div>
-            <label className="label">Election Type *</label>
-            <select {...register('electionType')} className={`input ${errors.electionType ? 'input-error' : ''}`}>
+            <label className="label" htmlFor="el-type">Election Type *</label>
+            <select
+              id="el-type"
+              {...register('electionType')}
+              className={`input ${errors.electionType ? 'input-error' : ''}`}
+              aria-invalid={!!errors.electionType}
+              aria-describedby={errors.electionType ? 'el-type-error' : undefined}
+            >
               <option value="">Select type...</option>
               {ELECTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            {errors.electionType && <p className="mt-1 text-xs text-red-400">{errors.electionType.message}</p>}
+            {errors.electionType && <p id="el-type-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.electionType.message}</p>}
           </div>
           <div>
-            <label className="label">Scheduled Date *</label>
-            <input {...register('scheduledDate')} type="date" className={`input ${errors.scheduledDate ? 'input-error' : ''}`} />
-            {errors.scheduledDate && <p className="mt-1 text-xs text-red-400">{errors.scheduledDate.message}</p>}
+            <label className="label" htmlFor="el-date">Scheduled Date *</label>
+            <input
+              id="el-date"
+              {...register('scheduledDate')}
+              type="date"
+              className={`input ${errors.scheduledDate ? 'input-error' : ''}`}
+              aria-invalid={!!errors.scheduledDate}
+              aria-describedby={errors.scheduledDate ? 'el-date-error' : undefined}
+            />
+            {errors.scheduledDate && <p id="el-date-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.scheduledDate.message}</p>}
           </div>
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" className="btn-secondary" onClick={() => { setModalOpen(false); setEditTarget(null); reset(); }}>Cancel</button>

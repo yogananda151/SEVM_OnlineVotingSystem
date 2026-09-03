@@ -6,6 +6,8 @@ import { partyService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
 import { toast } from 'react-hot-toast';
 
+import { normaliseValidationErrors } from '../../lib/validationErrors';
+
 interface Party { id: number; name: string; abbreviation: string; symbol?: string; symbolUrl?: string; color: string; foundedYear?: number; isActive: boolean; _count: { candidates: number } }
 
 export const PartiesPage: React.FC = () => {
@@ -17,18 +19,35 @@ export const PartiesPage: React.FC = () => {
   const fetchParties = useCallback(() => partyService.getAll(), []);
   const { data: parties, loading, execute: refetch } = useAsync<Party[]>(fetchParties);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<{
+  const { register, handleSubmit, reset, setValue, setError, formState: { errors } } = useForm<{
     name: string; abbreviation: string; symbol?: string; color: string; foundedYear?: number;
   }>();
 
+  const handleServerErrors = (data: { message?: string; errors?: Array<{ field: string; message: string }> }) => {
+    const fieldErrors = normaliseValidationErrors(data);
+    if (fieldErrors) {
+      Object.entries(fieldErrors).forEach(([field, message]) => setError(field as any, { message }));
+    } else {
+      toast.error(data.message || 'Operation failed');
+    }
+  };
+
   const { mutate: createParty, loading: creating } = useMutation(
     (data: object) => partyService.create(data),
-    { onSuccess: () => { refetch(); setModalOpen(false); reset(); }, successMessage: 'Party created' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); reset(); },
+      successMessage: 'Party created',
+      onServerErrors: handleServerErrors,
+    },
   );
 
   const { mutate: updateParty, loading: updating } = useMutation(
     ({ id, data }: { id: number; data: object }) => partyService.update(id, data),
-    { onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); }, successMessage: 'Party updated' },
+    {
+      onSuccess: () => { refetch(); setModalOpen(false); setEditTarget(null); reset(); },
+      successMessage: 'Party updated',
+      onServerErrors: handleServerErrors,
+    },
   );
 
   const { mutate: deleteParty, loading: deleting } = useMutation(
@@ -116,12 +135,12 @@ export const PartiesPage: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div><label className="label">Party Name *</label><input {...register('name', { required: 'Required' })} className="input" placeholder="National Democratic Alliance" />{errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}</div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="label">Abbreviation *</label><input {...register('abbreviation', { required: 'Required' })} className="input" placeholder="NDA" /></div>
-            <div><label className="label">Symbol Name</label><input {...register('symbol')} className="input" placeholder="Lotus" /></div>
+            <div><label className="label">Abbreviation *</label><input {...register('abbreviation', { required: 'Required' })} className="input" placeholder="NDA" />{errors.abbreviation && <p className="mt-1 text-xs text-red-400">{errors.abbreviation.message}</p>}</div>
+            <div><label className="label">Symbol Name</label><input {...register('symbol')} className="input" placeholder="Lotus" />{errors.symbol && <p className="mt-1 text-xs text-red-400">{errors.symbol.message}</p>}</div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="label">Color</label><input {...register('color')} type="color" className="input h-11 p-1 cursor-pointer" defaultValue="#1a73e8" /></div>
-            <div><label className="label">Founded Year</label><input {...register('foundedYear', { valueAsNumber: true })} type="number" className="input" placeholder="2000" /></div>
+            <div><label className="label">Color</label><input {...register('color')} type="color" className="input h-11 p-1 cursor-pointer" defaultValue="#1a73e8" />{errors.color && <p className="mt-1 text-xs text-red-400">{errors.color.message}</p>}</div>
+            <div><label className="label">Founded Year</label><input {...register('foundedYear', { valueAsNumber: true })} type="number" className="input" placeholder="2000" />{errors.foundedYear && <p className="mt-1 text-xs text-red-400">{errors.foundedYear.message}</p>}</div>
           </div>
           <div className="flex gap-3 justify-end">
             <button type="button" className="btn-secondary" onClick={() => { setModalOpen(false); reset(); }}>Cancel</button>

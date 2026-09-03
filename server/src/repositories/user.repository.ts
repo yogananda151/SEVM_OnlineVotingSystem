@@ -36,7 +36,7 @@ export class UserRepository {
     phone: string;
     pollingStationId?: number | null;
   }) {
-    // Pre-check: email must be unique among active (non-deleted) users
+    // Pre-check: email must be unique among active users
     const existingEmail = await prisma.user.findFirst({
       where: { email: data.email, deletedAt: null },
     });
@@ -84,8 +84,27 @@ export class UserRepository {
   async deleteOfficer(id: number) {
     const officer = await prisma.electionOfficer.findUnique({ where: { id } });
     if (!officer) throw new Error('Officer not found');
-    await prisma.electionOfficer.update({ where: { id }, data: { deletedAt: new Date() } });
-    await prisma.user.update({ where: { id: officer.userId }, data: { isActive: false } });
+    const user = await prisma.user.findUnique({ where: { id: officer.userId } });
+    const now = new Date();
+    const timestamp = Date.now();
+    // Suffix unique employeeId and email so the original values can be reused cleanly without MySQL P2002
+    await prisma.electionOfficer.update({
+      where: { id },
+      data: {
+        employeeId: `${officer.employeeId}_del_${timestamp}`,
+        deletedAt: now,
+      },
+    });
+    if (user) {
+      await prisma.user.update({
+        where: { id: officer.userId },
+        data: {
+          email: `${user.email}_del_${timestamp}`,
+          isActive: false,
+          deletedAt: now,
+        },
+      });
+    }
   }
 
   async updateLastLogin(userId: number): Promise<void> {

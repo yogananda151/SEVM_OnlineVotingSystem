@@ -10,6 +10,9 @@ export const electionService = {
   getConstituencies: async (id: number) => (await api.get(`/elections/${id}/constituencies`)).data.data,
   setConstituencies: async (id: number, constituencyIds: number[]) =>
     (await api.put(`/elections/${id}/constituencies`, { constituencyIds })).data.data,
+  getOfficer: async (id: number) => (await api.get(`/elections/${id}/officer`)).data.data,
+  setOfficer: async (id: number, officerId: number | null) =>
+    (await api.put(`/elections/${id}/officer`, { officerId })).data.data,
   create: async (data: object) => (await api.post('/elections', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/elections/${id}`, data)).data.data,
   updateStatus: async (id: number, status: string) =>
@@ -87,11 +90,18 @@ export const voterService = {
   getAll: async (params?: object) => (await api.get('/voters', { params })).data,
   getById: async (id: number) => (await api.get(`/voters/${id}`)).data.data,
   create: async (data: object) => (await api.post('/voters', data)).data.data,
+  bulkCreate: async (voters: object[]) => (await api.post('/voters/bulk', { voters })).data,
   update: async (id: number, data: object) => (await api.put(`/voters/${id}`, data)).data.data,
   delete: async (id: number) => (await api.delete(`/voters/${id}`)).data,
 };
 
 export const votingService = {
+  getBallotCandidates: async (constituencyId?: number, electionId?: number) =>
+    (await api.get('/voting/candidates', { params: { constituencyId, electionId } })).data.data,
+  getPublicStations: async () =>
+    (await api.get('/voting/polling-stations')).data.data,
+  getPublicStationById: async (id: number) =>
+    (await api.get(`/voting/polling-stations/${id}`)).data.data,
   initiateVerification: async (data: object) => (await api.post('/voting/verify/initiate', data)).data.data,
   verifyOTP: async (voterId: number, otp: string) =>
     (await api.post('/voting/verify/otp', { voterId, otp })).data.data,
@@ -106,13 +116,28 @@ export const auditService = {
   getAll: async (params?: object) => (await api.get('/audit-logs', { params })).data,
 };
 
+// Helper to trigger authenticated file download from binary blob response
+const downloadBlob = async (url: string, filename: string): Promise<void> => {
+  const response = await api.get(url, { responseType: 'blob' });
+  const blob = new Blob([response.data], {
+    type: response.headers['content-type'] || 'application/octet-stream',
+  });
+  const link = document.createElement('a');
+  link.href = window.URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(link.href);
+};
+
 export const reportService = {
-  downloadElectionSummaryPDF: (electionId: number) =>
-    window.open(`/api/reports/election/${electionId}/summary/pdf`, '_blank'),
-  downloadResultsExcel: (electionId: number) =>
-    window.open(`/api/reports/election/${electionId}/results/excel`, '_blank'),
-  downloadVotersExcel: (stationId: number) =>
-    window.open(`/api/reports/station/${stationId}/voters/excel`, '_blank'),
-  downloadAuditLogPDF: () =>
-    window.open('/api/reports/audit-log/pdf', '_blank'),
+  downloadElectionSummaryPDF: async (electionId: number) =>
+    downloadBlob(`/reports/election/${electionId}/summary/pdf`, `election-${electionId}-summary.pdf`),
+  downloadResultsExcel: async (electionId: number) =>
+    downloadBlob(`/reports/election/${electionId}/results/excel`, `election-${electionId}-results.xlsx`),
+  downloadVotersExcel: async (stationId: number) =>
+    downloadBlob(`/reports/station/${stationId}/voters/excel`, `station-${stationId}-voters.xlsx`),
+  downloadAuditLogPDF: async () =>
+    downloadBlob('/reports/audit-log/pdf', `audit-log-${new Date().toISOString().split('T')[0]}.pdf`),
 };
