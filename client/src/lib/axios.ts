@@ -21,7 +21,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
-      window.location.href = '/';
+      const isPublicRoute = ['/', '/voting-machine', '/vvpat'].some(
+        (path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`),
+      );
+      if (!isPublicRoute) {
+        window.location.href = '/';
+      }
     }
     return Promise.reject(error);
   },

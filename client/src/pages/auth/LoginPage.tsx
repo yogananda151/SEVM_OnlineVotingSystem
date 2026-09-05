@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -181,11 +181,11 @@ export const LoginPage: React.FC = () => {
 
         {/* Voting Machine Link */}
         <div className="mt-4 text-center">
-          <a href="/voting-machine" target="_blank" rel="noopener noreferrer"
+          <Link to="/voting-machine"
             className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
             <Monitor size={14} />
             Open Touchscreen Voting Machine →
-          </a>
+          </Link>
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">

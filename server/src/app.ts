@@ -59,10 +59,10 @@ app.get('/health', (_req, res) => {
 
 // ── API Routes ────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
-app.use('/api/elections', electionRoutes);
-app.use('/api', managementRoutes);
-app.use('/api/voters', voterRoutes);
 app.use('/api/voting', votingRoutes);
+app.use('/api/elections', electionRoutes);
+app.use('/api/voters', voterRoutes);
+app.use('/api', managementRoutes);
 app.use('/api', reportRoutes);
 
 // ── 404 & Error handlers ──────────────────────────────────────────
