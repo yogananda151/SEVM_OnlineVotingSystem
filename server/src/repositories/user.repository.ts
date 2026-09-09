@@ -83,7 +83,18 @@ export class UserRepository {
 
   async deleteOfficer(id: number) {
     const officer = await prisma.electionOfficer.findUnique({ where: { id } });
-    if (!officer) throw new Error('Officer not found');
+    if (!officer) throw new AppError('Officer not found', 404);
+
+    const activeElection = await prisma.election.findFirst({
+      where: { officerId: id, status: 'ACTIVE', deletedAt: null },
+    });
+    if (activeElection) {
+      throw new AppError(
+        `Cannot delete officer while assigned as supervising officer of active election "${activeElection.name}".`,
+        400,
+      );
+    }
+
     const user = await prisma.user.findUnique({ where: { id: officer.userId } });
     const now = new Date();
     const timestamp = Date.now();

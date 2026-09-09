@@ -20,9 +20,9 @@ const createStorage = (folder: string) => {
 };
 
 const imageFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp|svg/;
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const mimetype = /image\/(jpeg|jpg|png|gif|webp)/.test(file.mimetype);
 
   if (extname && mimetype) {
     cb(null, true);

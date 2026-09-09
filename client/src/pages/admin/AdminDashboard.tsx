@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Vote, Building2, Users, Award, Flag, BarChart3,
@@ -158,11 +159,11 @@ export const AdminDashboard: React.FC = () => {
             { label: 'Register Voter', href: '/admin/voters', color: 'text-amber-400', bg: 'bg-amber-500/10', icon: Users },
             { label: 'View Reports', href: '/admin/reports', color: 'text-purple-400', bg: 'bg-purple-500/10', icon: BarChart3 },
           ].map((action) => (
-            <a key={action.label} href={action.href}
+            <Link key={action.label} to={action.href}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl ${action.bg} border border-slate-700/30 hover:border-slate-600/50 transition-all duration-200 hover:-translate-y-0.5`}>
               <action.icon size={24} className={action.color} />
               <span className="text-xs font-medium text-slate-300">{action.label}</span>
-            </a>
+            </Link>
           ))}
         </div>
       </div>

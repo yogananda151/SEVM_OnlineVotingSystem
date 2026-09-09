@@ -76,7 +76,7 @@ export const ElectionsPage: React.FC = () => {
 
   const openCreate = () => { reset(); setEditTarget(null); setModalOpen(true); };
 
-  const openEdit = (e: { id: number; name: string; description?: string; electionType: string; scheduledDate: string; status: string; isResultPublished: boolean; _count: { constituencies: number } }) => {
+  const openEdit = (e: { id: number; name: string; description?: string | null; electionType: string; scheduledDate: string; status: string }) => {
     setEditTarget({ id: e.id, name: e.name, description: e.description ?? '', electionType: e.electionType, scheduledDate: e.scheduledDate.split('T')[0] });
     setValue('name', e.name);
     setValue('description', e.description ?? '');
@@ -130,13 +130,24 @@ export const ElectionsPage: React.FC = () => {
                       <td><StatusBadge status={e.status} /></td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => navigate(`/admin/elections/${e.id}/setup`)} className="p-1.5 text-primary-400 hover:text-primary-300" title="Setup Wizard">
-                            <Settings2 size={14} />
-                          </button>
-                          <button onClick={() => navigate(`/admin/elections/${e.id}`)} className="p-1.5 text-slate-400 hover:text-white" title="View"><Eye size={14} /></button>
+                          {e.status === 'DRAFT' || e.status === 'SCHEDULED' ? (
+                            <button onClick={() => navigate(`/admin/elections/${e.id}/setup`)} className="p-1.5 text-primary-400 hover:text-primary-300" title="Setup Wizard">
+                              <Settings2 size={14} />
+                            </button>
+                          ) : (
+                            <button onClick={() => navigate(`/admin/elections/${e.id}/setup`)} className="p-1.5 text-slate-400 hover:text-white" title="View Details">
+                              <Eye size={14} />
+                            </button>
+                          )}
                           {e.status === 'CLOSED' && !e.isResultPublished && (
                             <button onClick={() => { electionService.publishResults(e.id).then(() => { toast.success('Results published!'); refetch(); }); }}
                               className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Publish Results">
+                              <BarChart3 size={14} />
+                            </button>
+                          )}
+                          {e.status === 'RESULTS_PUBLISHED' && (
+                            <button onClick={() => navigate('/admin/results')}
+                              className="p-1.5 text-blue-400 hover:text-blue-300" title="View Published Results">
                               <BarChart3 size={14} />
                             </button>
                           )}
@@ -146,10 +157,18 @@ export const ElectionsPage: React.FC = () => {
                               {action.icon}
                             </button>
                           )}
-                          {e.status === 'DRAFT' && (
-                            <button onClick={() => openEdit(e)} className="p-1.5 text-slate-400 hover:text-blue-400"><Pencil size={14} /></button>
+                          {(e.status === 'DRAFT' || e.status === 'SCHEDULED') && (
+                            <button onClick={() => openEdit(e)} className="p-1.5 text-slate-400 hover:text-blue-400" title="Edit Election"><Pencil size={14} /></button>
                           )}
-                          <button onClick={() => setDeleteTarget({ id: e.id, name: e.name })} className="p-1.5 text-slate-400 hover:text-red-400"><Trash2 size={14} /></button>
+                          {e.status === 'ACTIVE' ? (
+                            <button disabled className="p-1.5 text-slate-600 cursor-not-allowed opacity-40" title="Cannot delete an active election. Close or pause it first.">
+                              <Trash2 size={14} />
+                            </button>
+                          ) : (
+                            <button onClick={() => setDeleteTarget({ id: e.id, name: e.name })} className="p-1.5 text-slate-400 hover:text-red-400" title="Delete Election">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

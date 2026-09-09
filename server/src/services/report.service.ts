@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 import { Response } from 'express';
 import { prisma } from '../config/database';
+import { AppError } from '../middleware/error.middleware';
 
 export class ReportService {
   // ── Election Summary PDF ─────────────────────────────────────────
@@ -23,7 +24,7 @@ export class ReportService {
       },
     });
 
-    if (!election) throw new Error('Election not found');
+    if (!election) throw new AppError('Election not found', 404);
 
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
@@ -107,7 +108,7 @@ export class ReportService {
         },
       },
     });
-    if (!election) throw new Error('Election not found');
+    if (!election) throw new AppError('Election not found', 404);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Smart EVM System';

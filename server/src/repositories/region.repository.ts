@@ -69,14 +69,15 @@ export class RegionRepository {
 
   async delete(id: number) {
     const region = await prisma.region.findUnique({ where: { id } });
-    if (!region) throw new Error('Region not found');
+    if (!region) throw new AppError('Region not found', 404);
     // Check if any constituencies are attached
     const count = await prisma.constituency.count({
       where: { regionId: id, deletedAt: null },
     });
     if (count > 0) {
-      throw new Error(
+      throw new AppError(
         `Cannot delete region. It has ${count} active constituent${count !== 1 ? 'cies' : 'cy'} attached. Remove them first.`,
+        400,
       );
     }
     const now = new Date();

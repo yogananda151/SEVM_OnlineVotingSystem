@@ -15,7 +15,7 @@ import { useForm } from 'react-hook-form';
 import {
   MapPin, Users, Award, CheckCircle, ChevronRight, ChevronLeft,
   AlertCircle, Loader2, Globe, RefreshCw, Plus, Trash2, UserCog, Search,
-  ShieldCheck,
+  ShieldCheck, BarChart3, Lock,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -71,8 +71,9 @@ const Step1: React.FC<{
   onSelectAll: (ids: number[]) => void;
   onClear: () => void;
   saving: boolean;
+  readOnly?: boolean;
   error?: string;
-}> = ({ selectedIds, onToggle, onSelectAll, onClear, error }) => {
+}> = ({ selectedIds, onToggle, onSelectAll, onClear, readOnly, error }) => {
   const [filterRegion, setFilterRegion] = useState('');
 
   const fetchRegions = useCallback(() => regionService.getAll(), []);
@@ -106,10 +107,12 @@ const Step1: React.FC<{
             {(regions || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => onSelectAll((constituencies || []).map((c) => c.id))} className="btn-secondary text-xs py-1.5 px-3">Select All Visible</button>
-          <button onClick={onClear} className="btn-secondary text-xs py-1.5 px-3">Clear</button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <button onClick={() => onSelectAll((constituencies || []).map((c) => c.id))} className="btn-secondary text-xs py-1.5 px-3">Select All Visible</button>
+            <button onClick={onClear} className="btn-secondary text-xs py-1.5 px-3">Clear</button>
+          </div>
+        )}
       </div>
 
       <div className={`flex items-center gap-2 p-3 rounded-xl border ${selectedIds.length > 0 ? 'bg-primary-500/10 border-primary-500/20' : 'bg-slate-800/40 border-slate-700/50'}`}>
@@ -132,12 +135,12 @@ const Step1: React.FC<{
                   return (
                     <button
                       key={c.id}
-                      onClick={() => onToggle(c.id)}
+                      onClick={() => !readOnly && onToggle(c.id)}
                       className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all duration-150 ${
                         isSelected
                           ? 'border-primary-500 bg-primary-500/10'
                           : 'border-slate-700/60 bg-slate-800/40 hover:border-slate-600'
-                      }`}
+                      } ${readOnly ? 'cursor-default opacity-90' : ''}`}
                       aria-pressed={isSelected}
                       aria-label={`${c.name} - ${isSelected ? 'selected' : 'not selected'}`}
                     >
@@ -175,8 +178,9 @@ const Step2Officer: React.FC<{
   selectedConstituencyIds: number[];
   currentOfficerId: number | null;
   onOfficerSaved: (officer: Officer | null) => void;
+  readOnly?: boolean;
   error?: string;
-}> = ({ electionId, selectedConstituencyIds, currentOfficerId, onOfficerSaved, error }) => {
+}> = ({ electionId, selectedConstituencyIds, currentOfficerId, onOfficerSaved, readOnly, error }) => {
   const [activeTab, setActiveTab] = useState<'supervising' | 'booths'>('supervising');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(currentOfficerId);
@@ -325,21 +329,24 @@ const Step2Officer: React.FC<{
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleRemove}
-                  className="text-xs text-slate-400 hover:text-red-400 transition-colors"
-                  disabled={saving}
-                >
-                  Remove
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={handleRemove}
+                    className="text-xs text-slate-400 hover:text-red-400 transition-colors"
+                    disabled={saving}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-          <div>
-            <label className="label" htmlFor="officer-search">
-              Select Supervising Officer *
-            </label>
+          {!readOnly ? (
+            <div>
+              <label className="label" htmlFor="officer-search">
+                Select Supervising Officer *
+              </label>
             <div className="relative mb-3">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -380,9 +387,8 @@ const Step2Officer: React.FC<{
                     </button>
                   );
                 })}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {selectedId && selectedId !== currentOfficerId && (
             <button
@@ -394,6 +400,10 @@ const Step2Officer: React.FC<{
               Assign Supervising Officer
             </button>
           )}
+        </div>
+      ) : !selectedOfficer ? (
+        <p className="text-sm text-slate-400 py-4">No supervising officer assigned.</p>
+      ) : null}
 
           {activeOfficers.length === 0 && !loading && (
             <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
@@ -443,18 +453,20 @@ const Step2Officer: React.FC<{
                         <span className="badge badge-yellow text-xs">Unassigned</span>
                       )}
 
-                      <select
-                        defaultValue=""
-                        onChange={(e) => handleAssignBoothOfficer(station.id, e.target.value)}
-                        className="input text-xs py-1.5 px-2 max-w-[170px]"
-                      >
-                        <option value="">{assigned ? 'Change...' : 'Assign...'}</option>
-                        {activeOfficers.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.fullName} ({o.employeeId})
-                          </option>
-                        ))}
-                      </select>
+                      {!readOnly && (
+                        <select
+                          defaultValue=""
+                          onChange={(e) => handleAssignBoothOfficer(station.id, e.target.value)}
+                          className="input text-xs py-1.5 px-2 max-w-[170px]"
+                        >
+                          <option value="">{assigned ? 'Change...' : 'Assign...'}</option>
+                          {activeOfficers.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.fullName} ({o.employeeId})
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </div>
                 );
@@ -471,8 +483,8 @@ const Step2Officer: React.FC<{
 // Step 3 – Candidates per Constituency
 // ─────────────────────────────────────────────────────────────────
 
-const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Constituency[] }> = ({
-  electionId, electionConstituencies,
+const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Constituency[]; readOnly?: boolean }> = ({
+  electionId, electionConstituencies, readOnly,
 }) => {
   const [selectedConstituency, setSelectedConstituency] = useState<Constituency | null>(electionConstituencies[0] || null);
 
@@ -549,63 +561,71 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
                     <p className="font-medium text-white text-sm">{cand.fullName}</p>
                     <p className="text-xs text-slate-400">{cand.party?.name ?? 'Independent'} · Age {cand.age}</p>
                   </div>
-                  <button onClick={() => removeCandidate(cand.id)} className="p-1.5 text-slate-500 hover:text-red-400"><Trash2 size={13} /></button>
+                  {!readOnly && (
+                    <button onClick={() => removeCandidate(cand.id)} className="p-1.5 text-slate-500 hover:text-red-400"><Trash2 size={13} /></button>
+                  )}
                 </div>
               ))}
             </div>
 
             {/* Add candidate form */}
-            <div className="border border-slate-700/50 rounded-xl p-4 bg-slate-900/50">
-              <p className="text-xs font-semibold text-slate-400 mb-3">ADD CANDIDATE</p>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <input
-                      {...register('fullName', { required: 'Full name is required.' })}
-                      className={`input text-sm ${errors.fullName ? 'input-error' : ''}`}
-                      placeholder="Full name *"
-                      aria-label="Full name"
-                      aria-invalid={!!errors.fullName}
-                    />
-                    {errors.fullName && <p className="field-error-message"><AlertCircle size={11} />{errors.fullName.message}</p>}
+            {!readOnly ? (
+              <div className="border border-slate-700/50 rounded-xl p-4 bg-slate-900/50">
+                <p className="text-xs font-semibold text-slate-400 mb-3">ADD CANDIDATE</p>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <input
+                        {...register('fullName', { required: 'Full name is required.' })}
+                        className={`input text-sm ${errors.fullName ? 'input-error' : ''}`}
+                        placeholder="Full name *"
+                        aria-label="Full name"
+                        aria-invalid={!!errors.fullName}
+                      />
+                      {errors.fullName && <p className="field-error-message"><AlertCircle size={11} />{errors.fullName.message}</p>}
+                    </div>
+                    <select {...register('partyId')} className="input text-sm" aria-label="Party">
+                      <option value="">Independent</option>
+                      {(parties || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
                   </div>
-                  <select {...register('partyId')} className="input text-sm" aria-label="Party">
-                    <option value="">Independent</option>
-                    {(parties || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <input
-                      {...register('age', { required: 'Age is required.', valueAsNumber: true, min: { value: 18, message: 'Must be at least 18.' } })}
-                      type="number"
-                      className={`input text-sm ${errors.age ? 'input-error' : ''}`}
-                      placeholder="Age *"
-                      aria-label="Age"
-                      aria-invalid={!!errors.age}
-                    />
-                    {errors.age && <p className="field-error-message"><AlertCircle size={11} />{errors.age.message}</p>}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <input
+                        {...register('age', { required: 'Age is required.', valueAsNumber: true, min: { value: 18, message: 'Must be at least 18.' } })}
+                        type="number"
+                        className={`input text-sm ${errors.age ? 'input-error' : ''}`}
+                        placeholder="Age *"
+                        aria-label="Age"
+                        aria-invalid={!!errors.age}
+                      />
+                      {errors.age && <p className="field-error-message"><AlertCircle size={11} />{errors.age.message}</p>}
+                    </div>
+                    <div>
+                      <input
+                        {...register('serialNumber', { required: 'Serial # required.', valueAsNumber: true, min: { value: 1, message: 'Must be > 0.' } })}
+                        type="number"
+                        className={`input text-sm ${errors.serialNumber ? 'input-error' : ''}`}
+                        placeholder="Serial # *"
+                        aria-label="Serial number"
+                        aria-invalid={!!errors.serialNumber}
+                      />
+                      {errors.serialNumber && <p className="field-error-message"><AlertCircle size={11} />{errors.serialNumber.message}</p>}
+                    </div>
+                    <input {...register('qualification')} className="input text-sm" placeholder="Qualification" aria-label="Qualification" />
                   </div>
-                  <div>
-                    <input
-                      {...register('serialNumber', { required: 'Serial # required.', valueAsNumber: true, min: { value: 1, message: 'Must be > 0.' } })}
-                      type="number"
-                      className={`input text-sm ${errors.serialNumber ? 'input-error' : ''}`}
-                      placeholder="Serial # *"
-                      aria-label="Serial number"
-                      aria-invalid={!!errors.serialNumber}
-                    />
-                    {errors.serialNumber && <p className="field-error-message"><AlertCircle size={11} />{errors.serialNumber.message}</p>}
+                  <div className="flex gap-2 justify-end">
+                    <button type="submit" className="btn-primary text-sm py-2" disabled={adding}>
+                      {adding ? <Spinner size={14} /> : <Plus size={14} />} Add
+                    </button>
                   </div>
-                  <input {...register('qualification')} className="input text-sm" placeholder="Qualification" aria-label="Qualification" />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button type="submit" className="btn-primary text-sm py-2" disabled={adding}>
-                    {adding ? <Spinner size={14} /> : <Plus size={14} />} Add
-                  </button>
-                </div>
-              </form>
-            </div>
+                </form>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-slate-700/40 bg-slate-800/30 text-center text-xs text-slate-400">
+                🔒 Candidate registration is locked for this election.
+              </div>
+            )}
           </>
         )}
       </div>
@@ -745,6 +765,24 @@ const Step4Review: React.FC<{
             {updating ? <Spinner size={16} /> : null} Publish Results
           </button>
         )}
+        {election.status === 'RESULTS_PUBLISHED' && (
+          <div className="flex-1 p-4 rounded-xl border border-blue-500/20 bg-blue-500/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle size={20} className="text-blue-400" />
+              <div>
+                <p className="text-sm font-semibold text-white">Results are published</p>
+                <p className="text-xs text-slate-400">Voting is concluded and official results have been published.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/results')}
+              className="btn-primary py-2 px-4 text-xs flex items-center gap-1.5"
+            >
+              <BarChart3 size={14} /> View Results
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -813,10 +851,14 @@ export const ElectionSetupPage: React.FC = () => {
     return true;
   };
 
+  const isReadOnly = election?.status === 'ACTIVE' || election?.status === 'CLOSED' || election?.status === 'RESULTS_PUBLISHED';
+
   const goNext = () => {
-    if (!validateStep(step)) return;
-    if (step === 1) {
-      saveConstituencies(selectedConstituencyIds);
+    if (!isReadOnly) {
+      if (!validateStep(step)) return;
+      if (step === 1) {
+        saveConstituencies(selectedConstituencyIds);
+      }
     }
     setStep((s) => Math.min(s + 1, STEPS.length));
   };
@@ -827,6 +869,10 @@ export const ElectionSetupPage: React.FC = () => {
   };
 
   const goToStep = (target: number) => {
+    if (isReadOnly) {
+      setStep(target);
+      return;
+    }
     // Allow going back freely; forward only if valid
     if (target < step) {
       setStep(target);
@@ -865,6 +911,15 @@ export const ElectionSetupPage: React.FC = () => {
         </div>
         <button onClick={() => navigate('/admin/elections')} className="btn-secondary">← Back to Elections</button>
       </div>
+
+      {isReadOnly && (
+        <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-300 text-sm">
+          <ShieldCheck size={20} className="text-amber-400 flex-shrink-0" />
+          <div>
+            <span className="font-semibold">Election Status: {election.status}</span> — Configuration is locked in read-only mode. Details and setup are available for inspection.
+          </div>
+        </div>
+      )}
 
       {/* Step progress */}
       <div className="card p-4">
@@ -928,6 +983,7 @@ export const ElectionSetupPage: React.FC = () => {
                 onSelectAll={(ids) => setSelectedConstituencyIds(ids)}
                 onClear={() => setSelectedConstituencyIds([])}
                 saving={saving}
+                readOnly={isReadOnly}
                 error={stepErrors[1]}
               />
             )}
@@ -942,11 +998,12 @@ export const ElectionSetupPage: React.FC = () => {
                     setStepErrors((prev) => { const n = { ...prev }; delete n[2]; return n; });
                   }
                 }}
+                readOnly={isReadOnly}
                 error={stepErrors[2]}
               />
             )}
             {step === 3 && (
-              <Step3Candidates electionId={electionId} electionConstituencies={electionConstituencies} />
+              <Step3Candidates electionId={electionId} electionConstituencies={electionConstituencies} readOnly={isReadOnly} />
             )}
             {step === 4 && (
               <Step4Review electionId={electionId} onStatusChanged={() => {}} onGoToStep={goToStep} />
@@ -962,8 +1019,8 @@ export const ElectionSetupPage: React.FC = () => {
         </button>
         <span className="text-sm text-slate-400">Step {step} of {STEPS.length}</span>
         {step < STEPS.length ? (
-          <button onClick={goNext} className="btn-primary" disabled={saving}>
-            {saving ? <Spinner size={16} /> : null} Save & Continue <ChevronRight size={16} />
+          <button onClick={goNext} className="btn-primary" disabled={!isReadOnly && saving}>
+            {!isReadOnly && saving ? <Spinner size={16} /> : null} {isReadOnly ? 'Next Step' : 'Save & Continue'} <ChevronRight size={16} />
           </button>
         ) : (
           <button onClick={() => navigate('/admin/elections')} className="btn-secondary">

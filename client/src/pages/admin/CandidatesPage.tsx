@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Award, Upload, User, ArrowRight, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Award, Upload, User, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { candidateService, constituencyService, partyService, electionService } from '../../services/api.service';
@@ -12,6 +12,7 @@ interface Candidate {
   id: number; fullName: string; age: number; qualification?: string; serialNumber: number;
   isIndependent: boolean; photoUrl?: string; constituencyId: number; electionId: number;
   constituency: { name: string };
+  election?: { id: number; name: string; status: string };
   party?: { id: number; name: string; color: string };
   _count: { votes: number };
 }
@@ -164,10 +165,21 @@ export const CandidatesPage: React.FC = () => {
           <div className="flex gap-3 items-center">
             <select className="input max-w-xs" value={filterElection} onChange={(e) => setFilterElection(e.target.value)}>
               <option value="">All Elections</option>
-              {(elections || []).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              {(elections || []).map((e) => <option key={e.id} value={e.id}>{e.name} ({e.status})</option>)}
             </select>
             <button onClick={() => refetch()} className="btn-secondary">Filter</button>
           </div>
+
+          {(() => {
+            const curEl = elections?.find((e) => e.id === Number(filterElection));
+            const isCurLocked = curEl && (curEl.status === 'ACTIVE' || curEl.status === 'CLOSED' || curEl.status === 'RESULTS_PUBLISHED');
+            return isCurLocked ? (
+              <div className="flex items-center gap-3 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs">
+                <ShieldCheck size={16} className="text-amber-400 flex-shrink-0" />
+                <span>Election <strong>{curEl.name}</strong> is in <strong>{curEl.status}</strong> status. Candidates cannot be added, modified, or removed.</span>
+              </div>
+            ) : null;
+          })()}
 
           {loading ? <TableSkeleton rows={5} cols={7} /> : (
             <div className="card overflow-hidden">
@@ -195,11 +207,25 @@ export const CandidatesPage: React.FC = () => {
                         <td>{c.age}</td>
                         <td><span className="badge badge-green">{c._count.votes}</span></td>
                         <td>
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => setUploadTarget(c)} className="p-1.5 text-slate-400 hover:text-amber-400" title="Upload Photo"><Upload size={14} /></button>
-                            <button onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-400"><Pencil size={14} /></button>
-                            <button onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-400"><Trash2 size={14} /></button>
-                          </div>
+                          {(() => {
+                            const curEl = elections?.find((e) => e.id === Number(filterElection));
+                            const lockedStatus = (curEl?.status === 'ACTIVE' || curEl?.status === 'CLOSED' || curEl?.status === 'RESULTS_PUBLISHED')
+                              ? curEl.status
+                              : (c.election?.status === 'ACTIVE' || c.election?.status === 'CLOSED' || c.election?.status === 'RESULTS_PUBLISHED')
+                              ? c.election.status
+                              : null;
+
+                            if (lockedStatus) {
+                              return <span className="text-xs text-slate-500 italic">Locked ({lockedStatus})</span>;
+                            }
+                            return (
+                              <div className="flex items-center gap-2">
+                                <button onClick={() => setUploadTarget(c)} className="p-1.5 text-slate-400 hover:text-amber-400" title="Upload Photo"><Upload size={14} /></button>
+                                <button onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-400" title="Edit"><Pencil size={14} /></button>
+                                <button onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-400" title="Delete"><Trash2 size={14} /></button>
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}
@@ -240,7 +266,14 @@ export const CandidatesPage: React.FC = () => {
                 aria-describedby={errors.electionId ? 'cand-election-error' : undefined}
               >
                 <option value="">Select election...</option>
-                {(elections || []).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                {(elections || []).map((e) => {
+                  const locked = e.status === 'ACTIVE' || e.status === 'CLOSED' || e.status === 'RESULTS_PUBLISHED';
+                  return (
+                    <option key={e.id} value={e.id} disabled={locked}>
+                      {e.name} {locked ? `(${e.status} - Locked)` : `(${e.status})`}
+                    </option>
+                  );
+                })}
               </select>
               {errors.electionId && <p id="cand-election-error" className="field-error-message" role="alert"><AlertCircle size={12} />{errors.electionId.message}</p>}
             </div>

@@ -125,7 +125,30 @@ export class VoteRepository {
         prisma.vote.count(),
       ]);
 
-    const turnoutPercent = totalVoters > 0 ? ((totalVotes / totalVoters) * 100).toFixed(2) : '0.00';
+    // Turnout is only meaningful for the active election's voters
+    let turnoutPercent = '0.00';
+    if (activeElection) {
+      // Get voter IDs in constituencies for the active election
+      const activeElectionLinks = await prisma.electionConstituency.findMany({
+        where: { electionId: activeElection.id },
+        select: { constituencyId: true },
+      });
+      const activeConstituencyIds = activeElectionLinks.map((l) => l.constituencyId);
+
+      const [activeVoters, activeVotes] = await Promise.all([
+        prisma.voter.count({
+          where: { deletedAt: null, constituencyId: { in: activeConstituencyIds } },
+        }),
+        prisma.vote.count({
+          where: {
+            voter: { constituencyId: { in: activeConstituencyIds } },
+          },
+        }),
+      ]);
+      turnoutPercent = activeVoters > 0
+        ? ((activeVotes / activeVoters) * 100).toFixed(2)
+        : '0.00';
+    }
 
     return {
       totalElections,

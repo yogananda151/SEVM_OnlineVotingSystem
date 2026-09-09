@@ -78,22 +78,69 @@ export class VoterController {
     try {
       const { voters } = req.body;
       if (!Array.isArray(voters) || voters.length === 0) {
-        res.status(400).json({ success: false, message: 'Array of voters is required.' });
+        res.status(400).json({ success: false, message: 'An array of voters is required.' });
         return;
       }
 
-      const formatted = voters.map((v: any) => ({
-        constituencyId: Number(v.constituencyId),
-        pollingStationId: Number(v.pollingStationId),
-        fullName: String(v.fullName || '').trim(),
-        voterId: String(v.voterId || '').trim(),
-        aadhaarHash: v.aadhaarNumber ? hashAadhaar(String(v.aadhaarNumber).trim()) : undefined,
-        dateOfBirth: new Date(v.dateOfBirth || '2000-01-01'),
-        gender: v.gender || 'Other',
-        address: v.address || 'Address not specified',
-        phone: v.phone ? String(v.phone).trim() : undefined,
-        serialNumber: Number(v.serialNumber) || 1,
-      }));
+      const MAX_BULK = 500;
+      if (voters.length > MAX_BULK) {
+        res.status(400).json({
+          success: false,
+          message: `Bulk import is limited to ${MAX_BULK} voters per request. You sent ${voters.length}.`,
+        });
+        return;
+      }
+
+      const errors: string[] = [];
+      const formatted = voters.map((v: Record<string, unknown>, idx: number) => {
+        const row = idx + 1;
+        if (!v.fullName || typeof v.fullName !== 'string' || String(v.fullName).trim().length < 2) {
+          errors.push(`Row ${row}: fullName is required (min 2 characters).`);
+        }
+        if (!v.voterId || typeof v.voterId !== 'string' || String(v.voterId).trim().length < 5) {
+          errors.push(`Row ${row}: voterId is required (min 5 characters).`);
+        }
+        if (!v.constituencyId || isNaN(Number(v.constituencyId))) {
+          errors.push(`Row ${row}: constituencyId must be a valid number.`);
+        }
+        if (!v.pollingStationId || isNaN(Number(v.pollingStationId))) {
+          errors.push(`Row ${row}: pollingStationId must be a valid number.`);
+        }
+        if (!v.dateOfBirth || isNaN(Date.parse(String(v.dateOfBirth)))) {
+          errors.push(`Row ${row}: dateOfBirth is required and must be a valid date.`);
+        }
+        if (!v.gender || !['Male', 'Female', 'Other'].includes(String(v.gender))) {
+          errors.push(`Row ${row}: gender must be one of Male, Female, Other.`);
+        }
+        if (!v.address || typeof v.address !== 'string' || String(v.address).trim().length < 5) {
+          errors.push(`Row ${row}: address is required (min 5 characters).`);
+        }
+        if (!v.serialNumber || isNaN(Number(v.serialNumber)) || Number(v.serialNumber) < 1) {
+          errors.push(`Row ${row}: serialNumber must be a positive integer.`);
+        }
+
+        return {
+          constituencyId: Number(v.constituencyId),
+          pollingStationId: Number(v.pollingStationId),
+          fullName: String(v.fullName || '').trim(),
+          voterId: String(v.voterId || '').trim(),
+          aadhaarHash: v.aadhaarNumber ? hashAadhaar(String(v.aadhaarNumber).trim()) : undefined,
+          dateOfBirth: new Date(String(v.dateOfBirth)),
+          gender: String(v.gender),
+          address: String(v.address || '').trim(),
+          phone: v.phone ? String(v.phone).trim() : undefined,
+          serialNumber: Number(v.serialNumber),
+        };
+      });
+
+      if (errors.length > 0) {
+        res.status(422).json({
+          success: false,
+          message: `Validation failed for ${errors.length} row(s).`,
+          errors,
+        });
+        return;
+      }
 
       const count = await voterRepository.bulkCreate(formatted);
 

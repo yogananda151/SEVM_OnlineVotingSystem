@@ -4,6 +4,7 @@ import { authenticate, authorize } from '../middleware/auth.middleware';
 import {
   validate,
   createElectionSchema,
+  updateElectionSchema,
   setElectionConstituenciesSchema,
   setElectionOfficerSchema,
 } from '../middleware/validation.middleware';
@@ -23,7 +24,7 @@ router.get('/:id/officer', electionController.getOfficer.bind(electionController
 
 // Commissioner only
 router.post('/', authorize(UserRole.COMMISSIONER), validate(createElectionSchema), electionController.create.bind(electionController));
-router.put('/:id', authorize(UserRole.COMMISSIONER), electionController.update.bind(electionController));
+router.put('/:id', authorize(UserRole.COMMISSIONER), validate(updateElectionSchema), electionController.update.bind(electionController));
 router.patch('/:id/status', authorize(UserRole.COMMISSIONER), electionController.updateStatus.bind(electionController));
 router.put('/:id/constituencies', authorize(UserRole.COMMISSIONER), validate(setElectionConstituenciesSchema), electionController.setConstituencies.bind(electionController));
 router.put('/:id/officer', authorize(UserRole.COMMISSIONER), validate(setElectionOfficerSchema), electionController.setOfficer.bind(electionController));

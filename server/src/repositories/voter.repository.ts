@@ -95,7 +95,10 @@ export class VoterRepository {
 
   async delete(id: number): Promise<void> {
     const voter = await prisma.voter.findUnique({ where: { id } });
-    if (!voter) throw new Error('Voter not found');
+    if (!voter) throw new AppError('Voter not found', 404);
+    if (voter.hasVoted) {
+      throw new AppError('Cannot delete a voter who has already cast a vote.', 400);
+    }
     const now = new Date();
     const timestamp = Date.now();
     await prisma.voter.update({

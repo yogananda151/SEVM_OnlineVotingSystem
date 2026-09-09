@@ -11,6 +11,7 @@ export class CandidateRepository {
       },
       include: {
         constituency: { select: { id: true, name: true, code: true } },
+        election: { select: { id: true, name: true, status: true } },
         party: true,
         _count: { select: { votes: true } },
       },
@@ -45,8 +46,9 @@ export class CandidateRepository {
       },
     });
     if (!link) {
-      throw new Error(
+      throw new AppError(
         'The selected constituency is not part of this election. Please select a constituency that has been added to this election.',
+        400,
       );
     }
 
@@ -86,10 +88,10 @@ export class CandidateRepository {
 
   async delete(id: number) {
     const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate) throw new Error('Candidate not found');
+    if (!candidate) throw new AppError('Candidate not found', 404);
     const voteCount = await prisma.vote.count({ where: { candidateId: id } });
     if (voteCount > 0) {
-      throw new Error('Cannot remove candidate. They have already received votes.');
+      throw new AppError('Cannot remove candidate. They have already received votes.', 400);
     }
     return prisma.candidate.update({
       where: { id },

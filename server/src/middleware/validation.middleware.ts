@@ -46,7 +46,7 @@ export const createElectionSchema = z.object({
     .min(1, 'Please select an election type.'),
   scheduledDate: z
     .string({ required_error: 'Scheduled date is required.' })
-    .datetime('Please enter a valid scheduled date.'),
+    .refine((val) => !isNaN(Date.parse(val)), 'Please enter a valid scheduled date.'),
 });
 
 export const updateElectionSchema = createElectionSchema.partial();

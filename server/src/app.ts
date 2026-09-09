@@ -59,6 +59,17 @@ app.get('/health', (_req, res) => {
 
 // ── API Routes ────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+
+// Stricter rate limit for OTP/verification endpoints (10 req/min per IP)
+const votingVerifyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many verification attempts. Please wait 1 minute before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/voting/verify', votingVerifyLimiter);
+
 app.use('/api/voting', votingRoutes);
 app.use('/api/elections', electionRoutes);
 app.use('/api/voters', voterRoutes);

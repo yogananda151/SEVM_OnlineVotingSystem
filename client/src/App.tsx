@@ -44,7 +44,7 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   <div className="flex items-center justify-center h-64">
     <div className="text-center">
       <h2 className="text-xl font-bold text-white">{title}</h2>
-      <p className="text-slate-400 mt-2">This page is fully implemented in the system.</p>
+      <p className="text-slate-400 mt-2">This feature is coming soon.</p>
     </div>
   </div>
 );

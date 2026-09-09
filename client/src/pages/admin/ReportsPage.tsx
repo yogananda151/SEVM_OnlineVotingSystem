@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { FileText, Table2, BarChart3, ClipboardList, Users, Vote } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useAsync } from '../../hooks/useAsync';
 import { electionService, pollingStationService, reportService } from '../../services/api.service';
 
@@ -20,7 +21,7 @@ export const ReportsPage: React.FC = () => {
       icon: Vote,
       color: 'text-blue-400', bg: 'bg-blue-500/10',
       format: 'PDF',
-      action: () => selectedElection ? reportService.downloadElectionSummaryPDF(Number(selectedElection)) : alert('Select an election'),
+      action: () => selectedElection ? reportService.downloadElectionSummaryPDF(Number(selectedElection)) : toast.error('Please select an election first.'),
     },
     {
       title: 'Election Results',
@@ -28,7 +29,7 @@ export const ReportsPage: React.FC = () => {
       icon: BarChart3,
       color: 'text-emerald-400', bg: 'bg-emerald-500/10',
       format: 'Excel',
-      action: () => selectedElection ? reportService.downloadResultsExcel(Number(selectedElection)) : alert('Select an election'),
+      action: () => selectedElection ? reportService.downloadResultsExcel(Number(selectedElection)) : toast.error('Please select an election first.'),
     },
     {
       title: 'Voters List',
@@ -36,7 +37,7 @@ export const ReportsPage: React.FC = () => {
       icon: Users,
       color: 'text-amber-400', bg: 'bg-amber-500/10',
       format: 'Excel',
-      action: () => selectedStation ? reportService.downloadVotersExcel(Number(selectedStation)) : alert('Select a station'),
+      action: () => selectedStation ? reportService.downloadVotersExcel(Number(selectedStation)) : toast.error('Please select a polling station first.'),
     },
     {
       title: 'Audit Log',

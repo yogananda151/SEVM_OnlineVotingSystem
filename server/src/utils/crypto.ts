@@ -25,10 +25,10 @@ export const generateVoteHash = (data: {
   return crypto.createHash('sha256').update(payload).digest('hex');
 };
 
-// ── Aadhaar hash (salted HMAC simulation) ─────────────────────────
+// ── Aadhaar hash (salted HMAC with a dedicated secret — separate from JWT) ──
 
 export const hashAadhaar = (aadhaar: string): string => {
-  return crypto.createHmac('sha256', config.jwt.secret).update(aadhaar).digest('hex');
+  return crypto.createHmac('sha256', config.aadhaarHmacSecret).update(aadhaar).digest('hex');
 };
 
 // ── Cryptographically secure OTP generation ──────────────────────
@@ -41,6 +41,6 @@ export const generateOTP = (): string => {
 
 export const generateReferenceNumber = (): string => {
   const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `VOTE-${timestamp}-${random}`;
 };

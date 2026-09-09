@@ -12,6 +12,9 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 
+  // Separate secret for Aadhaar HMAC – MUST differ from JWT secret in production
+  aadhaarHmacSecret: process.env.AADHAAR_HMAC_SECRET || 'fallback_aadhaar_hmac_secret_change_me',
+
   client: {
     url: process.env.CLIENT_URL || 'http://localhost:5173',
   },

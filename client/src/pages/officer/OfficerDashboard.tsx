@@ -4,7 +4,7 @@ import { Building2, Users, CheckCircle, Clock, Lock, Unlock, Pause, Play, Square
 import { useAsync } from '../../hooks/useAsync';
 import { pollingStationService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
-import { StatCard, Spinner } from '../../components/ui';
+import { StatCard, Spinner, ConfirmDialog } from '../../components/ui';
 import { toast } from 'react-hot-toast';
 
 export const OfficerDashboard: React.FC = () => {
@@ -25,6 +25,14 @@ export const OfficerDashboard: React.FC = () => {
 
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Confirmation state for destructive actions
+  const [confirmAction, setConfirmAction] = useState<{
+    status: string;
+    isPollingActive?: boolean;
+    title: string;
+    message: string;
+  } | null>(null);
+
   const updateStatus = async (status: string, isPollingActive?: boolean) => {
     if (!stationId) return;
     setActionLoading(true);
@@ -34,6 +42,17 @@ export const OfficerDashboard: React.FC = () => {
       await Promise.all([refetchStation(), refetchTurnout()]);
     } catch { toast.error('Failed to update status'); }
     finally { setActionLoading(false); }
+  };
+
+  const requestAction = (status: string, isPollingActive: boolean | undefined, title: string, message: string) => {
+    setConfirmAction({ status, isPollingActive, title, message });
+  };
+
+  const handleConfirm = () => {
+    if (confirmAction) {
+      updateStatus(confirmAction.status, confirmAction.isPollingActive);
+      setConfirmAction(null);
+    }
   };
 
   const machineStatus = (station as { machineStatus: string } | null)?.machineStatus;
@@ -110,7 +129,9 @@ export const OfficerDashboard: React.FC = () => {
           )}
           {isActive && (
             <>
-              <button onClick={() => updateStatus('LOCKED', false)} disabled={actionLoading}
+              <button
+                onClick={() => requestAction('LOCKED', false, 'Lock Machine?', 'Locking the machine will stop voters from casting their vote. You can unlock it again when ready. Are you sure?')}
+                disabled={actionLoading}
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all text-red-400 disabled:opacity-50">
                 <Lock size={24} /><span className="text-xs font-medium">Lock Machine</span>
               </button>
@@ -133,7 +154,9 @@ export const OfficerDashboard: React.FC = () => {
             </button>
           )}
           {(isActive || isPaused) && (
-            <button onClick={() => updateStatus('CLOSED', false)} disabled={actionLoading}
+            <button
+              onClick={() => requestAction('CLOSED', false, 'Close Polling?', 'Closing polling is permanent and cannot be undone. No further votes can be cast after closing. Are you sure you want to close this polling station?')}
+              disabled={actionLoading}
               className="flex flex-col items-center gap-2 p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 hover:bg-slate-700/50 transition-all text-slate-400 disabled:opacity-50">
               <Square size={24} /><span className="text-xs font-medium">Close Polling</span>
             </button>
@@ -153,6 +176,18 @@ export const OfficerDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Destructive action confirmation */}
+      <ConfirmDialog
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirm}
+        title={confirmAction?.title ?? ''}
+        message={confirmAction?.message ?? ''}
+        confirmText="Yes, Proceed"
+        loading={actionLoading}
+      />
     </div>
   );
 };
+

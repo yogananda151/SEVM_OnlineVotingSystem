@@ -76,18 +76,32 @@ export class ElectionController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Number(req.params.id);
+      const election = await electionRepository.findById(id);
+      if (!election) throw new AppError('Election not found.', 404);
+
+      if (
+        election.status === ElectionStatus.ACTIVE ||
+        election.status === ElectionStatus.CLOSED ||
+        election.status === ElectionStatus.RESULTS_PUBLISHED
+      ) {
+        throw new AppError(
+          `Cannot edit election in "${election.status}" status. Election configuration is locked once activated or completed.`,
+          400,
+        );
+      }
+
       const data = { ...req.body };
       if (data.scheduledDate) data.scheduledDate = new Date(data.scheduledDate);
-      const election = await electionRepository.update(id, data);
+      const updated = await electionRepository.update(id, data);
       await auditRepository.create({
         userId: req.user!.userId,
         electionId: id,
         action: 'UPDATE',
         module: 'Election',
-        description: `Updated election: ${election.name}`,
+        description: `Updated election: ${updated.name}`,
         ipAddress: req.ip,
       });
-      sendSuccess(res, election, 'Election updated');
+      sendSuccess(res, updated, 'Election updated');
     } catch (err) { next(err); }
   }
 
@@ -271,13 +285,23 @@ export class ElectionController {
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Number(req.params.id);
+      const election = await electionRepository.findById(id);
+      if (!election) throw new AppError('Election not found.', 404);
+
+      if (election.status === ElectionStatus.ACTIVE) {
+        throw new AppError(
+          'Cannot delete an active election while voting is in progress. Please pause or close the election first.',
+          400,
+        );
+      }
+
       await electionRepository.delete(id);
       await auditRepository.create({
         userId: req.user!.userId,
         electionId: id,
         action: 'DELETE',
         module: 'Election',
-        description: `Deleted election ID: ${id}`,
+        description: `Deleted election ID: ${id} (${election.name})`,
         ipAddress: req.ip,
       });
       sendSuccess(res, null, 'Election deleted');

@@ -46,8 +46,9 @@ export class PollingStationRepository {
       where: { id: data.constituencyId, deletedAt: null },
     });
     if (!constituency) {
-      throw new Error(
+      throw new AppError(
         'The selected constituency does not exist. Please select a valid constituency.',
+        404,
       );
     }
 
@@ -88,15 +89,31 @@ export class PollingStationRepository {
 
   async delete(id: number) {
     const station = await prisma.pollingStation.findUnique({ where: { id } });
-    if (!station) throw new Error('Polling station not found');
+    if (!station) throw new AppError('Polling station not found', 404);
+
+    const activeElection = await prisma.electionConstituency.findFirst({
+      where: {
+        constituencyId: station.constituencyId,
+        election: { status: 'ACTIVE', deletedAt: null },
+      },
+      include: { election: true },
+    });
+    if (activeElection) {
+      throw new AppError(
+        `Cannot delete polling station while participating in active election "${activeElection.election.name}".`,
+        400,
+      );
+    }
+
     const voterCount = await prisma.voter.count({ where: { pollingStationId: id, deletedAt: null } });
     const voteCount = await prisma.vote.count({ where: { pollingStationId: id } });
     if (voteCount > 0) {
-      throw new Error('Cannot delete polling station. Votes have already been cast here.');
+      throw new AppError('Cannot delete polling station. Votes have already been cast here.', 400);
     }
     if (voterCount > 0) {
-      throw new Error(
+      throw new AppError(
         `Cannot delete polling station. It has ${voterCount} registered voter(s). Reassign or remove them first.`,
+        400,
       );
     }
     const now = new Date();
