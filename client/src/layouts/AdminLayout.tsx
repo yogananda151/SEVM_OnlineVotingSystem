@@ -39,7 +39,6 @@ const navGroups = [
     items: [
       { to: '/admin/results', label: 'Election Results', icon: TrendingUp },
       { to: '/admin/reports', label: 'Reports', icon: FileText },
-      { to: '/admin/vvpat', label: 'Digital VVPAT', icon: Shield },
       { to: '/admin/audit-logs', label: 'Audit Logs', icon: ClipboardList },
     ],
   },

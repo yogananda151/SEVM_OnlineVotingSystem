@@ -44,9 +44,20 @@ export class VotingController {
 
   async getVVPAT(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { referenceNumber } = req.params;
-      const vvpat = await voteRepository.getVvpat(referenceNumber);
-      if (!vvpat) { res.status(404).json({ success: false, message: 'VVPAT not found' }); return; }
+      const rawRef = (req.query.referenceNumber || req.query.ref || req.params.referenceNumber) as string;
+      if (!rawRef || !rawRef.trim()) {
+        res.status(400).json({ success: false, message: 'Please enter a valid Vote Reference Number or Voter ID.' });
+        return;
+      }
+      const pollingStationId = req.query.pollingStationId ? Number(req.query.pollingStationId) : undefined;
+      const vvpat = await voteRepository.getVvpat(rawRef.trim(), pollingStationId);
+      if (!vvpat) {
+        res.status(404).json({
+          success: false,
+          message: `No verified vote record found for reference number or Voter ID "${rawRef.trim()}".`,
+        });
+        return;
+      }
       sendSuccess(res, vvpat);
     } catch (err) { next(err); }
   }
@@ -54,7 +65,32 @@ export class VotingController {
   async getBallotCandidates(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const constituencyId = req.query.constituencyId ? Number(req.query.constituencyId) : undefined;
-      const electionId = req.query.electionId ? Number(req.query.electionId) : undefined;
+      let electionId = req.query.electionId ? Number(req.query.electionId) : undefined;
+
+      // If no electionId provided, auto-resolve the ACTIVE election for this constituency.
+      // This prevents candidates from past/future elections from appearing on the ballot.
+      if (!electionId && constituencyId) {
+        const { prisma } = await import('../config/database');
+        const activeLink = await prisma.electionConstituency.findFirst({
+          where: {
+            constituencyId,
+            election: { status: 'ACTIVE' },
+          },
+          select: { electionId: true },
+        });
+        if (activeLink) {
+          electionId = activeLink.electionId;
+        }
+      } else if (!electionId) {
+        // No constituency either — resolve the globally active election
+        const { prisma } = await import('../config/database');
+        const activeElection = await prisma.election.findFirst({
+          where: { status: 'ACTIVE' },
+          select: { id: true },
+        });
+        if (activeElection) electionId = activeElection.id;
+      }
+
       const candidates = await candidateRepository.findAll(electionId, constituencyId);
       sendSuccess(res, candidates);
     } catch (err) { next(err); }

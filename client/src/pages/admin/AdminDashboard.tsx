@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Vote, Building2, Users, Award, Flag, BarChart3,
-  TrendingUp, Activity, CheckCircle, Clock, AlertCircle
+  TrendingUp, Activity, CheckCircle, Clock, RefreshCw
 } from 'lucide-react';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useAsync } from '../../hooks/useAsync';
 import { electionService } from '../../services/api.service';
 import { StatCard, Skeleton, StatusBadge } from '../../components/ui';
@@ -16,13 +17,14 @@ import {
 const COLORS = ['#1a73e8', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899'];
 
 export const AdminDashboard: React.FC = () => {
+  // Auto-refresh stats every 30 seconds (#2)
   const fetchStats = useCallback(() => electionService.getDashboardStats(), []);
-  const { data: stats, loading } = useAsync(fetchStats);
+  const { data: stats, loading, secondsSince, refresh } = useAutoRefresh(fetchStats, 30_000);
 
   const fetchElections = useCallback(() => electionService.getAll(), []);
   const { data: elections } = useAsync(fetchElections);
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -62,9 +64,22 @@ export const AdminDashboard: React.FC = () => {
           </h1>
           <p className="page-subtitle">Election Commission of India – Control Panel</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-emerald-400 font-medium">System Online</span>
+        <div className="flex items-center gap-3">
+          {/* Live refresh indicator (#2) */}
+          <button
+            onClick={refresh}
+            title="Refresh now"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/60 hover:bg-slate-700/60 transition-colors text-xs text-slate-400 hover:text-slate-200"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin text-primary-400' : ''} />
+            <span>
+              {loading ? 'Refreshing…' : secondsSince < 5 ? 'Just updated' : `Updated ${secondsSince}s ago`}
+            </span>
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs text-emerald-400 font-medium">Live · 30s refresh</span>
+          </div>
         </div>
       </div>
 
@@ -170,3 +185,4 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+

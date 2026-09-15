@@ -131,7 +131,12 @@ export class PollingStationRepository {
   async getTurnout(id: number) {
     const [totalVoters, votedCount] = await Promise.all([
       prisma.voter.count({ where: { pollingStationId: id, deletedAt: null } }),
-      prisma.voter.count({ where: { pollingStationId: id, hasVoted: true } }),
+      prisma.vote.count({
+        where: {
+          pollingStationId: id,
+          election: { status: 'ACTIVE' },
+        },
+      }),
     ]);
     return {
       totalVoters,

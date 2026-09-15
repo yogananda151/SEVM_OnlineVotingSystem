@@ -1,16 +1,16 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Building2, Lock, Unlock, Pause, Play, ArrowRight, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, ArrowRight, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { pollingStationService, constituencyService, regionService } from '../../services/api.service';
-import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner, StatusBadge } from '../../components/ui';
+import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { normaliseValidationErrors } from '../../lib/validationErrors';
 
 interface Station {
   id: number; name: string; code: string; address: string;
-  totalBooths: number; machineStatus: string; isPollingActive: boolean;
+  totalBooths: number; machineStatus?: string; isPollingActive?: boolean;
   constituency: { name: string; code: string; region: { name: string } };
   officers: { user: { email: string } }[];
   _count: { voters: number; votes: number };
@@ -84,16 +84,6 @@ export const PollingStationsPage: React.FC = () => {
     { onSuccess: () => { refetch(); setDeleteTarget(null); }, successMessage: 'Deleted' },
   );
 
-  const changeStatus = async (id: number, status: string, isPollingActive?: boolean) => {
-    try {
-      await pollingStationService.updateMachineStatus(id, status, isPollingActive);
-      toast.success(`Machine status: ${status}`);
-      refetch();
-    } catch (e: unknown) {
-      toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Update failed');
-    }
-  };
-
   const openEdit = (s: Station) => {
     setEditTarget(s);
     setValue('name', s.name);
@@ -146,7 +136,7 @@ export const PollingStationsPage: React.FC = () => {
                   <thead>
                     <tr>
                       <th>#</th><th>Name</th><th>Code</th><th>Region / Constituency</th>
-                      <th>Officer</th><th>Voters</th><th>Votes Cast</th><th>Machine</th><th>Actions</th>
+                      <th>Officer</th><th>Voters</th><th>Votes Cast</th><th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -168,15 +158,10 @@ export const PollingStationsPage: React.FC = () => {
                         </td>
                         <td>{s._count.voters}</td>
                         <td>{s._count.votes}</td>
-                        <td><StatusBadge status={s.machineStatus} /></td>
                         <td>
                           <div className="flex items-center gap-1.5">
-                            {s.machineStatus === 'IDLE' && <button onClick={() => changeStatus(s.id, 'ACTIVE', true)} className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Activate"><Play size={13} /></button>}
-                            {s.machineStatus === 'ACTIVE' && <button onClick={() => changeStatus(s.id, 'LOCKED', false)} className="p-1.5 text-red-400 hover:text-red-300" title="Lock"><Lock size={13} /></button>}
-                            {s.machineStatus === 'LOCKED' && <button onClick={() => changeStatus(s.id, 'ACTIVE', true)} className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Unlock"><Unlock size={13} /></button>}
-                            {s.machineStatus === 'ACTIVE' && <button onClick={() => changeStatus(s.id, 'PAUSED', false)} className="p-1.5 text-amber-400 hover:text-amber-300" title="Pause"><Pause size={13} /></button>}
-                            <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400"><Pencil size={13} /></button>
-                            <button onClick={() => setDeleteTarget(s)} className="p-1.5 text-slate-400 hover:text-red-400"><Trash2 size={13} /></button>
+                            <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400" title="Edit"><Pencil size={13} /></button>
+                            <button onClick={() => setDeleteTarget(s)} className="p-1.5 text-slate-400 hover:text-red-400" title="Delete"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>

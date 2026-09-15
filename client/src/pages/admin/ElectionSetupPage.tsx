@@ -740,24 +740,22 @@ const Step4Review: React.FC<{
             {updating ? <Spinner size={16} /> : null} Schedule Election
           </button>
         )}
-        {election.status === 'SCHEDULED' && (
-          <button
-            onClick={() => updateStatus('ACTIVE')}
-            disabled={!readiness.isReady || updating}
-            className={`flex-1 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-500 flex items-center justify-center gap-2 ${!readiness.isReady ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {updating ? <Spinner size={16} /> : null} Activate Election
-          </button>
-        )}
-        {election.status === 'ACTIVE' && (
-          <button onClick={() => updateStatus('PAUSED')} disabled={updating} className="btn-secondary flex-1 justify-center">
-            Pause Election
-          </button>
-        )}
-        {(election.status === 'ACTIVE' || election.status === 'PAUSED') && (
-          <button onClick={() => updateStatus('CLOSED')} disabled={updating} className="btn-danger flex-1 justify-center">
-            Close Election
-          </button>
+        {(election.status === 'SCHEDULED' || election.status === 'ACTIVE' || election.status === 'PAUSED') && (
+          <div className="flex-1 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <UserCog size={20} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {election.status === 'SCHEDULED' ? 'Ready for Officer Activation' : 'Election Voting in Progress'}
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Elections can only be started and stopped by assigned Election Officers from their dashboard.
+                  {readiness.officer?.fullName && ` Assigned Officer: ${readiness.officer.fullName}.`}
+                </p>
+              </div>
+            </div>
+            <span className="badge badge-emerald text-xs flex-shrink-0">Officer Controlled</span>
+          </div>
         )}
         {election.status === 'CLOSED' && (
           <button onClick={() => updateStatus('RESULTS_PUBLISHED')} disabled={updating}

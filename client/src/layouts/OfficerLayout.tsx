@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Users, Lock, Pause, LogOut, Vote, Building2 } from 'lucide-react';
+import { LayoutDashboard, Users, Lock, Pause, LogOut, Vote, Building2, Shield } from 'lucide-react';
 import { authService } from '../services/auth.service';
 import { toast } from 'react-hot-toast';
 
@@ -35,6 +35,7 @@ export const OfficerLayout: React.FC<{ children: React.ReactNode }> = ({ childre
             { to: '/officer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
             { to: '/officer/voters', label: 'Voters', icon: Users },
             { to: '/officer/machine', label: 'Machine Control', icon: Building2 },
+            { to: '/officer/vvpat', label: 'Digital VVPAT', icon: Shield },
           ].map((item) => (
             <NavLink key={item.to} to={item.to} end={item.exact}
               className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}>

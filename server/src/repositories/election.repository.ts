@@ -22,6 +22,49 @@ export class ElectionRepository {
     });
   }
 
+  async findByOfficer(officerId: number, pollingStationId?: number | null) {
+    const orConditions: any[] = [{ officerId }];
+    if (pollingStationId) {
+      orConditions.push({
+        electionConstituencies: {
+          some: {
+            constituency: {
+              pollingStations: {
+                some: { id: pollingStationId },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    return prisma.election.findMany({
+      where: {
+        deletedAt: null,
+        OR: orConditions,
+      },
+      include: {
+        officer: {
+          select: { id: true, fullName: true, employeeId: true, phone: true },
+        },
+        electionConstituencies: {
+          include: {
+            constituency: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                _count: { select: { voters: true, candidates: true, pollingStations: true } },
+              },
+            },
+          },
+        },
+        _count: { select: { electionConstituencies: true, candidates: true } },
+      },
+      orderBy: { scheduledDate: 'desc' },
+    });
+  }
+
   async findById(id: number) {
     return prisma.election.findUnique({
       where: { id, deletedAt: null },
@@ -126,7 +169,7 @@ export class ElectionRepository {
 
     const [totalVoters, votedCount, totalCandidates, totalStations] = await Promise.all([
       prisma.voter.count({ where: { constituencyId: { in: constituencyIds }, deletedAt: null } }),
-      prisma.voter.count({ where: { constituencyId: { in: constituencyIds }, hasVoted: true } }),
+      prisma.vote.count({ where: { electionId } }),
       prisma.candidate.count({ where: { electionId, deletedAt: null } }),
       prisma.pollingStation.count({ where: { constituencyId: { in: constituencyIds }, deletedAt: null } }),
     ]);

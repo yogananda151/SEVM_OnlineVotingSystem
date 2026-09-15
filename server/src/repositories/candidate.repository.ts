@@ -6,6 +6,7 @@ export class CandidateRepository {
     return prisma.candidate.findMany({
       where: {
         deletedAt: null,
+        isActive: true,
         ...(electionId && { electionId }),
         ...(constituencyId && { constituencyId }),
       },

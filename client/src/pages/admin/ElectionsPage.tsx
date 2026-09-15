@@ -69,11 +69,6 @@ export const ElectionsPage: React.FC = () => {
     { onSuccess: () => { refetch(); setDeleteTarget(null); }, successMessage: 'Election deleted' },
   );
 
-  const { mutate: changeStatus } = useMutation(
-    ({ id, status }: { id: number; status: string }) => electionService.updateStatus(id, status),
-    { onSuccess: () => refetch() },
-  );
-
   const openCreate = () => { reset(); setEditTarget(null); setModalOpen(true); };
 
   const openEdit = (e: { id: number; name: string; description?: string | null; electionType: string; scheduledDate: string; status: string }) => {
@@ -88,13 +83,6 @@ export const ElectionsPage: React.FC = () => {
   const onSubmit = (data: FormData) => {
     if (editTarget) updateElection({ ...data, id: editTarget.id });
     else createElection(data);
-  };
-
-  const statusActions: Record<string, { label: string; next: string; icon: React.ReactNode; class: string }> = {
-    DRAFT: { label: 'Schedule', next: 'SCHEDULED', icon: <Play size={14} />, class: 'text-blue-400 hover:text-blue-300' },
-    SCHEDULED: { label: 'Activate', next: 'ACTIVE', icon: <Play size={14} />, class: 'text-emerald-400 hover:text-emerald-300' },
-    ACTIVE: { label: 'Close', next: 'CLOSED', icon: <Square size={14} />, class: 'text-red-400 hover:text-red-300' },
-    PAUSED: { label: 'Resume', next: 'ACTIVE', icon: <Play size={14} />, class: 'text-emerald-400 hover:text-emerald-300' },
   };
 
   return (
@@ -119,7 +107,6 @@ export const ElectionsPage: React.FC = () => {
               </thead>
               <tbody>
                 {elections?.map((e, i) => {
-                  const action = statusActions[e.status];
                   return (
                     <tr key={e.id}>
                       <td className="text-slate-500">{i + 1}</td>
@@ -149,12 +136,6 @@ export const ElectionsPage: React.FC = () => {
                             <button onClick={() => navigate('/admin/results')}
                               className="p-1.5 text-blue-400 hover:text-blue-300" title="View Published Results">
                               <BarChart3 size={14} />
-                            </button>
-                          )}
-                          {action && (
-                            <button onClick={() => changeStatus({ id: e.id, status: action.next })}
-                              className={`p-1.5 ${action.class}`} title={action.label}>
-                              {action.icon}
                             </button>
                           )}
                           {(e.status === 'DRAFT' || e.status === 'SCHEDULED') && (

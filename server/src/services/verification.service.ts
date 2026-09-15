@@ -2,7 +2,7 @@ import { voterRepository } from '../repositories/voter.repository';
 import { prisma } from '../config/database';
 import { hashAadhaar, generateOTP } from '../utils/crypto';
 import { AppError } from '../middleware/error.middleware';
-import { VerificationMethod } from '@prisma/client';
+import { VerificationMethod, ElectionStatus } from '@prisma/client';
 
 export class VerificationService {
   /**
@@ -30,9 +30,29 @@ export class VerificationService {
 
     if (!voter) throw new AppError('Voter not found. Please check your details.', 404);
     if (!voter.isActive) throw new AppError('Voter record is inactive. Contact the officer.', 403);
-    if (voter.hasVoted) throw new AppError('This voter has already cast their vote.', 409);
     if (voter.pollingStationId !== pollingStationId) {
       throw new AppError('You are not registered at this polling station.', 403);
+    }
+
+    // Check if there is an active election for this voter's constituency
+    const electionLink = await prisma.electionConstituency.findFirst({
+      where: {
+        constituencyId: voter.constituencyId,
+        election: { status: ElectionStatus.ACTIVE },
+      },
+      include: { election: true },
+    });
+    if (!electionLink) {
+      throw new AppError('No active election found for your constituency.', 400);
+    }
+    const electionId = electionLink.election.id;
+
+    // Check per-election voting status (replaces global hasVoted flag)
+    const electionStatus = await prisma.electionVoterStatus.findUnique({
+      where: { voterId_electionId: { voterId: voter.id, electionId } },
+    });
+    if (electionStatus?.hasVoted) {
+      throw new AppError('This voter has already cast their vote in the current election.', 409);
     }
 
     // Simulate OTP generation (would be sent via SMS in production)
@@ -85,7 +105,20 @@ export class VerificationService {
     // Pure simulation — always returns success after a delay
     const voter = await voterRepository.findById(voterId);
     if (!voter) throw new AppError('Voter not found.', 404);
-    if (voter.hasVoted) throw new AppError('Voter has already voted.', 409);
+
+    // Check per-election status for active election
+    const electionLink = await prisma.electionConstituency.findFirst({
+      where: {
+        constituencyId: voter.constituencyId,
+        election: { status: ElectionStatus.ACTIVE },
+      },
+    });
+    if (electionLink) {
+      const evs = await prisma.electionVoterStatus.findUnique({
+        where: { voterId_electionId: { voterId, electionId: electionLink.electionId } },
+      });
+      if (evs?.hasVoted) throw new AppError('Voter has already voted in the current election.', 409);
+    }
 
     return {
       verified: true,

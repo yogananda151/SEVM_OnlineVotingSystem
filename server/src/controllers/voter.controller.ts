@@ -3,18 +3,20 @@ import { voterRepository } from '../repositories/voter.repository';
 import { hashAadhaar } from '../utils/crypto';
 import { sendSuccess, sendPaginated } from '../utils/response';
 import { auditRepository } from '../repositories/audit.repository';
+import { voterExcelService } from '../services/voter-excel.service';
+import { AppError } from '../middleware/error.middleware';
+import { prisma } from '../config/database';
 
 export class VoterController {
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 20;
-      const { pollingStationId, constituencyId, hasVoted, search } = req.query;
+      const { pollingStationId, constituencyId, search } = req.query;
 
       const { data, total } = await voterRepository.findAll({
         pollingStationId: pollingStationId ? Number(pollingStationId) : undefined,
         constituencyId: constituencyId ? Number(constituencyId) : undefined,
-        hasVoted: hasVoted !== undefined ? hasVoted === 'true' : undefined,
         search: search as string | undefined,
         page,
         limit,
@@ -37,14 +39,15 @@ export class VoterController {
       const { aadhaarNumber, dateOfBirth, ...rest } = req.body;
       const voter = await voterRepository.create({
         ...rest,
-        aadhaarHash: aadhaarNumber ? hashAadhaar(aadhaarNumber) : undefined,
         dateOfBirth: new Date(dateOfBirth),
+        aadhaarHash: aadhaarNumber ? hashAadhaar(aadhaarNumber) : undefined,
       });
+
       await auditRepository.create({
         userId: req.user?.userId,
         action: 'CREATE',
         module: 'Voter',
-        description: `Registered voter: ${voter.fullName} (${voter.voterId})`,
+        description: `Registered voter "${voter.fullName}" (${voter.voterId})`,
         ipAddress: req.ip,
       });
       sendSuccess(res, voter, 'Voter registered successfully', 201);
@@ -74,6 +77,54 @@ export class VoterController {
     } catch (err) { next(err); }
   }
 
+  async downloadTemplate(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await voterExcelService.generateTemplate(res);
+    } catch (err) { next(err); }
+  }
+
+  async uploadExcel(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.file) {
+        throw new AppError('No Excel file uploaded. Please select an .xlsx or .csv file.', 400);
+      }
+
+      const defaultCId = req.body.defaultConstituencyId ? Number(req.body.defaultConstituencyId) : undefined;
+      const defaultSId = req.body.defaultPollingStationId ? Number(req.body.defaultPollingStationId) : undefined;
+
+      const result = await voterExcelService.parseAndValidateExcel(req.file.buffer, defaultCId, defaultSId);
+
+      if (result.validVoters.length > 0) {
+        await voterRepository.bulkCreate(result.validVoters);
+
+        await auditRepository.create({
+          userId: req.user?.userId,
+          action: 'CREATE',
+          module: 'Voter',
+          description: `Excel imported ${result.validVoters.length} voters (${result.skippedDuplicatesCount} duplicates skipped)`,
+          ipAddress: req.ip,
+        });
+      }
+
+      const message = result.validVoters.length > 0
+        ? `Successfully imported ${result.validVoters.length} voters!${result.skippedDuplicatesCount > 0 ? ` (${result.skippedDuplicatesCount} duplicates were skipped).` : ''}`
+        : `No new voters imported (${result.skippedDuplicatesCount} duplicate records were skipped).`;
+
+      sendSuccess(
+        res,
+        {
+          totalRows: result.totalRows,
+          imported: result.validVoters.length,
+          skippedDuplicates: result.skippedDuplicatesCount,
+          duplicateVoterIds: result.duplicateVoterIds,
+          errors: result.errors,
+        },
+        message,
+        201,
+      );
+    } catch (err) { next(err); }
+  }
+
   async bulkCreate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { voters } = req.body;
@@ -82,7 +133,7 @@ export class VoterController {
         return;
       }
 
-      const MAX_BULK = 500;
+      const MAX_BULK = 1000;
       if (voters.length > MAX_BULK) {
         res.status(400).json({
           success: false,
@@ -92,14 +143,26 @@ export class VoterController {
       }
 
       const errors: string[] = [];
-      const formatted = voters.map((v: Record<string, unknown>, idx: number) => {
+      const seenVoterIds = new Set<string>();
+      const internalDuplicates: string[] = [];
+      const uniquePayloadRows: any[] = [];
+
+      voters.forEach((v: Record<string, unknown>, idx: number) => {
         const row = idx + 1;
+        const voterIdStr = String(v.voterId || '').trim().toUpperCase();
+
         if (!v.fullName || typeof v.fullName !== 'string' || String(v.fullName).trim().length < 2) {
           errors.push(`Row ${row}: fullName is required (min 2 characters).`);
         }
-        if (!v.voterId || typeof v.voterId !== 'string' || String(v.voterId).trim().length < 5) {
+        if (!voterIdStr || voterIdStr.length < 5) {
           errors.push(`Row ${row}: voterId is required (min 5 characters).`);
+        } else if (seenVoterIds.has(voterIdStr)) {
+          internalDuplicates.push(voterIdStr);
+          return;
+        } else {
+          seenVoterIds.add(voterIdStr);
         }
+
         if (!v.constituencyId || isNaN(Number(v.constituencyId))) {
           errors.push(`Row ${row}: constituencyId must be a valid number.`);
         }
@@ -119,21 +182,21 @@ export class VoterController {
           errors.push(`Row ${row}: serialNumber must be a positive integer.`);
         }
 
-        return {
+        uniquePayloadRows.push({
           constituencyId: Number(v.constituencyId),
           pollingStationId: Number(v.pollingStationId),
           fullName: String(v.fullName || '').trim(),
-          voterId: String(v.voterId || '').trim(),
+          voterId: voterIdStr,
           aadhaarHash: v.aadhaarNumber ? hashAadhaar(String(v.aadhaarNumber).trim()) : undefined,
           dateOfBirth: new Date(String(v.dateOfBirth)),
           gender: String(v.gender),
           address: String(v.address || '').trim(),
           phone: v.phone ? String(v.phone).trim() : undefined,
           serialNumber: Number(v.serialNumber),
-        };
+        });
       });
 
-      if (errors.length > 0) {
+      if (errors.length > 0 && uniquePayloadRows.length === 0) {
         res.status(422).json({
           success: false,
           message: `Validation failed for ${errors.length} row(s).`,
@@ -142,17 +205,39 @@ export class VoterController {
         return;
       }
 
-      const count = await voterRepository.bulkCreate(formatted);
-
-      await auditRepository.create({
-        userId: req.user?.userId,
-        action: 'CREATE',
-        module: 'Voter',
-        description: `Bulk imported ${count.count} voters`,
-        ipAddress: req.ip,
+      const payloadVoterIds = uniquePayloadRows.map((r) => r.voterId);
+      const existingInDb = await prisma.voter.findMany({
+        where: { voterId: { in: payloadVoterIds }, deletedAt: null },
+        select: { voterId: true },
       });
+      const existingDbSet = new Set(existingInDb.map((e) => e.voterId.toUpperCase()));
 
-      sendSuccess(res, count, `Successfully imported ${count.count} voters`, 201);
+      const finalToInsert = uniquePayloadRows.filter((r) => !existingDbSet.has(r.voterId));
+      const allDuplicatesCount = internalDuplicates.length + existingInDb.length;
+
+      let count = { count: 0 };
+      if (finalToInsert.length > 0) {
+        count = await voterRepository.bulkCreate(finalToInsert);
+
+        await auditRepository.create({
+          userId: req.user?.userId,
+          action: 'CREATE',
+          module: 'Voter',
+          description: `Bulk imported ${count.count} voters (${allDuplicatesCount} duplicates skipped)`,
+          ipAddress: req.ip,
+        });
+      }
+
+      sendSuccess(
+        res,
+        {
+          count: count.count,
+          imported: count.count,
+          skippedDuplicates: allDuplicatesCount,
+        },
+        `Successfully imported ${count.count} voters${allDuplicatesCount > 0 ? ` (${allDuplicatesCount} duplicates skipped)` : ''}`,
+        201,
+      );
     } catch (err) { next(err); }
   }
 }

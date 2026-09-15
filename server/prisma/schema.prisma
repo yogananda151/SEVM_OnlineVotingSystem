@@ -219,6 +219,8 @@ model Election {
   officer                ElectionOfficer?       @relation(fields: [officerId], references: [id], onDelete: SetNull)
   electionConstituencies ElectionConstituency[]
   candidates             Candidate[]
+  votes                  Vote[]
+  voterStatuses          ElectionVoterStatus[]
   auditLogs              AuditLog[]
   notifications          Notification[]
 
@@ -302,35 +304,51 @@ model Candidate {
 // ─────────────────────────────────────────────
 
 model Voter {
-  id                Int                 @id @default(autoincrement())
+  id                Int                    @id @default(autoincrement())
   constituencyId    Int
   pollingStationId  Int
-  fullName          String              @db.VarChar(150)
-  voterId           String              @unique @db.VarChar(50)
-  aadhaarHash       String?             @db.VarChar(64)
+  fullName          String                 @db.VarChar(150)
+  voterId           String                 @unique @db.VarChar(50)
+  aadhaarHash       String?                @db.VarChar(64)
   dateOfBirth       DateTime
-  gender            String              @db.VarChar(10)
-  address           String              @db.Text
-  phone             String?             @db.VarChar(20)
-  photoUrl          String?             @db.VarChar(500)
+  gender            String                 @db.VarChar(10)
+  address           String                 @db.Text
+  phone             String?                @db.VarChar(20)
+  photoUrl          String?                @db.VarChar(500)
   serialNumber      Int
-  hasVoted          Boolean             @default(false)
-  votedAt           DateTime?
-  isActive          Boolean             @default(true)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  isActive          Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
   deletedAt         DateTime?
 
-  constituency      Constituency        @relation(fields: [constituencyId], references: [id], onDelete: Restrict)
-  pollingStation    PollingStation      @relation(fields: [pollingStationId], references: [id], onDelete: Restrict)
-  vote              Vote?
+  constituency      Constituency           @relation(fields: [constituencyId], references: [id], onDelete: Restrict)
+  pollingStation    PollingStation         @relation(fields: [pollingStationId], references: [id], onDelete: Restrict)
+  votes             Vote[]
+  electionStatuses  ElectionVoterStatus[]
   otpVerifications  OTPVerification[]
 
   @@index([voterId])
   @@index([constituencyId])
   @@index([pollingStationId])
-  @@index([hasVoted])
   @@map("voters")
+}
+
+/// Tracks whether a specific voter has voted in a specific election.
+/// This replaces the old global hasVoted flag on Voter.
+model ElectionVoterStatus {
+  id         Int      @id @default(autoincrement())
+  voterId    Int
+  electionId Int
+  hasVoted   Boolean  @default(false)
+  votedAt    DateTime?
+
+  voter      Voter    @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  election   Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+
+  @@unique([voterId, electionId])
+  @@index([voterId])
+  @@index([electionId])
+  @@map("election_voter_status")
 }
 
 // ─────────────────────────────────────────────
@@ -338,20 +356,24 @@ model Voter {
 // ─────────────────────────────────────────────
 
 model Vote {
-  id               Int          @id @default(autoincrement())
-  voterId          Int          @unique
+  id               Int            @id @default(autoincrement())
+  voterId          Int
+  electionId       Int
   candidateId      Int
   pollingStationId Int
-  voteHash         String       @unique @db.VarChar(64)
-  referenceNumber  String       @unique @db.VarChar(50)
-  isVerified       Boolean      @default(false)
-  castAt           DateTime     @default(now())
+  voteHash         String         @unique @db.VarChar(64)
+  referenceNumber  String         @unique @db.VarChar(50)
+  isVerified       Boolean        @default(false)
+  castAt           DateTime       @default(now())
 
-  voter            Voter        @relation(fields: [voterId], references: [id], onDelete: Restrict)
-  candidate        Candidate    @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  voter            Voter          @relation(fields: [voterId], references: [id], onDelete: Restrict)
+  election         Election       @relation(fields: [electionId], references: [id], onDelete: Restrict)
+  candidate        Candidate      @relation(fields: [candidateId], references: [id], onDelete: Restrict)
   pollingStation   PollingStation @relation(fields: [pollingStationId], references: [id], onDelete: Restrict)
   vvpat            DigitalVVPAT?
 
+  @@unique([voterId, electionId])
+  @@index([electionId])
   @@index([candidateId])
   @@index([pollingStationId])
   @@index([castAt])

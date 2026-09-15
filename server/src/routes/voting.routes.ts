@@ -12,8 +12,9 @@ router.post('/verify/biometric', votingController.simulateBiometric.bind(votingC
 // Cast vote (public route – the machine handles its own security context)
 router.post('/cast', validate(castVoteSchema), votingController.castVote.bind(votingController));
 
-// VVPAT lookup (public)
-router.get('/vvpat/:referenceNumber', votingController.getVVPAT.bind(votingController));
+// VVPAT lookup (public - supports query param ?referenceNumber=... and wildcard path /vvpat/...)
+router.get('/vvpat', votingController.getVVPAT.bind(votingController));
+router.get('/vvpat/:referenceNumber(*)', votingController.getVVPAT.bind(votingController));
 
 // Public ballot candidates & polling stations for EVM kiosk
 router.get('/candidates', votingController.getBallotCandidates.bind(votingController));

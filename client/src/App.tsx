@@ -23,9 +23,12 @@ import { VotersPage } from './pages/admin/VotersPage';
 import { ResultsPage } from './pages/admin/ResultsPage';
 import { ReportsPage } from './pages/admin/ReportsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
+import { NotificationsPage } from './pages/admin/NotificationsPage'; // #1 / #10
+import { SettingsPage } from './pages/admin/SettingsPage';           // #1 / #11
 
 // Officer pages
 import { OfficerDashboard } from './pages/officer/OfficerDashboard';
+import { MachineControlPage } from './pages/officer/MachineControlPage'; // #1 / #4
 
 // Voting Machine & Public VVPAT
 import { VotingMachinePage } from './pages/voting/VotingMachinePage';
@@ -39,15 +42,6 @@ const RequireAuth: React.FC<{ role: string; children: React.ReactNode }> = ({ ro
   if (!authService.hasRole(role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
-
-const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
-  <div className="flex items-center justify-center h-64">
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-white">{title}</h2>
-      <p className="text-slate-400 mt-2">This feature is coming soon.</p>
-    </div>
-  </div>
-);
 
 function App() {
   return (
@@ -70,8 +64,9 @@ function App() {
         {/* Admin */}
         <Route path="/admin" element={<RequireAuth role="COMMISSIONER"><AdminLayout><AdminDashboard /></AdminLayout></RequireAuth>} />
         <Route path="/admin/elections" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionsPage /></AdminLayout></RequireAuth>} />
-        <Route path="/admin/elections/:id" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionSetupPage /></AdminLayout></RequireAuth>} />
+        {/* #12: Removed duplicate route — canonical URL is /admin/elections/:id/setup */}
         <Route path="/admin/elections/:id/setup" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ElectionSetupPage /></AdminLayout></RequireAuth>} />
+        <Route path="/admin/elections/:id" element={<Navigate to="/admin/elections" replace />} />
         <Route path="/admin/regions" element={<RequireAuth role="COMMISSIONER"><AdminLayout><RegionsPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/constituencies" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ConstituenciesPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/polling-stations" element={<RequireAuth role="COMMISSIONER"><AdminLayout><PollingStationsPage /></AdminLayout></RequireAuth>} />
@@ -81,15 +76,18 @@ function App() {
         <Route path="/admin/voters" element={<RequireAuth role="COMMISSIONER"><AdminLayout><VotersPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/results" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ResultsPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/reports" element={<RequireAuth role="COMMISSIONER"><AdminLayout><ReportsPage /></AdminLayout></RequireAuth>} />
-        <Route path="/admin/vvpat" element={<RequireAuth role="COMMISSIONER"><AdminLayout><VvpatPage /></AdminLayout></RequireAuth>} />
         <Route path="/admin/audit-logs" element={<RequireAuth role="COMMISSIONER"><AdminLayout><AuditLogsPage /></AdminLayout></RequireAuth>} />
-        <Route path="/admin/notifications" element={<RequireAuth role="COMMISSIONER"><AdminLayout><PlaceholderPage title="Notifications" /></AdminLayout></RequireAuth>} />
-        <Route path="/admin/settings" element={<RequireAuth role="COMMISSIONER"><AdminLayout><PlaceholderPage title="System Settings" /></AdminLayout></RequireAuth>} />
+        {/* #1 / #10: Real notifications page */}
+        <Route path="/admin/notifications" element={<RequireAuth role="COMMISSIONER"><AdminLayout><NotificationsPage /></AdminLayout></RequireAuth>} />
+        {/* #1 / #11: Real settings page */}
+        <Route path="/admin/settings" element={<RequireAuth role="COMMISSIONER"><AdminLayout><SettingsPage /></AdminLayout></RequireAuth>} />
 
         {/* Officer */}
         <Route path="/officer" element={<RequireAuth role="OFFICER"><OfficerLayout><OfficerDashboard /></OfficerLayout></RequireAuth>} />
         <Route path="/officer/voters" element={<RequireAuth role="OFFICER"><OfficerLayout><VotersPage /></OfficerLayout></RequireAuth>} />
-        <Route path="/officer/machine" element={<RequireAuth role="OFFICER"><OfficerLayout><PlaceholderPage title="Machine Control" /></OfficerLayout></RequireAuth>} />
+        {/* #1 / #4: Real MachineControlPage instead of PlaceholderPage */}
+        <Route path="/officer/machine" element={<RequireAuth role="OFFICER"><OfficerLayout><MachineControlPage /></OfficerLayout></RequireAuth>} />
+        <Route path="/officer/vvpat" element={<RequireAuth role="OFFICER"><OfficerLayout><VvpatPage /></OfficerLayout></RequireAuth>} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

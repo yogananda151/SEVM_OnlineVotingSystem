@@ -179,7 +179,13 @@ export class ReportService {
   async generateVotersExcel(pollingStationId: number, res: Response): Promise<void> {
     const voters = await prisma.voter.findMany({
       where: { pollingStationId, deletedAt: null },
-      include: { pollingStation: { select: { name: true, code: true } } },
+      include: {
+        pollingStation: { select: { name: true, code: true } },
+        electionStatuses: {
+          where: { election: { status: 'ACTIVE' } },
+          take: 1,
+        },
+      },
       orderBy: { serialNumber: 'asc' },
     });
 
@@ -204,6 +210,9 @@ export class ReportService {
     });
 
     for (const voter of voters) {
+      const electionStatus = voter.electionStatuses?.[0];
+      const hasVotedInCurrentElection = electionStatus?.hasVoted ?? false;
+      const votedAt = electionStatus?.votedAt;
       const row = sheet.addRow({
         serial: voter.serialNumber,
         name: voter.fullName,
@@ -211,10 +220,10 @@ export class ReportService {
         dob: new Date(voter.dateOfBirth).toLocaleDateString('en-IN'),
         gender: voter.gender,
         address: voter.address,
-        voted: voter.hasVoted ? 'Yes' : 'No',
-        votedAt: voter.votedAt ? new Date(voter.votedAt).toLocaleString('en-IN') : '-',
+        voted: hasVotedInCurrentElection ? 'Yes' : 'No',
+        votedAt: votedAt ? new Date(votedAt).toLocaleString('en-IN') : '-',
       });
-      if (voter.hasVoted) {
+      if (hasVotedInCurrentElection) {
         row.getCell('voted').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
       }
     }

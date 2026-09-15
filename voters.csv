@@ -1,0 +1,21 @@
+Full Name *,Voter ID (EPIC) *,Constituency ID *,Polling Station ID *,Serial Number,Date of Birth (YYYY-MM-DD) *,Gender (Male/Female/Other) *,Address *,Phone (10 digits),Aadhaar Number (12 digits)
+John Doe,VOT1001,1,1,1001,1985-04-12,Male,123 Main St Springfield,5550101000,123456789012
+Jane Smith,VOT1002,1,1,1002,1990-08-25,Female,456 Oak Ave Shelbyville,5550102000,123456789013
+Robert Brown,VOT1003,1,1,1003,1978-11-03,Male,789 Pine Rd Capital City,5550103000,123456789014
+Emily Davis,VOT1004,1,1,1004,2001-02-14,Female,321 Elm St Ogdenville,5550104000,123456789015
+Michael Miller,VOT1005,1,1,1005,1965-07-30,Male,654 Maple Dr North Haverbrook,5550105000,123456789016
+Sarah Wilson,VOT1006,1,1,1006,1995-12-05,Female,987 Cedar Ln Springfield,5550106000,123456789017
+David Moore,VOT1007,1,1,1007,1982-03-21,Male,159 Birch Ct Shelbyville,5550107000,123456789018
+Laura Taylor,VOT1008,1,1,1008,1970-09-18,Female,753 Walnut St Capital City,5550108000,123456789019
+James Anderson,VOT1009,1,1,1009,1988-01-09,Male,852 Chestnut Blvd Ogdenville,5550109000,123456789020
+Linda Thomas,VOT1010,1,1,1010,1992-06-11,Female,951 Ash Pkwy North Haverbrook,5550110000,123456789021
+William Jackson,VOT1011,1,1,1011,1960-10-27,Male,357 Spruce Cir Springfield,5550111000,123456789022
+Barbara White,VOT1012,1,1,1012,1980-05-15,Female,468 Fir Pl Shelbyville,5550112000,123456789023
+Richard Harris,VOT1013,1,1,1013,1998-03-08,Male,246 Sycamore Sq Capital City,5550113000,123456789024
+Susan Martin,VOT1014,1,1,1014,1975-11-22,Female,135 Redwood Way Ogdenville,5550114000,123456789025
+Joseph Thompson,VOT1015,1,1,1015,1986-07-04,Male,864 Sequoia Terr North Haverbrook,5550115000,123456789026
+Jessica Garcia,VOT1016,1,1,1016,1993-09-30,Female,975 Cypress Cv Springfield,5550116000,123456789027
+Thomas Martinez,VOT1017,1,1,1017,1968-12-12,Male,531 Magnolia Trl Shelbyville,5550117000,123456789028
+Margaret Robinson,VOT1018,1,1,1018,1984-02-28,Female,642 Poplar Run Capital City,5550118000,123456789029
+Charles Clark,VOT1019,1,1,1019,1991-06-19,Male,753 Willow Pass Ogdenville,5550119000,123456789030
+Betty Rodriguez,VOT1020,1,1,1020,1979-04-01,Female,159 Holly Glen North Haverbrook,5550120000,123456789031

@@ -1,5 +1,20 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Plus, Trash2, Users, Search, Filter, AlertCircle, Upload, Download, FileText, CheckCircle } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Users,
+  Search,
+  Filter,
+  AlertCircle,
+  Upload,
+  Download,
+  FileText,
+  CheckCircle,
+  FileSpreadsheet,
+  AlertTriangle,
+  X,
+} from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -130,10 +145,21 @@ export const VotersPage: React.FC = () => {
   // ── List state
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [spreadsheetFile, setSpreadsheetFile] = useState<File | null>(null);
+  const [defaultConstituencyId, setDefaultConstituencyId] = useState<string>('');
+  const [defaultPollingStationId, setDefaultPollingStationId] = useState<string>('');
   const [parsedVoters, setParsedVoters] = useState<any[]>([]);
+  const [previewRows, setPreviewRows] = useState<any[]>([]);
+  const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
+  const [fileStats, setFileStats] = useState<{ total: number; valid: number; duplicates: number; errors: number }>({
+    total: 0,
+    valid: 0,
+    duplicates: 0,
+    errors: 0,
+  });
   const [parsingError, setParsingError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<Voter | null>(null);
   const [page, setPage] = useState(1);
@@ -145,64 +171,238 @@ export const VotersPage: React.FC = () => {
   // ── Ref to scroll/focus the first error field inside the modal
   const firstErrorRef = useRef<HTMLElement | null>(null);
 
-  // ── CSV Bulk Import handlers
-  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Spreadsheet parsing (Excel .xlsx, .xls and .csv)
+  const processSpreadsheetFile = useCallback(
+    (file: File, defCId?: string, defSId?: string) => {
+      setParsingError(null);
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        try {
+          const buffer = event.target?.result as ArrayBuffer;
+          const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
+          const sheetName = workbook.SheetNames[0];
+
+          if (!sheetName) {
+            setParsingError('The spreadsheet file does not contain any sheets.');
+            return;
+          }
+
+          const worksheet = workbook.Sheets[sheetName];
+          const rawRows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+          if (!rawRows || rawRows.length === 0) {
+            setParsingError('The selected spreadsheet contains no data rows.');
+            setParsedVoters([]);
+            setPreviewRows([]);
+            setFileStats({ total: 0, valid: 0, duplicates: 0, errors: 0 });
+            return;
+          }
+
+          const seenVoterIds = new Set<string>();
+          const validRows: any[] = [];
+          const duplicates: string[] = [];
+          const previewList: any[] = [];
+          let errorCount = 0;
+
+          rawRows.forEach((row, idx) => {
+            // Normalize column headers to lower alphanumeric
+            const normalized: Record<string, any> = {};
+            Object.keys(row).forEach((k) => {
+              const clean = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+              normalized[clean] = row[k];
+            });
+
+            const getVal = (...keys: string[]): string => {
+              for (const k of keys) {
+                const found = Object.keys(normalized).find((nk) => nk.includes(k));
+                if (found && normalized[found] !== undefined && normalized[found] !== '') {
+                  return String(normalized[found]).trim();
+                }
+              }
+              return '';
+            };
+
+            const fullName = getVal('fullname', 'name', 'votername');
+            const voterId = getVal('voterid', 'epic', 'cardno').toUpperCase();
+
+            // Skip completely empty rows
+            if (!fullName && !voterId) return;
+
+            const rawCId = getVal('constituencyid', 'constituency');
+            const constituencyId = Number(rawCId) || (defCId ? Number(defCId) : undefined);
+
+            const rawSId = getVal('pollingstationid', 'stationid', 'station', 'boothid');
+            const pollingStationId = Number(rawSId) || (defSId ? Number(defSId) : undefined);
+
+            const rawSerial = getVal('serialnumber', 'serialno', 'serial', 'slno');
+            const serialNumber = Number(rawSerial) > 0 ? Number(rawSerial) : idx + 1;
+
+            // Date of birth
+            let dateOfBirth = '2000-01-01';
+            const rawDob = getVal('dateofbirth', 'dob', 'birthdate');
+            if (rawDob) {
+              const d = new Date(rawDob);
+              if (!isNaN(d.getTime())) {
+                dateOfBirth = d.toISOString().split('T')[0];
+              } else {
+                dateOfBirth = rawDob;
+              }
+            }
+
+            // Gender
+            let gender = 'Other';
+            const rawGender = getVal('gender', 'sex').toLowerCase();
+            if (rawGender.startsWith('m')) gender = 'Male';
+            else if (rawGender.startsWith('f')) gender = 'Female';
+            else if (rawGender.startsWith('o')) gender = 'Other';
+
+            const address = getVal('address') || 'Address not specified';
+            const phone = getVal('phone', 'mobile') || undefined;
+            const rawAadhaar = getVal('aadhaar', 'aadhar').replace(/\D/g, '');
+            const aadhaarNumber = rawAadhaar.length === 12 ? rawAadhaar : undefined;
+
+            // Deduplication: "Add each member once"
+            if (voterId && seenVoterIds.has(voterId)) {
+              duplicates.push(voterId);
+              if (previewList.length < 20) {
+                previewList.push({
+                  fullName: fullName || 'Duplicate Entry',
+                  voterId,
+                  constituencyId: constituencyId || '-',
+                  pollingStationId: pollingStationId || '-',
+                  gender,
+                  dateOfBirth,
+                  status: 'Duplicate (Skipped)',
+                  statusType: 'duplicate',
+                });
+              }
+              return;
+            }
+
+            if (voterId) seenVoterIds.add(voterId);
+
+            const isValid = Boolean(
+              fullName &&
+                fullName.length >= 2 &&
+                voterId &&
+                voterId.length >= 4 &&
+                constituencyId &&
+                pollingStationId,
+            );
+
+            if (!isValid) {
+              errorCount++;
+              if (previewList.length < 20) {
+                previewList.push({
+                  fullName: fullName || '(Missing Name)',
+                  voterId: voterId || '(Missing ID)',
+                  constituencyId: constituencyId || '(Missing)',
+                  pollingStationId: pollingStationId || '(Missing)',
+                  gender,
+                  dateOfBirth,
+                  status:
+                    !constituencyId || !pollingStationId
+                      ? 'Missing Station/Constituency'
+                      : 'Missing Required Info',
+                  statusType: 'error',
+                });
+              }
+            } else {
+              validRows.push({
+                fullName,
+                voterId,
+                constituencyId: Number(constituencyId),
+                pollingStationId: Number(pollingStationId),
+                serialNumber,
+                dateOfBirth,
+                gender,
+                address,
+                phone,
+                aadhaarNumber,
+              });
+
+              if (previewList.length < 20) {
+                previewList.push({
+                  fullName,
+                  voterId,
+                  constituencyId,
+                  pollingStationId,
+                  gender,
+                  dateOfBirth,
+                  status: 'Ready',
+                  statusType: 'valid',
+                });
+              }
+            }
+          });
+
+          setParsedVoters(validRows);
+          setPreviewRows(previewList);
+          setSkippedDuplicates(duplicates);
+          setFileStats({
+            total: rawRows.length,
+            valid: validRows.length,
+            duplicates: duplicates.length,
+            errors: errorCount,
+          });
+
+          if (validRows.length === 0 && rawRows.length > 0) {
+            setParsingError(
+              'No valid rows could be imported. Please verify that columns include "Full Name", "Voter ID", and that Station IDs are provided (or select a Default Station above).',
+            );
+          }
+        } catch {
+          setParsingError('Failed to parse file. Please ensure it is a valid .xlsx, .xls, or .csv spreadsheet.');
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    },
+    [],
+  );
+
+  const handleSpreadsheetFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setCsvFile(file);
-    setParsingError(null);
+    setSpreadsheetFile(file);
+    processSpreadsheetFile(file, defaultConstituencyId, defaultPollingStationId);
+  };
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-        if (lines.length < 2) {
-          setParsingError('CSV file must have a header row and at least one voter record.');
-          setParsedVoters([]);
-          return;
-        }
+  // Re-process file when default station/constituency changes
+  const handleDefaultConstituencyChange = (cId: string) => {
+    setDefaultConstituencyId(cId);
+    setDefaultPollingStationId('');
+    if (spreadsheetFile) {
+      processSpreadsheetFile(spreadsheetFile, cId, '');
+    }
+  };
 
-        const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, ''));
-        const rows: any[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map((v) => v.trim().replace(/^["']|["']$/g, ''));
-          const row: Record<string, any> = {};
-          headers.forEach((h, idx) => {
-            row[h] = values[idx] ?? '';
-          });
-          if (row.fullName && row.voterId && row.constituencyId && row.pollingStationId) {
-            rows.push({
-              fullName: row.fullName,
-              voterId: row.voterId,
-              constituencyId: Number(row.constituencyId),
-              pollingStationId: Number(row.pollingStationId),
-              serialNumber: Number(row.serialNumber) || i,
-              dateOfBirth: row.dateOfBirth || '2000-01-01',
-              gender: ['Male', 'Female', 'Other'].includes(row.gender) ? row.gender : 'Other',
-              address: row.address || 'Address not specified',
-              phone: row.phone || undefined,
-              aadhaarNumber: row.aadhaarNumber || undefined,
-            });
-          }
-        }
+  const handleDefaultStationChange = (sId: string) => {
+    setDefaultPollingStationId(sId);
+    if (spreadsheetFile) {
+      processSpreadsheetFile(spreadsheetFile, defaultConstituencyId, sId);
+    }
+  };
 
-        if (rows.length === 0) {
-          setParsingError('No valid voter rows found. Expected columns: fullName, voterId, constituencyId, pollingStationId, serialNumber, dateOfBirth, gender, address, phone, aadhaarNumber.');
-        } else {
-          setParsedVoters(rows);
-        }
-      } catch {
-        setParsingError('Failed to parse CSV file. Please verify CSV encoding and structure.');
-      }
-    };
-    reader.readAsText(file);
+  const handleDownloadExcelTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      await voterService.downloadExcelTemplate();
+      toast.success('Excel template downloaded successfully!');
+    } catch {
+      toast.error('Failed to download Excel template.');
+    } finally {
+      setDownloadingTemplate(false);
+    }
   };
 
   const handleDownloadSampleCsv = () => {
-    const sample = 'fullName,voterId,constituencyId,pollingStationId,serialNumber,dateOfBirth,gender,address,phone,aadhaarNumber\n' +
-      'Amit Sharma,DL1234567,1,1,1,1992-04-12,Male,123 Rajendra Prasad Marg New Delhi,9876543210,123456789012\n' +
-      'Sunita Devi,DL1234568,1,1,2,1995-09-24,Female,124 Rajendra Prasad Marg New Delhi,9876543211,123456789013';
+    const sample =
+      'fullName,voterId,constituencyId,pollingStationId,serialNumber,dateOfBirth,gender,address,phone,aadhaarNumber\n' +
+      'Amit Sharma,DL/01/001/0002,1,1,1,1992-04-12,Male,123 Rajendra Prasad Marg New Delhi,9876543210,123456789012\n' +
+      'Sunita Devi,DL/01/001/0003,1,1,2,1995-09-24,Female,124 Rajendra Prasad Marg New Delhi,9876543211,123456789013\n' +
+      'Ravi Kumar,DL/01/001/0004,1,1,3,1990-11-05,Male,125 Rajendra Prasad Marg New Delhi,9876543212,123456789014';
     const blob = new Blob([sample], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -215,17 +415,49 @@ export const VotersPage: React.FC = () => {
   };
 
   const handleBulkSubmit = async () => {
-    if (parsedVoters.length === 0) return;
+    if (parsedVoters.length === 0 && !spreadsheetFile) return;
     setImporting(true);
     try {
-      await voterService.bulkCreate(parsedVoters);
-      toast.success(`Successfully imported ${parsedVoters.length} voters!`);
+      if (spreadsheetFile) {
+        const res = await voterService.uploadExcel(
+          spreadsheetFile,
+          defaultConstituencyId ? Number(defaultConstituencyId) : undefined,
+          defaultPollingStationId ? Number(defaultPollingStationId) : undefined,
+        );
+        const imported = res.data?.imported ?? parsedVoters.length;
+        const skipped = res.data?.skippedDuplicates ?? skippedDuplicates.length;
+        toast.success(
+          `Successfully imported ${imported} voters!${skipped > 0 ? ` (${skipped} duplicate records were skipped).` : ''}`,
+          { duration: 5000 },
+        );
+      } else {
+        const res = await voterService.bulkCreate(parsedVoters);
+        toast.success(`Successfully imported ${res.data?.count || parsedVoters.length} voters!`);
+      }
       setBulkModalOpen(false);
-      setCsvFile(null);
+      setSpreadsheetFile(null);
       setParsedVoters([]);
+      setPreviewRows([]);
+      setSkippedDuplicates([]);
       refetch();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to import voters.';
+      // Seamless fallback to bulkCreate with parsed voters if multipart upload encounters an issue
+      try {
+        if (parsedVoters.length > 0) {
+          const res = await voterService.bulkCreate(parsedVoters);
+          toast.success(`Successfully imported ${res.data?.count || parsedVoters.length} voters!`);
+          setBulkModalOpen(false);
+          setSpreadsheetFile(null);
+          setParsedVoters([]);
+          setPreviewRows([]);
+          setSkippedDuplicates([]);
+          refetch();
+          return;
+        }
+      } catch {}
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Failed to import voters.';
       toast.error(msg);
     } finally {
       setImporting(false);
@@ -426,15 +658,19 @@ export const VotersPage: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={() => {
-              setCsvFile(null);
+              setSpreadsheetFile(null);
               setParsedVoters([]);
+              setPreviewRows([]);
+              setSkippedDuplicates([]);
               setParsingError(null);
+              setFileStats({ total: 0, valid: 0, duplicates: 0, errors: 0 });
               setBulkModalOpen(true);
             }}
-            className="btn-secondary"
+            className="btn-secondary flex items-center gap-2"
             id="bulk-import-btn"
           >
-            <Upload size={16} /> Bulk Import CSV
+            <FileSpreadsheet size={16} className="text-emerald-400" />
+            <span>Bulk Import (Excel / CSV)</span>
           </button>
           <button
             onClick={() => {
@@ -822,74 +1058,235 @@ export const VotersPage: React.FC = () => {
         loading={deleting}
       />
 
-      {/* ── Bulk Import CSV Modal ── */}
+      {/* ── Bulk Import Excel / CSV Modal ── */}
       <Modal
         open={bulkModalOpen}
         onClose={() => setBulkModalOpen(false)}
-        title="Bulk Import Voters (CSV)"
-        size="lg"
+        title="Bulk Import Voters (Excel / CSV)"
+        size="xl"
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3.5 bg-slate-800/60 border border-slate-700/60 rounded-xl">
-            <div>
-              <p className="text-sm font-semibold text-white">Download Sample CSV Template</p>
-              <p className="text-xs text-slate-400 mt-0.5">Use this template with the expected column headers to prepare voter rosters.</p>
+          {/* ── Template Download Banner ── */}
+          <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white flex items-center gap-2">
+                  <FileSpreadsheet size={16} className="text-emerald-400" />
+                  Official Voter Roster Templates
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Download our formatted template containing sample voters and a reference sheet with valid Constituency & Polling Station IDs.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={handleDownloadExcelTemplate}
+                  disabled={downloadingTemplate}
+                  className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 border-0"
+                >
+                  {downloadingTemplate ? <Spinner size={12} /> : <FileSpreadsheet size={14} />}
+                  <span>Excel Template (.xlsx)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadSampleCsv}
+                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                >
+                  <Download size={14} /> CSV Template
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={handleDownloadSampleCsv}
-              className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
-            >
-              <Download size={14} /> Download Template
-            </button>
           </div>
 
+          {/* ── Default Station Assignment (Optional) ── */}
+          <div className="p-3.5 bg-slate-800/40 border border-slate-700/50 rounded-xl">
+            <p className="text-xs font-semibold text-slate-300 mb-2">
+              Default Location Assignment <span className="text-slate-500 font-normal">(Optional — auto-applies to rows where station/constituency ID is blank)</span>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-medium text-slate-400 mb-1 block">Default Constituency</label>
+                <select
+                  className="input text-xs py-1.5"
+                  value={defaultConstituencyId}
+                  onChange={(e) => handleDefaultConstituencyChange(e.target.value)}
+                >
+                  <option value="">None (Specify in spreadsheet)</option>
+                  {constituencyList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} (ID: {c.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-slate-400 mb-1 block">Default Polling Station</label>
+                <select
+                  className="input text-xs py-1.5"
+                  value={defaultPollingStationId}
+                  onChange={(e) => handleDefaultStationChange(e.target.value)}
+                >
+                  <option value="">None (Specify in spreadsheet)</option>
+                  {allStations
+                    .filter((s) => !defaultConstituencyId || s.constituencyId === Number(defaultConstituencyId))
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} (ID: {s.id})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* ── File Upload Dropzone ── */}
           <div>
-            <label className="label">Upload CSV File *</label>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleCsvFileChange}
-              className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-600 file:text-white file:cursor-pointer hover:file:bg-primary-700"
-            />
+            <label className="label">Select or Drag & Drop Spreadsheet File (.xlsx, .xls, .csv) *</label>
+            {!spreadsheetFile ? (
+              <label className="border-2 border-dashed border-slate-700 hover:border-primary-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer bg-slate-800/20 hover:bg-slate-800/40 transition-colors">
+                <Upload size={28} className="text-slate-400 mb-2" />
+                <span className="text-sm font-medium text-slate-300">Click to browse or drop file here</span>
+                <span className="text-xs text-slate-500 mt-1">Supports Microsoft Excel (.xlsx, .xls) and CSV (.csv)</span>
+                <input
+                  id="spreadsheet-file-input"
+                  data-testid="spreadsheet-file-input"
+                  type="file"
+                  accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
+                  onChange={handleSpreadsheetFileChange}
+                  className="hidden"
+                />
+              </label>
+            ) : (
+              <div className="flex items-center justify-between p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <FileSpreadsheet size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">{spreadsheetFile.name}</p>
+                    <p className="text-xs text-slate-400">
+                      {(spreadsheetFile.size / 1024).toFixed(1)} KB • {spreadsheetFile.name.split('.').pop()?.toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="btn-secondary text-xs py-1.5 px-3 cursor-pointer">
+                    Change File
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
+                      onChange={handleSpreadsheetFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpreadsheetFile(null);
+                      setParsedVoters([]);
+                      setPreviewRows([]);
+                      setSkippedDuplicates([]);
+                      setParsingError(null);
+                      setFileStats({ total: 0, valid: 0, duplicates: 0, errors: 0 });
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-red-400"
+                    title="Remove file"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* ── Parsing Error Banner ── */}
           {parsingError && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
-              <AlertCircle size={14} className="flex-shrink-0" />
+              <AlertCircle size={15} className="flex-shrink-0" />
               <span>{parsingError}</span>
             </div>
           )}
 
-          {parsedVoters.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                  <CheckCircle size={14} /> {parsedVoters.length} valid voters ready to import
-                </span>
-                <span className="text-[10px] text-slate-400">Previewing first 5 rows</span>
+          {/* ── Metrics Summary Cards ── */}
+          {spreadsheetFile && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-center">
+                <p className="text-[11px] text-slate-400">Total Rows Found</p>
+                <p className="text-lg font-bold text-white mt-0.5">{fileStats.total}</p>
               </div>
-              <div className="border border-slate-700/50 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center">
+                <p className="text-[11px] text-emerald-300">Ready to Import</p>
+                <p className="text-lg font-bold text-emerald-400 mt-0.5">{fileStats.valid}</p>
+              </div>
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center">
+                <p className="text-[11px] text-amber-300">Duplicates (Added Once)</p>
+                <p className="text-lg font-bold text-amber-400 mt-0.5">{fileStats.duplicates}</p>
+              </div>
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
+                <p className="text-[11px] text-red-300">Errors / Incomplete</p>
+                <p className="text-lg font-bold text-red-400 mt-0.5">{fileStats.errors}</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Duplicate Notice (Add each member once) ── */}
+          {fileStats.duplicates > 0 && (
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-center gap-2">
+              <AlertTriangle size={15} className="flex-shrink-0 text-amber-400" />
+              <span>
+                <strong>{fileStats.duplicates} duplicate voter ID(s)</strong> detected. Each voter will be registered exactly once, and duplicate rows are safely skipped.
+              </span>
+            </div>
+          )}
+
+          {/* ── Preview Table ── */}
+          {previewRows.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <CheckCircle size={14} className="text-emerald-400" />
+                  Roster Preview ({parsedVoters.length} valid voters ready)
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Showing first {previewRows.length} rows
+                </span>
+              </div>
+              <div className="border border-slate-700/50 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
                 <table className="table text-xs">
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Name</th>
-                      <th>Voter ID</th>
-                      <th>Constituency ID</th>
+                      <th>Full Name</th>
+                      <th>Voter ID (EPIC)</th>
                       <th>Station ID</th>
                       <th>Gender</th>
+                      <th>DOB</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {parsedVoters.slice(0, 5).map((v, i) => (
+                    {previewRows.map((v, i) => (
                       <tr key={i}>
-                        <td>{i + 1}</td>
+                        <td className="text-slate-500">{i + 1}</td>
                         <td className="font-medium text-white">{v.fullName}</td>
                         <td className="font-mono text-primary-400">{v.voterId}</td>
-                        <td>{v.constituencyId}</td>
                         <td>{v.pollingStationId}</td>
                         <td>{v.gender}</td>
+                        <td className="text-slate-400">{v.dateOfBirth}</td>
+                        <td>
+                          {v.statusType === 'valid' && (
+                            <span className="badge badge-green text-[10px]">Ready</span>
+                          )}
+                          {v.statusType === 'duplicate' && (
+                            <span className="badge badge-amber text-[10px]" title="Duplicate will be skipped so each member is registered once">
+                              Duplicate (Skipped)
+                            </span>
+                          )}
+                          {v.statusType === 'error' && (
+                            <span className="badge badge-red text-[10px]">{v.status}</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -898,7 +1295,8 @@ export const VotersPage: React.FC = () => {
             </div>
           )}
 
-          <div className="flex gap-3 justify-end pt-2 border-t border-slate-700/50">
+          {/* ── Modal Footer ── */}
+          <div className="flex gap-3 justify-end pt-3 border-t border-slate-700/50">
             <button
               type="button"
               className="btn-secondary"
@@ -911,10 +1309,10 @@ export const VotersPage: React.FC = () => {
               type="button"
               onClick={handleBulkSubmit}
               disabled={importing || parsedVoters.length === 0}
-              className="btn-primary"
+              className="btn-primary flex items-center gap-2"
             >
               {importing ? <Spinner size={16} /> : <Upload size={16} />}
-              {importing ? 'Importing…' : `Import ${parsedVoters.length} Voters`}
+              <span>{importing ? 'Importing Voters…' : `Import ${parsedVoters.length} Voters`}</span>
             </button>
           </div>
         </div>

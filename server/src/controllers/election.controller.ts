@@ -4,13 +4,13 @@ import { electionConstituencyRepository } from '../repositories/election-constit
 import { voteRepository } from '../repositories/vote.repository';
 import { auditRepository } from '../repositories/audit.repository';
 import { sendSuccess, sendError } from '../utils/response';
-import { ElectionStatus } from '@prisma/client';
+import { ElectionStatus, UserRole } from '@prisma/client';
 import { AppError } from '../middleware/error.middleware';
 import { prisma } from '../config/database';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ['SCHEDULED'],
+  DRAFT: ['SCHEDULED', 'ACTIVE'],
   SCHEDULED: ['ACTIVE', 'DRAFT'],
   ACTIVE: ['PAUSED', 'CLOSED'],
   PAUSED: ['ACTIVE', 'CLOSED'],
@@ -19,6 +19,23 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 export class ElectionController {
+  async getMyElections(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+      const officer = await prisma.electionOfficer.findUnique({
+        where: { userId: req.user.userId },
+      });
+      if (!officer || officer.deletedAt) {
+        sendSuccess(res, []);
+        return;
+      }
+      const elections = await electionRepository.findByOfficer(officer.id, officer.pollingStationId);
+      sendSuccess(res, elections);
+    } catch (err) { next(err); }
+  }
+
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       sendSuccess(res, await electionRepository.findAll());
@@ -116,6 +133,30 @@ export class ElectionController {
 
       const election = await electionRepository.findById(id);
       if (!election) throw new AppError('Election not found.', 404);
+
+      // Starting and stopping elections (ACTIVE, PAUSED, CLOSED) can ONLY be done by Election Officers
+      if (status === ElectionStatus.ACTIVE || status === ElectionStatus.CLOSED || status === ElectionStatus.PAUSED) {
+        if (req.user?.role !== UserRole.OFFICER) {
+          throw new AppError('Elections can only be started and stopped by assigned Election Officers.', 403);
+        }
+
+        const officer = await prisma.electionOfficer.findUnique({
+          where: { userId: req.user.userId },
+        });
+        if (!officer || officer.deletedAt) {
+          throw new AppError('Election Officer profile not found.', 404);
+        }
+
+        // Check if officer is assigned to this election (directly as supervising officer or via polling station)
+        const isSupervisingOfficer = election.officerId === officer.id;
+        const isStationOfficer = !!officer.pollingStationId && election.electionConstituencies.some((ec) =>
+          ec.constituency.pollingStations.some((ps) => ps.id === officer.pollingStationId),
+        );
+
+        if (!isSupervisingOfficer && !isStationOfficer) {
+          throw new AppError('You are not assigned to this election.', 403);
+        }
+      }
 
       // Enforce valid transitions
       const allowed = VALID_TRANSITIONS[election.status] ?? [];

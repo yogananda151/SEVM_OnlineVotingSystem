@@ -16,6 +16,7 @@ import managementRoutes from './routes/management.routes';
 import voterRoutes from './routes/voter.routes';
 import votingRoutes from './routes/voting.routes';
 import reportRoutes from './routes/report.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/api/elections', electionRoutes);
 app.use('/api/voters', voterRoutes);
 app.use('/api', managementRoutes);
 app.use('/api', reportRoutes);
+app.use('/api', notificationRoutes);
 
 // ── 404 & Error handlers ──────────────────────────────────────────
 app.use(notFoundHandler);

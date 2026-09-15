@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Search, CheckCircle2, Clock, Vote, ArrowLeft } from 'lucide-react';
 import { votingService } from '../../services/api.service';
 import { Spinner } from '../../components/ui';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface VvpatRecord {
   id: number;
@@ -20,6 +20,8 @@ interface VvpatRecord {
 }
 
 export const VvpatPage: React.FC = () => {
+  const location = useLocation();
+  const isOfficer = location.pathname.startsWith('/officer');
   const [refNum, setRefNum] = useState('');
   const [loading, setLoading] = useState(false);
   const [record, setRecord] = useState<VvpatRecord | null>(null);
@@ -47,14 +49,19 @@ export const VvpatPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className={`${isOfficer ? 'py-4' : 'min-h-screen bg-slate-950'} flex flex-col items-center justify-center p-4 relative overflow-hidden`}>
       {/* Background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-600/10 rounded-full blur-3xl pointer-events-none" />
+      {!isOfficer && (
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-600/10 rounded-full blur-3xl pointer-events-none" />
+      )}
 
       <div className="w-full max-w-lg relative z-10 space-y-6">
         <div className="text-center">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white mb-4 transition-colors">
-            <ArrowLeft size={14} /> Back to Portal
+          <Link
+            to={isOfficer ? '/officer' : '/'}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white mb-4 transition-colors"
+          >
+            <ArrowLeft size={14} /> {isOfficer ? 'Back to Officer Dashboard' : 'Back to Portal'}
           </Link>
           <div className="w-14 h-14 rounded-2xl bg-primary-600/20 border border-primary-500/30 flex items-center justify-center mx-auto mb-3 shadow-lg">
             <Shield size={28} className="text-primary-400" />
@@ -68,19 +75,21 @@ export const VvpatPage: React.FC = () => {
           <form onSubmit={handleLookup} className="space-y-4">
             <div>
               <label htmlFor="ref-input" className="label">
-                Vote Reference Number
+                Vote Reference Number or Voter ID (EPIC)
               </label>
               <div className="relative">
                 <input
                   id="ref-input"
                   value={refNum}
                   onChange={(e) => setRefNum(e.target.value)}
-                  placeholder="e.g. VOTE-M7AB12-XY89"
+                  placeholder="e.g. VOTE-M7AB12-XY89 or DL/01/001/0001"
                   className="input font-mono uppercase tracking-wider"
                   required
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1">Found on your digital VVPAT confirmation slip after voting.</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter the reference number from your digital VVPAT confirmation slip or your Voter ID card number (EPIC).
+              </p>
             </div>
 
             <button type="submit" disabled={loading || !refNum.trim()} className="btn-primary w-full justify-center">
