@@ -26,6 +26,13 @@ type OfficerForm = {
   pollingStationId?: number;
 };
 
+interface StationWithOfficers {
+  id: number;
+  name: string;
+  code: string;
+  officers?: Array<{ id: number; fullName: string; user?: { email: string } }>;
+}
+
 export const OfficersPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Officer | null>(null);
@@ -36,7 +43,7 @@ export const OfficersPage: React.FC = () => {
   const { data: officers, loading, execute: refetch } = useAsync<Officer[]>(fetchOfficers);
 
   const fetchStations = useCallback(() => pollingStationService.getAll(), []);
-  const { data: stations } = useAsync(fetchStations);
+  const { data: stations, execute: refetchStations } = useAsync<StationWithOfficers[]>(fetchStations);
 
   const { register, handleSubmit, reset, setValue, setError, formState: { errors } } = useForm<OfficerForm>({
     shouldFocusError: true,
@@ -64,6 +71,7 @@ export const OfficersPage: React.FC = () => {
     {
       onSuccess: () => {
         refetch();
+        refetchStations();
         closeModal();
       },
       successMessage: 'Officer registered successfully.',
@@ -100,6 +108,7 @@ export const OfficersPage: React.FC = () => {
     {
       onSuccess: () => {
         refetch();
+        refetchStations();
         closeModal();
       },
       successMessage: 'Officer updated successfully.',
@@ -133,10 +142,11 @@ export const OfficersPage: React.FC = () => {
 
   const { mutate: deleteOfficer, loading: deleting } = useMutation(
     (id: number) => officerService.delete(id),
-    { onSuccess: () => { refetch(); setDeleteTarget(null); }, successMessage: 'Officer removed' },
+    { onSuccess: () => { refetch(); refetchStations(); setDeleteTarget(null); }, successMessage: 'Officer removed' },
   );
 
   const openEdit = (o: Officer) => {
+    refetchStations();
     setEditTarget(o);
     setGeneralError(null);
     setValue('fullName', o.fullName);
@@ -153,11 +163,26 @@ export const OfficersPage: React.FC = () => {
 
   const onSubmit = (data: object) => {
     setGeneralError(null);
+    const rawStationId = (data as { pollingStationId?: string | number }).pollingStationId;
+    const pollingStationId = rawStationId ? Number(rawStationId) : null;
+
+    if (pollingStationId) {
+      const targetStation = stations?.find((s) => s.id === pollingStationId);
+      const assignedOfficer = targetStation?.officers && targetStation.officers.length > 0
+        ? targetStation.officers[0]
+        : null;
+      if (assignedOfficer && (!editTarget || assignedOfficer.id !== editTarget.id)) {
+        setError('pollingStationId', {
+          message: `Polling station "${targetStation?.name}" already has an assigned officer (${assignedOfficer.fullName}). Each station can only have one officer.`,
+        });
+        setGeneralError(`This station is already assigned to officer "${assignedOfficer.fullName}".`);
+        return;
+      }
+    }
+
     const payload = {
       ...data,
-      pollingStationId: (data as { pollingStationId?: string }).pollingStationId
-        ? Number((data as { pollingStationId: string }).pollingStationId)
-        : null,
+      pollingStationId,
     };
     if (editTarget) updateOfficer({ id: editTarget.id, data: payload });
     else createOfficer(payload);
@@ -172,6 +197,7 @@ export const OfficersPage: React.FC = () => {
         </div>
         <button
           onClick={() => {
+            refetchStations();
             reset();
             setEditTarget(null);
             setGeneralError(null);
@@ -387,14 +413,30 @@ export const OfficersPage: React.FC = () => {
             <label className="label" htmlFor="of-station">
               Assign Polling Station
             </label>
-            <select id="of-station" {...register('pollingStationId')} className="input">
+            <select
+              id="of-station"
+              {...register('pollingStationId')}
+              className={`input ${errors.pollingStationId ? 'input-error' : ''}`}
+              aria-invalid={!!errors.pollingStationId}
+              aria-describedby={errors.pollingStationId ? 'of-pollingStationId-error' : undefined}
+            >
               <option value="">Unassigned</option>
-              {(stations as { id: number; name: string; code: string }[] || []).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.code})
-                </option>
-              ))}
+              {(stations || []).map((s) => {
+                const assignedOfficer = s.officers && s.officers.length > 0 ? s.officers[0] : null;
+                const isAssignedToOther = assignedOfficer && (!editTarget || assignedOfficer.id !== editTarget.id);
+                return (
+                  <option key={s.id} value={s.id} disabled={Boolean(isAssignedToOther)}>
+                    {s.name} ({s.code}){isAssignedToOther ? ` — (Already Assigned: ${assignedOfficer.fullName})` : ''}
+                  </option>
+                );
+              })}
             </select>
+            {errors.pollingStationId && (
+              <p id="of-pollingStationId-error" className="field-error-message" role="alert">
+                <AlertCircle size={12} />
+                {errors.pollingStationId.message}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3 justify-end pt-2">

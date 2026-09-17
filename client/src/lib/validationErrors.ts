@@ -159,6 +159,8 @@ export function normaliseValidationErrors(
       fieldErrors['employeeId'] = 'An officer with this Employee ID already exists. Please use a different ID.';
     } else if (msg.includes('code') && msg.includes('already')) {
       fieldErrors['code'] = 'This code is already in use. Please choose a unique code.';
+    } else if ((msg.includes('polling station') || msg.includes('station')) && msg.includes('already')) {
+      fieldErrors['pollingStationId'] = responseData.message;
     } else {
       // Generic fallback — surface the message so it is never swallowed
       fieldErrors['_form'] = responseData.message;

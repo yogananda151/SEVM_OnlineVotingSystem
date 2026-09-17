@@ -188,7 +188,7 @@ const Step2Officer: React.FC<{
   const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchOfficers = useCallback(() => officerService.getAll(), []);
-  const { data: allOfficers, loading } = useAsync<Officer[]>(fetchOfficers);
+  const { data: allOfficers, loading, execute: refetchOfficers } = useAsync<Officer[]>(fetchOfficers);
 
   // Filter to only active officers (not deleted, user is active)
   const activeOfficers = (allOfficers || []).filter(
@@ -252,12 +252,36 @@ const Step2Officer: React.FC<{
   const handleAssignBoothOfficer = async (stationId: number, officerIdStr: string) => {
     try {
       if (!officerIdStr) return;
-      const officerId = Number(officerIdStr);
-      await officerService.update(officerId, { pollingStationId: stationId });
+
+      const station = participatingStations.find((s: any) => s.id === stationId);
+      const currentlyAssigned = station?.officers && station.officers.length > 0 ? station.officers[0] : null;
+
+      if (officerIdStr === '__unassign__') {
+        if (currentlyAssigned) {
+          await officerService.update(currentlyAssigned.id, { pollingStationId: null });
+          toast.success(`Officer "${currentlyAssigned.fullName}" unassigned.`);
+          refetchStations();
+          refetchOfficers();
+        }
+        return;
+      }
+
+      const newOfficerId = Number(officerIdStr);
+      if (currentlyAssigned && currentlyAssigned.id === newOfficerId) {
+        return;
+      }
+
+      // If this station already has an officer assigned, unassign them first so only one officer is present
+      if (currentlyAssigned && currentlyAssigned.id !== newOfficerId) {
+        await officerService.update(currentlyAssigned.id, { pollingStationId: null });
+      }
+
+      await officerService.update(newOfficerId, { pollingStationId: stationId });
       toast.success('Booth officer assigned successfully');
       refetchStations();
-    } catch {
-      toast.error('Failed to assign booth officer');
+      refetchOfficers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to assign booth officer');
     }
   };
 
@@ -455,16 +479,21 @@ const Step2Officer: React.FC<{
 
                       {!readOnly && (
                         <select
-                          defaultValue=""
+                          value=""
                           onChange={(e) => handleAssignBoothOfficer(station.id, e.target.value)}
-                          className="input text-xs py-1.5 px-2 max-w-[170px]"
+                          className="input text-xs py-1.5 px-2 max-w-[190px]"
                         >
-                          <option value="">{assigned ? 'Change...' : 'Assign...'}</option>
-                          {activeOfficers.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.fullName} ({o.employeeId})
-                            </option>
-                          ))}
+                          <option value="">{assigned ? 'Change officer...' : 'Assign officer...'}</option>
+                          {assigned && <option value="__unassign__">❌ Unassign</option>}
+                          {activeOfficers.map((o) => {
+                            const isAtOtherStation = o.pollingStationId && o.pollingStationId !== station.id;
+                            const isAlreadyHere = assigned && assigned.id === o.id;
+                            return (
+                              <option key={o.id} value={o.id} disabled={Boolean(isAtOtherStation || isAlreadyHere)}>
+                                {o.fullName} ({o.employeeId}){isAtOtherStation ? ' — [Assigned elsewhere]' : isAlreadyHere ? ' — [Current]' : ''}
+                              </option>
+                            );
+                          })}
                         </select>
                       )}
                     </div>

@@ -51,6 +51,24 @@ class UserRepository {
         if (existingEmployee) {
             throw new error_middleware_1.AppError(`An officer with employee ID "${data.employeeId}" already exists. Please use a different employee ID.`, 409);
         }
+        // Pre-check: if assigning a polling station, make sure no other active officer is already assigned to it
+        if (data.pollingStationId) {
+            const station = await database_1.prisma.pollingStation.findUnique({
+                where: { id: data.pollingStationId, deletedAt: null },
+            });
+            if (!station) {
+                throw new error_middleware_1.AppError('The selected polling station does not exist.', 404);
+            }
+            const existingOfficer = await database_1.prisma.electionOfficer.findFirst({
+                where: {
+                    pollingStationId: data.pollingStationId,
+                    deletedAt: null,
+                },
+            });
+            if (existingOfficer) {
+                throw new error_middleware_1.AppError(`Polling station "${station.name}" already has an assigned officer (${existingOfficer.fullName}). Each station can only have one officer.`, 409);
+            }
+        }
         const passwordHash = await (0, crypto_1.hashPassword)(data.password);
         return database_1.prisma.user.create({
             data: {
@@ -70,6 +88,28 @@ class UserRepository {
         });
     }
     async updateOfficer(id, data) {
+        const officer = await database_1.prisma.electionOfficer.findUnique({ where: { id, deletedAt: null } });
+        if (!officer) {
+            throw new error_middleware_1.AppError('Officer not found', 404);
+        }
+        if (data.pollingStationId) {
+            const station = await database_1.prisma.pollingStation.findUnique({
+                where: { id: data.pollingStationId, deletedAt: null },
+            });
+            if (!station) {
+                throw new error_middleware_1.AppError('The selected polling station does not exist.', 404);
+            }
+            const existingOfficer = await database_1.prisma.electionOfficer.findFirst({
+                where: {
+                    pollingStationId: data.pollingStationId,
+                    id: { not: id },
+                    deletedAt: null,
+                },
+            });
+            if (existingOfficer) {
+                throw new error_middleware_1.AppError(`Polling station "${station.name}" already has an assigned officer (${existingOfficer.fullName}). Each station can only have one officer.`, 409);
+            }
+        }
         return database_1.prisma.electionOfficer.update({ where: { id }, data });
     }
     async deleteOfficer(id) {
@@ -90,6 +130,7 @@ class UserRepository {
             where: { id },
             data: {
                 employeeId: `${officer.employeeId}_del_${timestamp}`,
+                pollingStationId: null, // Release polling station so a new officer can be assigned
                 deletedAt: now,
             },
         });

@@ -67,6 +67,29 @@ export class UserRepository {
       );
     }
 
+    // Pre-check: if assigning a polling station, make sure no other active officer is already assigned to it
+    if (data.pollingStationId) {
+      const station = await prisma.pollingStation.findUnique({
+        where: { id: data.pollingStationId, deletedAt: null },
+      });
+      if (!station) {
+        throw new AppError('The selected polling station does not exist.', 404);
+      }
+
+      const existingOfficer = await prisma.electionOfficer.findFirst({
+        where: {
+          pollingStationId: data.pollingStationId,
+          deletedAt: null,
+        },
+      });
+      if (existingOfficer) {
+        throw new AppError(
+          `Polling station "${station.name}" already has an assigned officer (${existingOfficer.fullName}). Each station can only have one officer.`,
+          409,
+        );
+      }
+    }
+
     const passwordHash = await hashPassword(data.password);
     return prisma.user.create({
       data: {
@@ -87,6 +110,34 @@ export class UserRepository {
   }
 
   async updateOfficer(id: number, data: Partial<{ fullName: string; phone: string; pollingStationId: number | null }>) {
+    const officer = await prisma.electionOfficer.findUnique({ where: { id, deletedAt: null } });
+    if (!officer) {
+      throw new AppError('Officer not found', 404);
+    }
+
+    if (data.pollingStationId) {
+      const station = await prisma.pollingStation.findUnique({
+        where: { id: data.pollingStationId, deletedAt: null },
+      });
+      if (!station) {
+        throw new AppError('The selected polling station does not exist.', 404);
+      }
+
+      const existingOfficer = await prisma.electionOfficer.findFirst({
+        where: {
+          pollingStationId: data.pollingStationId,
+          id: { not: id },
+          deletedAt: null,
+        },
+      });
+      if (existingOfficer) {
+        throw new AppError(
+          `Polling station "${station.name}" already has an assigned officer (${existingOfficer.fullName}). Each station can only have one officer.`,
+          409,
+        );
+      }
+    }
+
     return prisma.electionOfficer.update({ where: { id }, data });
   }
 
@@ -112,6 +163,7 @@ export class UserRepository {
       where: { id },
       data: {
         employeeId: `${officer.employeeId}_del_${timestamp}`,
+        pollingStationId: null, // Release polling station so a new officer can be assigned
         deletedAt: now,
       },
     });
