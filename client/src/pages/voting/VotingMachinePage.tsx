@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Vote, Shield, Fingerprint, Scan, CheckCircle, X, RefreshCw, Clock, User } from 'lucide-react';
 import { votingService, candidateService } from '../../services/api.service';
+import { authService } from '../../services/auth.service';
 import { toast } from 'react-hot-toast';
 import { useCountdown } from '../../hooks/useAsync';
 
@@ -42,37 +43,49 @@ interface PollingStationInfo {
 const EVMHeader: React.FC<{
   station?: PollingStationInfo | null;
   onOpenStationSelect?: () => void;
-}> = ({ station, onOpenStationSelect }) => (
-  <div className="bg-slate-900 border-b border-slate-700/50 px-6 py-3 flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-        <Vote size={16} className="text-white" />
+}> = ({ station, onOpenStationSelect }) => {
+  const isOfficer = authService.hasRole('OFFICER');
+
+  return (
+    <div className="bg-slate-900 border-b border-slate-700/50 px-6 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
+          <Vote size={16} className="text-white" />
+        </div>
+        <div>
+          <p className="text-xs font-bold text-white leading-tight">SMART ELECTRONIC VOTING MACHINE</p>
+          <p className="text-[10px] text-slate-400">
+            {station ? `${station.name} (${station.code})` : 'Election Commission of India – Official System'}
+          </p>
+        </div>
       </div>
-      <div>
-        <p className="text-xs font-bold text-white leading-tight">SMART ELECTRONIC VOTING MACHINE</p>
-        <p className="text-[10px] text-slate-400">
-          {station ? `${station.name} (${station.code})` : 'Election Commission of India – Official System'}
-        </p>
+      <div className="flex items-center gap-4">
+        {isOfficer && (
+          <a
+            href="/officer"
+            className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium bg-emerald-950/60 border border-emerald-700/40 px-2 py-0.5 rounded-lg transition-colors"
+          >
+            ← Officer Portal
+          </a>
+        )}
+        {station && (
+          <button
+            onClick={onOpenStationSelect}
+            className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            title="Change Polling Station"
+          >
+            Station #{station.id}
+          </button>
+        )}
+        <div className="flex items-center gap-1.5">
+          <div className={`evm-led ${station?.machineStatus === 'LOCKED' ? 'evm-led-red' : station?.machineStatus === 'PAUSED' ? 'evm-led-yellow' : 'evm-led-green'}`} />
+          <span className="text-[10px] text-slate-400">{station?.machineStatus ?? 'ONLINE'}</span>
+        </div>
+        <div className="text-[10px] text-slate-500 font-mono hidden sm:block">{new Date().toLocaleTimeString('en-IN')}</div>
       </div>
     </div>
-    <div className="flex items-center gap-4">
-      {station && (
-        <button
-          onClick={onOpenStationSelect}
-          className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
-          title="Change Polling Station"
-        >
-          Station #{station.id}
-        </button>
-      )}
-      <div className="flex items-center gap-1.5">
-        <div className={`evm-led ${station?.machineStatus === 'LOCKED' ? 'evm-led-red' : station?.machineStatus === 'PAUSED' ? 'evm-led-yellow' : 'evm-led-green'}`} />
-        <span className="text-[10px] text-slate-400">{station?.machineStatus ?? 'ONLINE'}</span>
-      </div>
-      <div className="text-[10px] text-slate-500 font-mono hidden sm:block">{new Date().toLocaleTimeString('en-IN')}</div>
-    </div>
-  </div>
-);
+  );
+};
 
 const WelcomeScreen: React.FC<{
   onStart: () => void;
@@ -547,9 +560,19 @@ export const VotingMachinePage: React.FC = () => {
       .then((data: PollingStationInfo[]) => {
         if (data && data.length > 0) {
           setAllStations(data);
+          const params = new URLSearchParams(window.location.search);
+          const fromUrl = params.get('stationId');
+          const targetId = fromUrl ? Number(fromUrl) : (localStorage.getItem('evm_station_id') ? Number(localStorage.getItem('evm_station_id')) : null);
+
           setSelectedStationId((curr) => {
+            if (targetId && data.some((s) => s.id === targetId)) {
+              localStorage.setItem('evm_station_id', targetId.toString());
+              return targetId;
+            }
             const exists = data.some((s) => s.id === curr);
-            return exists ? curr : data[0].id;
+            const finalId = exists ? curr : data[0].id;
+            localStorage.setItem('evm_station_id', finalId.toString());
+            return finalId;
           });
         }
       })

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Users, Lock, Pause, LogOut, Vote, Building2, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Vote, Building2, ExternalLink } from 'lucide-react';
 import { authService } from '../services/auth.service';
 import { toast } from 'react-hot-toast';
 
 export const OfficerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
+  const stationId = user?.profile?.pollingStationId ?? user?.stationId;
 
   const handleLogout = async () => {
     await authService.logout();
@@ -35,7 +36,6 @@ export const OfficerLayout: React.FC<{ children: React.ReactNode }> = ({ childre
             { to: '/officer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
             { to: '/officer/voters', label: 'Voters', icon: Users },
             { to: '/officer/machine', label: 'Machine Control', icon: Building2 },
-            { to: '/officer/vvpat', label: 'Digital VVPAT', icon: Shield },
           ].map((item) => (
             <NavLink key={item.to} to={item.to} end={item.exact}
               className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}>
@@ -43,6 +43,26 @@ export const OfficerLayout: React.FC<{ children: React.ReactNode }> = ({ childre
             </NavLink>
           ))}
         </nav>
+
+        {/* Quick Launch EVM Terminal for Booth */}
+        <div className="p-3">
+          <a
+            href={`/voting-machine${stationId ? `?stationId=${stationId}` : ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              if (stationId) localStorage.setItem('evm_station_id', stationId.toString());
+            }}
+            className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs shadow-lg shadow-emerald-900/30 transition-all group"
+            title="Open EVM Voting Machine for this polling station"
+          >
+            <div className="flex items-center gap-2">
+              <Vote size={15} className="text-white" />
+              <span>Voting Machine</span>
+            </div>
+            <ExternalLink size={13} className="text-emerald-200 group-hover:translate-x-0.5 transition-transform" />
+          </a>
+        </div>
 
         <div className="p-3 border-t border-slate-700/50">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/30">

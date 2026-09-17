@@ -22,9 +22,9 @@ const generateVoteHash = (data) => {
     return crypto_1.default.createHash('sha256').update(payload).digest('hex');
 };
 exports.generateVoteHash = generateVoteHash;
-// ── Aadhaar hash (salted HMAC simulation) ─────────────────────────
+// ── Aadhaar hash (salted HMAC with a dedicated secret — separate from JWT) ──
 const hashAadhaar = (aadhaar) => {
-    return crypto_1.default.createHmac('sha256', config_1.config.jwt.secret).update(aadhaar).digest('hex');
+    return crypto_1.default.createHmac('sha256', config_1.config.aadhaarHmacSecret).update(aadhaar).digest('hex');
 };
 exports.hashAadhaar = hashAadhaar;
 // ── Cryptographically secure OTP generation ──────────────────────
@@ -35,7 +35,7 @@ exports.generateOTP = generateOTP;
 // ── Reference number for VVPAT ────────────────────────────────────
 const generateReferenceNumber = () => {
     const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const random = crypto_1.default.randomBytes(3).toString('hex').toUpperCase();
     return `VOTE-${timestamp}-${random}`;
 };
 exports.generateReferenceNumber = generateReferenceNumber;

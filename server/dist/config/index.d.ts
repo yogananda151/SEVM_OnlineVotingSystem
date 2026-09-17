@@ -1,5 +1,5 @@
 export declare const config: {
-    env: string;
+    env: "development" | "production" | "test";
     port: number;
     jwt: {
         secret: string;
@@ -7,6 +7,7 @@ export declare const config: {
         refreshSecret: string;
         refreshExpiresIn: string;
     };
+    aadhaarHmacSecret: string;
     client: {
         url: string;
     };

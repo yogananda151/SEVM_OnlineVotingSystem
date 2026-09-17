@@ -2,7 +2,6 @@ export declare class VoterRepository {
     findAll(filters: {
         pollingStationId?: number;
         constituencyId?: number;
-        hasVoted?: boolean;
         search?: string;
         page?: number;
         limit?: number;
@@ -18,6 +17,11 @@ export declare class VoterRepository {
                 name: string;
                 id: number;
             };
+            electionStatuses: {
+                electionId: number;
+                hasVoted: boolean;
+                votedAt: Date | null;
+            }[];
         } & {
             voterId: string;
             id: number;
@@ -33,10 +37,8 @@ export declare class VoterRepository {
             serialNumber: number;
             dateOfBirth: Date;
             gender: string;
-            hasVoted: boolean;
             photoUrl: string | null;
             aadhaarHash: string | null;
-            votedAt: Date | null;
         })[];
         total: number;
     }>;
@@ -67,7 +69,7 @@ export declare class VoterRepository {
             description: string | null;
             regionId: number;
         };
-        vote: ({
+        votes: ({
             candidate: {
                 party: {
                     symbol: string | null;
@@ -102,12 +104,20 @@ export declare class VoterRepository {
             voterId: number;
             id: number;
             pollingStationId: number;
+            electionId: number;
             candidateId: number;
             voteHash: string;
             referenceNumber: string;
             isVerified: boolean;
             castAt: Date;
-        }) | null;
+        })[];
+        electionStatuses: {
+            voterId: number;
+            id: number;
+            electionId: number;
+            hasVoted: boolean;
+            votedAt: Date | null;
+        }[];
     } & {
         voterId: string;
         id: number;
@@ -123,10 +133,8 @@ export declare class VoterRepository {
         serialNumber: number;
         dateOfBirth: Date;
         gender: string;
-        hasVoted: boolean;
         photoUrl: string | null;
         aadhaarHash: string | null;
-        votedAt: Date | null;
     }) | null>;
     findByVoterId(voterId: string): Promise<({
         pollingStation: {
@@ -181,10 +189,8 @@ export declare class VoterRepository {
         serialNumber: number;
         dateOfBirth: Date;
         gender: string;
-        hasVoted: boolean;
         photoUrl: string | null;
         aadhaarHash: string | null;
-        votedAt: Date | null;
     }) | null>;
     findByAadhaarHash(aadhaarHash: string): Promise<({
         pollingStation: {
@@ -239,10 +245,8 @@ export declare class VoterRepository {
         serialNumber: number;
         dateOfBirth: Date;
         gender: string;
-        hasVoted: boolean;
         photoUrl: string | null;
         aadhaarHash: string | null;
-        votedAt: Date | null;
     }) | null>;
     create(data: {
         constituencyId: number;
@@ -270,10 +274,8 @@ export declare class VoterRepository {
         serialNumber: number;
         dateOfBirth: Date;
         gender: string;
-        hasVoted: boolean;
         photoUrl: string | null;
         aadhaarHash: string | null;
-        votedAt: Date | null;
     }>;
     update(id: number, data: Partial<{
         fullName: string;
@@ -295,12 +297,9 @@ export declare class VoterRepository {
         serialNumber: number;
         dateOfBirth: Date;
         gender: string;
-        hasVoted: boolean;
         photoUrl: string | null;
         aadhaarHash: string | null;
-        votedAt: Date | null;
     }>;
-    markVoted(id: number): Promise<void>;
     delete(id: number): Promise<void>;
     bulkCreate(voters: Array<{
         constituencyId: number;

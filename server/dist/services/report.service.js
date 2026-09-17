@@ -7,6 +7,7 @@ exports.reportService = exports.ReportService = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const exceljs_1 = __importDefault(require("exceljs"));
 const database_1 = require("../config/database");
+const error_middleware_1 = require("../middleware/error.middleware");
 class ReportService {
     // ── Election Summary PDF ─────────────────────────────────────────
     async generateElectionSummaryPDF(electionId, res) {
@@ -26,7 +27,7 @@ class ReportService {
             },
         });
         if (!election)
-            throw new Error('Election not found');
+            throw new error_middleware_1.AppError('Election not found', 404);
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="election-${election.id}-summary.pdf"`);
@@ -105,7 +106,7 @@ class ReportService {
             },
         });
         if (!election)
-            throw new Error('Election not found');
+            throw new error_middleware_1.AppError('Election not found', 404);
         const workbook = new exceljs_1.default.Workbook();
         workbook.creator = 'Smart EVM System';
         workbook.created = new Date();
@@ -163,7 +164,13 @@ class ReportService {
     async generateVotersExcel(pollingStationId, res) {
         const voters = await database_1.prisma.voter.findMany({
             where: { pollingStationId, deletedAt: null },
-            include: { pollingStation: { select: { name: true, code: true } } },
+            include: {
+                pollingStation: { select: { name: true, code: true } },
+                electionStatuses: {
+                    where: { election: { status: 'ACTIVE' } },
+                    take: 1,
+                },
+            },
             orderBy: { serialNumber: 'asc' },
         });
         const workbook = new exceljs_1.default.Workbook();
@@ -184,6 +191,9 @@ class ReportService {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A73E8' } };
         });
         for (const voter of voters) {
+            const electionStatus = voter.electionStatuses?.[0];
+            const hasVotedInCurrentElection = electionStatus?.hasVoted ?? false;
+            const votedAt = electionStatus?.votedAt;
             const row = sheet.addRow({
                 serial: voter.serialNumber,
                 name: voter.fullName,
@@ -191,10 +201,10 @@ class ReportService {
                 dob: new Date(voter.dateOfBirth).toLocaleDateString('en-IN'),
                 gender: voter.gender,
                 address: voter.address,
-                voted: voter.hasVoted ? 'Yes' : 'No',
-                votedAt: voter.votedAt ? new Date(voter.votedAt).toLocaleString('en-IN') : '-',
+                voted: hasVotedInCurrentElection ? 'Yes' : 'No',
+                votedAt: votedAt ? new Date(votedAt).toLocaleString('en-IN') : '-',
             });
-            if (voter.hasVoted) {
+            if (hasVotedInCurrentElection) {
                 row.getCell('voted').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
             }
         }

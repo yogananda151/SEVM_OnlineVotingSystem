@@ -5,33 +5,86 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
+const zod_1 = require("zod");
 dotenv_1.default.config();
+// ── Environment Validation ──────────────────────────────────────────────────
+// Validates all required env vars at startup. Throws with a clear error
+// message if any required variable is missing or using an insecure default.
+const INSECURE_SECRETS = new Set([
+    'fallback_secret_change_me',
+    'fallback_refresh_secret',
+    'fallback_aadhaar_hmac_secret_change_me',
+    'your_jwt_secret_here',
+    'secret',
+    'password',
+]);
+const envSchema = zod_1.z.object({
+    NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('development'),
+    PORT: zod_1.z.string().default('5000'),
+    DATABASE_URL: zod_1.z.string().min(1, 'DATABASE_URL is required'),
+    JWT_SECRET: zod_1.z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
+    JWT_EXPIRES_IN: zod_1.z.string().default('8h'),
+    JWT_REFRESH_SECRET: zod_1.z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters'),
+    JWT_REFRESH_EXPIRES_IN: zod_1.z.string().default('7d'),
+    AADHAAR_HMAC_SECRET: zod_1.z.string().default('fallback_aadhaar_hmac_secret_change_me'),
+    CLIENT_URL: zod_1.z.string().url('CLIENT_URL must be a valid URL').default('http://localhost:5173'),
+    UPLOAD_PATH: zod_1.z.string().default('./uploads'),
+    MAX_FILE_SIZE: zod_1.z.string().default('5242880'),
+    BCRYPT_ROUNDS: zod_1.z.string().default('12'),
+    RATE_LIMIT_WINDOW_MS: zod_1.z.string().default('900000'),
+    RATE_LIMIT_MAX: zod_1.z.string().default('2000'),
+    LOG_LEVEL: zod_1.z.string().default('info'),
+    LOG_FILE: zod_1.z.string().default('./logs/app.log'),
+});
+const parsed = envSchema.safeParse(process.env);
+if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `  • ${i.path.join('.')}: ${i.message}`).join('\n');
+    console.error('\n❌  Environment validation failed. Check your server/.env file:\n');
+    console.error(issues);
+    console.error('\n  Copy server/.env.example → server/.env and fill in the required values.\n');
+    process.exit(1);
+}
+const env = parsed.data;
+// Warn about insecure secrets in production
+if (env.NODE_ENV === 'production') {
+    const insecure = [];
+    if (INSECURE_SECRETS.has(env.JWT_SECRET))
+        insecure.push('JWT_SECRET');
+    if (INSECURE_SECRETS.has(env.JWT_REFRESH_SECRET))
+        insecure.push('JWT_REFRESH_SECRET');
+    if (insecure.length > 0) {
+        console.error(`\n❌  SECURITY ERROR: Insecure default values detected for: ${insecure.join(', ')}`);
+        console.error('  Please set strong random secrets before running in production.\n');
+        process.exit(1);
+    }
+}
 exports.config = {
-    env: process.env.NODE_ENV || 'development',
-    port: parseInt(process.env.PORT || '5000', 10),
+    env: env.NODE_ENV,
+    port: parseInt(env.PORT, 10),
     jwt: {
-        secret: process.env.JWT_SECRET || 'fallback_secret_change_me',
-        expiresIn: process.env.JWT_EXPIRES_IN || '8h',
-        refreshSecret: process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret',
-        refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+        secret: env.JWT_SECRET,
+        expiresIn: env.JWT_EXPIRES_IN,
+        refreshSecret: env.JWT_REFRESH_SECRET,
+        refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
     },
+    aadhaarHmacSecret: env.AADHAAR_HMAC_SECRET,
     client: {
-        url: process.env.CLIENT_URL || 'http://localhost:5173',
+        url: env.CLIENT_URL,
     },
     upload: {
-        path: process.env.UPLOAD_PATH || './uploads',
-        maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10),
+        path: env.UPLOAD_PATH,
+        maxFileSize: parseInt(env.MAX_FILE_SIZE, 10),
     },
     bcrypt: {
-        rounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+        rounds: parseInt(env.BCRYPT_ROUNDS, 10),
     },
     rateLimit: {
-        windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-        max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+        windowMs: parseInt(env.RATE_LIMIT_WINDOW_MS, 10),
+        max: parseInt(env.RATE_LIMIT_MAX, 10),
     },
     logging: {
-        level: process.env.LOG_LEVEL || 'info',
-        file: process.env.LOG_FILE || './logs/app.log',
+        level: env.LOG_LEVEL,
+        file: env.LOG_FILE,
     },
 };
 //# sourceMappingURL=index.js.map

@@ -8,11 +8,13 @@ class CandidateRepository {
         return database_1.prisma.candidate.findMany({
             where: {
                 deletedAt: null,
+                isActive: true,
                 ...(electionId && { electionId }),
                 ...(constituencyId && { constituencyId }),
             },
             include: {
                 constituency: { select: { id: true, name: true, code: true } },
+                election: { select: { id: true, name: true, status: true } },
                 party: true,
                 _count: { select: { votes: true } },
             },
@@ -36,7 +38,7 @@ class CandidateRepository {
             },
         });
         if (!link) {
-            throw new Error('The selected constituency is not part of this election. Please select a constituency that has been added to this election.');
+            throw new error_middleware_1.AppError('The selected constituency is not part of this election. Please select a constituency that has been added to this election.', 400);
         }
         // Pre-check: serial number must be unique per election+constituency among active candidates
         const existingSerial = await database_1.prisma.candidate.findFirst({
@@ -58,10 +60,10 @@ class CandidateRepository {
     async delete(id) {
         const candidate = await database_1.prisma.candidate.findUnique({ where: { id } });
         if (!candidate)
-            throw new Error('Candidate not found');
+            throw new error_middleware_1.AppError('Candidate not found', 404);
         const voteCount = await database_1.prisma.vote.count({ where: { candidateId: id } });
         if (voteCount > 0) {
-            throw new Error('Cannot remove candidate. They have already received votes.');
+            throw new error_middleware_1.AppError('Cannot remove candidate. They have already received votes.', 400);
         }
         return database_1.prisma.candidate.update({
             where: { id },

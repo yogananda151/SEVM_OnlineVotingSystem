@@ -5,11 +5,11 @@ export declare const loginSchema: z.ZodObject<{
     email: z.ZodString;
     password: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    email: string;
     password: string;
+    email: string;
 }, {
-    email: string;
     password: string;
+    email: string;
 }>;
 export declare const createRegionSchema: z.ZodObject<{
     name: z.ZodString;
@@ -28,7 +28,7 @@ export declare const createElectionSchema: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
     electionType: z.ZodString;
-    scheduledDate: z.ZodString;
+    scheduledDate: z.ZodEffects<z.ZodString, string, string>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     electionType: string;
@@ -44,7 +44,7 @@ export declare const updateElectionSchema: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     description: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     electionType: z.ZodOptional<z.ZodString>;
-    scheduledDate: z.ZodOptional<z.ZodString>;
+    scheduledDate: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
 }, "strip", z.ZodTypeAny, {
     name?: string | undefined;
     description?: string | undefined;
@@ -163,18 +163,18 @@ export declare const createOfficerSchema: z.ZodObject<{
     phone: z.ZodString;
     pollingStationId: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
+    password: string;
     email: string;
     employeeId: string;
     fullName: string;
     phone: string;
-    password: string;
     pollingStationId?: number | null | undefined;
 }, {
+    password: string;
     email: string;
     employeeId: string;
     fullName: string;
     phone: string;
-    password: string;
     pollingStationId?: number | null | undefined;
 }>;
 export declare const createVoterSchema: z.ZodObject<{

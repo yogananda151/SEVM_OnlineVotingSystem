@@ -28,7 +28,7 @@ const envSchema = z.object({
   MAX_FILE_SIZE: z.string().default('5242880'),
   BCRYPT_ROUNDS: z.string().default('12'),
   RATE_LIMIT_WINDOW_MS: z.string().default('900000'),
-  RATE_LIMIT_MAX: z.string().default('100'),
+  RATE_LIMIT_MAX: z.string().default('2000'),
   LOG_LEVEL: z.string().default('info'),
   LOG_FILE: z.string().default('./logs/app.log'),
 });

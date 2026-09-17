@@ -13,11 +13,11 @@ export declare class AuditRepository {
         id: number;
         createdAt: Date;
         userId: number | null;
+        description: string;
         ipAddress: string | null;
         userAgent: string | null;
         action: import(".prisma/client").$Enums.AuditAction;
         module: string;
-        description: string;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
         electionId: number | null;
     }>;
@@ -40,11 +40,11 @@ export declare class AuditRepository {
             id: number;
             createdAt: Date;
             userId: number | null;
+            description: string;
             ipAddress: string | null;
             userAgent: string | null;
             action: import(".prisma/client").$Enums.AuditAction;
             module: string;
-            description: string;
             metadata: import("@prisma/client/runtime/library").JsonValue | null;
             electionId: number | null;
         })[];

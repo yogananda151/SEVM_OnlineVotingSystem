@@ -44,7 +44,7 @@ export declare class VerificationService {
                 description: string | null;
                 regionId: number;
             };
-            vote: ({
+            votes: ({
                 candidate: {
                     party: {
                         symbol: string | null;
@@ -79,12 +79,20 @@ export declare class VerificationService {
                 voterId: number;
                 id: number;
                 pollingStationId: number;
+                electionId: number;
                 candidateId: number;
                 voteHash: string;
                 referenceNumber: string;
                 isVerified: boolean;
                 castAt: Date;
-            }) | null;
+            })[];
+            electionStatuses: {
+                voterId: number;
+                id: number;
+                electionId: number;
+                hasVoted: boolean;
+                votedAt: Date | null;
+            }[];
         } & {
             voterId: string;
             id: number;
@@ -100,10 +108,8 @@ export declare class VerificationService {
             serialNumber: number;
             dateOfBirth: Date;
             gender: string;
-            hasVoted: boolean;
             photoUrl: string | null;
             aadhaarHash: string | null;
-            votedAt: Date | null;
         };
     }>;
     simulateBiometric(voterId: number, type: 'FINGERPRINT' | 'FACE'): Promise<{
@@ -135,7 +141,7 @@ export declare class VerificationService {
                 description: string | null;
                 regionId: number;
             };
-            vote: ({
+            votes: ({
                 candidate: {
                     party: {
                         symbol: string | null;
@@ -170,12 +176,20 @@ export declare class VerificationService {
                 voterId: number;
                 id: number;
                 pollingStationId: number;
+                electionId: number;
                 candidateId: number;
                 voteHash: string;
                 referenceNumber: string;
                 isVerified: boolean;
                 castAt: Date;
-            }) | null;
+            })[];
+            electionStatuses: {
+                voterId: number;
+                id: number;
+                electionId: number;
+                hasVoted: boolean;
+                votedAt: Date | null;
+            }[];
         } & {
             voterId: string;
             id: number;
@@ -191,10 +205,8 @@ export declare class VerificationService {
             serialNumber: number;
             dateOfBirth: Date;
             gender: string;
-            hasVoted: boolean;
             photoUrl: string | null;
             aadhaarHash: string | null;
-            votedAt: Date | null;
         };
         message: string;
     }>;

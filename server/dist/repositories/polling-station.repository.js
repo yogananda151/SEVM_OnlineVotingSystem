@@ -38,7 +38,7 @@ class PollingStationRepository {
             where: { id: data.constituencyId, deletedAt: null },
         });
         if (!constituency) {
-            throw new Error('The selected constituency does not exist. Please select a valid constituency.');
+            throw new error_middleware_1.AppError('The selected constituency does not exist. Please select a valid constituency.', 404);
         }
         // Pre-check: code must be unique among active (non-deleted) polling stations
         const existingCode = await database_1.prisma.pollingStation.findFirst({
@@ -61,14 +61,24 @@ class PollingStationRepository {
     async delete(id) {
         const station = await database_1.prisma.pollingStation.findUnique({ where: { id } });
         if (!station)
-            throw new Error('Polling station not found');
+            throw new error_middleware_1.AppError('Polling station not found', 404);
+        const activeElection = await database_1.prisma.electionConstituency.findFirst({
+            where: {
+                constituencyId: station.constituencyId,
+                election: { status: 'ACTIVE', deletedAt: null },
+            },
+            include: { election: true },
+        });
+        if (activeElection) {
+            throw new error_middleware_1.AppError(`Cannot delete polling station while participating in active election "${activeElection.election.name}".`, 400);
+        }
         const voterCount = await database_1.prisma.voter.count({ where: { pollingStationId: id, deletedAt: null } });
         const voteCount = await database_1.prisma.vote.count({ where: { pollingStationId: id } });
         if (voteCount > 0) {
-            throw new Error('Cannot delete polling station. Votes have already been cast here.');
+            throw new error_middleware_1.AppError('Cannot delete polling station. Votes have already been cast here.', 400);
         }
         if (voterCount > 0) {
-            throw new Error(`Cannot delete polling station. It has ${voterCount} registered voter(s). Reassign or remove them first.`);
+            throw new error_middleware_1.AppError(`Cannot delete polling station. It has ${voterCount} registered voter(s). Reassign or remove them first.`, 400);
         }
         const now = new Date();
         const timestamp = Date.now();
@@ -84,7 +94,12 @@ class PollingStationRepository {
     async getTurnout(id) {
         const [totalVoters, votedCount] = await Promise.all([
             database_1.prisma.voter.count({ where: { pollingStationId: id, deletedAt: null } }),
-            database_1.prisma.voter.count({ where: { pollingStationId: id, hasVoted: true } }),
+            database_1.prisma.vote.count({
+                where: {
+                    pollingStationId: id,
+                    election: { status: 'ACTIVE' },
+                },
+            }),
         ]);
         return {
             totalVoters,

@@ -8,6 +8,7 @@ export declare class VoteRepository {
             voterId: number;
             id: number;
             pollingStationId: number;
+            electionId: number;
             candidateId: number;
             voteHash: string;
             referenceNumber: string;
@@ -57,6 +58,7 @@ export declare class VoteRepository {
             photoUrl: string | null;
         };
         election: {
+            status: import(".prisma/client").$Enums.ElectionStatus;
             officerId: number | null;
             name: string;
             id: number;
@@ -68,11 +70,10 @@ export declare class VoteRepository {
             scheduledDate: Date;
             startTime: Date | null;
             endTime: Date | null;
-            status: import(".prisma/client").$Enums.ElectionStatus;
             isResultPublished: boolean;
         };
     }>;
-    getVvpat(referenceNumber: string): Promise<({
+    getVvpat(referenceNumber: string, pollingStationId?: number): Promise<({
         candidate: {
             party: {
                 symbol: string | null;
@@ -163,6 +164,7 @@ export declare class VoteRepository {
     getDashboardStats(): Promise<{
         totalElections: number;
         activeElection: {
+            status: import(".prisma/client").$Enums.ElectionStatus;
             officerId: number | null;
             name: string;
             id: number;
@@ -174,7 +176,6 @@ export declare class VoteRepository {
             scheduledDate: Date;
             startTime: Date | null;
             endTime: Date | null;
-            status: import(".prisma/client").$Enums.ElectionStatus;
             isResultPublished: boolean;
         } | null;
         totalStations: number;

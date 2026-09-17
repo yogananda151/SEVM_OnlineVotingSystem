@@ -34,11 +34,15 @@ app.use(cors({
 }));
 
 // ── Rate limiting ─────────────────────────────────────────────────
-app.use('/api', rateLimit({
+const generalLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.max,
+  max: config.env === 'development' ? 10000 : config.rateLimit.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => config.env === 'development',
   message: { success: false, message: 'Too many requests. Please try again later.' },
-}));
+});
+app.use('/api', generalLimiter);
 
 // ── Parsing & Compression ─────────────────────────────────────────
 app.use(compression());
@@ -59,12 +63,22 @@ app.get('/health', (_req, res) => {
 });
 
 // ── API Routes ────────────────────────────────────────────────────
+// Dedicated rate limit for login endpoint (e.g. 25 attempts per 15 min per IP in prod)
+const authLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: config.env === 'development' ? 200 : 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+});
+app.use('/api/auth/login', authLoginLimiter);
+
 app.use('/api/auth', authRoutes);
 
-// Stricter rate limit for OTP/verification endpoints (10 req/min per IP)
+// Stricter rate limit for OTP/verification endpoints (10 req/min per IP in prod, 100 in dev)
 const votingVerifyLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: config.env === 'development' ? 100 : 10,
   message: { success: false, message: 'Too many verification attempts. Please wait 1 minute before trying again.' },
   standardHeaders: true,
   legacyHeaders: false,

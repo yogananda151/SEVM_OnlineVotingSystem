@@ -11,7 +11,7 @@ const error_middleware_1 = require("../middleware/error.middleware");
 const database_1 = require("../config/database");
 // Valid status transitions
 const VALID_TRANSITIONS = {
-    DRAFT: ['SCHEDULED'],
+    DRAFT: ['SCHEDULED', 'ACTIVE'],
     SCHEDULED: ['ACTIVE', 'DRAFT'],
     ACTIVE: ['PAUSED', 'CLOSED'],
     PAUSED: ['ACTIVE', 'CLOSED'],
@@ -19,6 +19,25 @@ const VALID_TRANSITIONS = {
     RESULTS_PUBLISHED: [],
 };
 class ElectionController {
+    async getMyElections(req, res, next) {
+        try {
+            if (!req.user) {
+                throw new error_middleware_1.AppError('Unauthorized', 401);
+            }
+            const officer = await database_1.prisma.electionOfficer.findUnique({
+                where: { userId: req.user.userId },
+            });
+            if (!officer || officer.deletedAt) {
+                (0, response_1.sendSuccess)(res, []);
+                return;
+            }
+            const elections = await election_repository_1.electionRepository.findByOfficer(officer.id, officer.pollingStationId);
+            (0, response_1.sendSuccess)(res, elections);
+        }
+        catch (err) {
+            next(err);
+        }
+    }
     async getAll(req, res, next) {
         try {
             (0, response_1.sendSuccess)(res, await election_repository_1.electionRepository.findAll());
@@ -94,19 +113,27 @@ class ElectionController {
     async update(req, res, next) {
         try {
             const id = Number(req.params.id);
+            const election = await election_repository_1.electionRepository.findById(id);
+            if (!election)
+                throw new error_middleware_1.AppError('Election not found.', 404);
+            if (election.status === client_1.ElectionStatus.ACTIVE ||
+                election.status === client_1.ElectionStatus.CLOSED ||
+                election.status === client_1.ElectionStatus.RESULTS_PUBLISHED) {
+                throw new error_middleware_1.AppError(`Cannot edit election in "${election.status}" status. Election configuration is locked once activated or completed.`, 400);
+            }
             const data = { ...req.body };
             if (data.scheduledDate)
                 data.scheduledDate = new Date(data.scheduledDate);
-            const election = await election_repository_1.electionRepository.update(id, data);
+            const updated = await election_repository_1.electionRepository.update(id, data);
             await audit_repository_1.auditRepository.create({
                 userId: req.user.userId,
                 electionId: id,
                 action: 'UPDATE',
                 module: 'Election',
-                description: `Updated election: ${election.name}`,
+                description: `Updated election: ${updated.name}`,
                 ipAddress: req.ip,
             });
-            (0, response_1.sendSuccess)(res, election, 'Election updated');
+            (0, response_1.sendSuccess)(res, updated, 'Election updated');
         }
         catch (err) {
             next(err);
@@ -122,6 +149,24 @@ class ElectionController {
             const election = await election_repository_1.electionRepository.findById(id);
             if (!election)
                 throw new error_middleware_1.AppError('Election not found.', 404);
+            // Starting and stopping elections (ACTIVE, PAUSED, CLOSED) can ONLY be done by Election Officers
+            if (status === client_1.ElectionStatus.ACTIVE || status === client_1.ElectionStatus.CLOSED || status === client_1.ElectionStatus.PAUSED) {
+                if (req.user?.role !== client_1.UserRole.OFFICER) {
+                    throw new error_middleware_1.AppError('Elections can only be started and stopped by assigned Election Officers.', 403);
+                }
+                const officer = await database_1.prisma.electionOfficer.findUnique({
+                    where: { userId: req.user.userId },
+                });
+                if (!officer || officer.deletedAt) {
+                    throw new error_middleware_1.AppError('Election Officer profile not found.', 404);
+                }
+                // Check if officer is assigned to this election (directly as supervising officer or via polling station)
+                const isSupervisingOfficer = election.officerId === officer.id;
+                const isStationOfficer = !!officer.pollingStationId && election.electionConstituencies.some((ec) => ec.constituency.pollingStations.some((ps) => ps.id === officer.pollingStationId));
+                if (!isSupervisingOfficer && !isStationOfficer) {
+                    throw new error_middleware_1.AppError('You are not assigned to this election.', 403);
+                }
+            }
             // Enforce valid transitions
             const allowed = VALID_TRANSITIONS[election.status] ?? [];
             if (!allowed.includes(status)) {
@@ -291,13 +336,19 @@ class ElectionController {
     async delete(req, res, next) {
         try {
             const id = Number(req.params.id);
+            const election = await election_repository_1.electionRepository.findById(id);
+            if (!election)
+                throw new error_middleware_1.AppError('Election not found.', 404);
+            if (election.status === client_1.ElectionStatus.ACTIVE) {
+                throw new error_middleware_1.AppError('Cannot delete an active election while voting is in progress. Please pause or close the election first.', 400);
+            }
             await election_repository_1.electionRepository.delete(id);
             await audit_repository_1.auditRepository.create({
                 userId: req.user.userId,
                 electionId: id,
                 action: 'DELETE',
                 module: 'Election',
-                description: `Deleted election ID: ${id}`,
+                description: `Deleted election ID: ${id} (${election.name})`,
                 ipAddress: req.ip,
             });
             (0, response_1.sendSuccess)(res, null, 'Election deleted');

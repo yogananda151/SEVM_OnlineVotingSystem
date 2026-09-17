@@ -8,6 +8,11 @@ export declare class CandidateRepository {
             name: string;
             id: number;
         };
+        election: {
+            status: import(".prisma/client").$Enums.ElectionStatus;
+            name: string;
+            id: number;
+        };
         party: {
             symbol: string | null;
             name: string;

@@ -5,15 +5,13 @@ const database_1 = require("../config/database");
 const error_middleware_1 = require("../middleware/error.middleware");
 class VoterRepository {
     async findAll(filters) {
-        const { pollingStationId, constituencyId, hasVoted, search, page = 1, limit = 20 } = filters;
+        const { pollingStationId, constituencyId, search, page = 1, limit = 20 } = filters;
         const skip = (page - 1) * limit;
         const where = { deletedAt: null };
         if (pollingStationId)
             where.pollingStationId = pollingStationId;
         if (constituencyId)
             where.constituencyId = constituencyId;
-        if (hasVoted !== undefined)
-            where.hasVoted = hasVoted;
         if (search) {
             where.OR = [
                 { fullName: { contains: search } },
@@ -26,6 +24,7 @@ class VoterRepository {
                 include: {
                     pollingStation: { select: { id: true, name: true, code: true } },
                     constituency: { select: { id: true, name: true, code: true } },
+                    electionStatuses: { select: { electionId: true, hasVoted: true, votedAt: true } },
                 },
                 skip,
                 take: limit,
@@ -41,7 +40,8 @@ class VoterRepository {
             include: {
                 pollingStation: true,
                 constituency: true,
-                vote: { include: { candidate: { include: { party: true } } } },
+                votes: { include: { candidate: { include: { party: true } } } },
+                electionStatuses: true,
             },
         });
     }
@@ -70,13 +70,16 @@ class VoterRepository {
     async update(id, data) {
         return database_1.prisma.voter.update({ where: { id }, data });
     }
-    async markVoted(id) {
-        await database_1.prisma.voter.update({ where: { id }, data: { hasVoted: true, votedAt: new Date() } });
-    }
     async delete(id) {
-        const voter = await database_1.prisma.voter.findUnique({ where: { id } });
+        const voter = await database_1.prisma.voter.findUnique({
+            where: { id },
+            include: { votes: { take: 1 } },
+        });
         if (!voter)
-            throw new Error('Voter not found');
+            throw new error_middleware_1.AppError('Voter not found', 404);
+        if (voter.votes && voter.votes.length > 0) {
+            throw new error_middleware_1.AppError('Cannot delete a voter who has already cast a vote.', 400);
+        }
         const now = new Date();
         const timestamp = Date.now();
         await database_1.prisma.voter.update({

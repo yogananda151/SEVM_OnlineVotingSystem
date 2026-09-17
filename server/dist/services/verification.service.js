@@ -5,6 +5,7 @@ const voter_repository_1 = require("../repositories/voter.repository");
 const database_1 = require("../config/database");
 const crypto_1 = require("../utils/crypto");
 const error_middleware_1 = require("../middleware/error.middleware");
+const client_1 = require("@prisma/client");
 class VerificationService {
     /**
      * Simulate voter identity verification.
@@ -28,10 +29,27 @@ class VerificationService {
             throw new error_middleware_1.AppError('Voter not found. Please check your details.', 404);
         if (!voter.isActive)
             throw new error_middleware_1.AppError('Voter record is inactive. Contact the officer.', 403);
-        if (voter.hasVoted)
-            throw new error_middleware_1.AppError('This voter has already cast their vote.', 409);
         if (voter.pollingStationId !== pollingStationId) {
             throw new error_middleware_1.AppError('You are not registered at this polling station.', 403);
+        }
+        // Check if there is an active election for this voter's constituency
+        const electionLink = await database_1.prisma.electionConstituency.findFirst({
+            where: {
+                constituencyId: voter.constituencyId,
+                election: { status: client_1.ElectionStatus.ACTIVE },
+            },
+            include: { election: true },
+        });
+        if (!electionLink) {
+            throw new error_middleware_1.AppError('No active election found for your constituency.', 400);
+        }
+        const electionId = electionLink.election.id;
+        // Check per-election voting status (replaces global hasVoted flag)
+        const electionStatus = await database_1.prisma.electionVoterStatus.findUnique({
+            where: { voterId_electionId: { voterId: voter.id, electionId } },
+        });
+        if (electionStatus?.hasVoted) {
+            throw new error_middleware_1.AppError('This voter has already cast their vote in the current election.', 409);
         }
         // Simulate OTP generation (would be sent via SMS in production)
         const otp = (0, crypto_1.generateOTP)();
@@ -78,8 +96,20 @@ class VerificationService {
         const voter = await voter_repository_1.voterRepository.findById(voterId);
         if (!voter)
             throw new error_middleware_1.AppError('Voter not found.', 404);
-        if (voter.hasVoted)
-            throw new error_middleware_1.AppError('Voter has already voted.', 409);
+        // Check per-election status for active election
+        const electionLink = await database_1.prisma.electionConstituency.findFirst({
+            where: {
+                constituencyId: voter.constituencyId,
+                election: { status: client_1.ElectionStatus.ACTIVE },
+            },
+        });
+        if (electionLink) {
+            const evs = await database_1.prisma.electionVoterStatus.findUnique({
+                where: { voterId_electionId: { voterId, electionId: electionLink.electionId } },
+            });
+            if (evs?.hasVoted)
+                throw new error_middleware_1.AppError('Voter has already voted in the current election.', 409);
+        }
         return {
             verified: true,
             voter,

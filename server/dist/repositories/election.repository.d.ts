@@ -26,6 +26,7 @@ export declare class ElectionRepository {
             electionId: number;
         })[];
     } & {
+        status: import(".prisma/client").$Enums.ElectionStatus;
         officerId: number | null;
         name: string;
         id: number;
@@ -37,7 +38,49 @@ export declare class ElectionRepository {
         scheduledDate: Date;
         startTime: Date | null;
         endTime: Date | null;
+        isResultPublished: boolean;
+    })[]>;
+    findByOfficer(officerId: number, pollingStationId?: number | null): Promise<({
+        officer: {
+            employeeId: string;
+            id: number;
+            fullName: string;
+            phone: string;
+        } | null;
+        _count: {
+            electionConstituencies: number;
+            candidates: number;
+        };
+        electionConstituencies: ({
+            constituency: {
+                code: string;
+                name: string;
+                id: number;
+                _count: {
+                    voters: number;
+                    candidates: number;
+                    pollingStations: number;
+                };
+            };
+        } & {
+            id: number;
+            createdAt: Date;
+            constituencyId: number;
+            electionId: number;
+        })[];
+    } & {
         status: import(".prisma/client").$Enums.ElectionStatus;
+        officerId: number | null;
+        name: string;
+        id: number;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        description: string | null;
+        electionType: string;
+        scheduledDate: Date;
+        startTime: Date | null;
+        endTime: Date | null;
         isResultPublished: boolean;
     })[]>;
     findById(id: number): Promise<({
@@ -146,6 +189,7 @@ export declare class ElectionRepository {
             photoUrl: string | null;
         })[];
     } & {
+        status: import(".prisma/client").$Enums.ElectionStatus;
         officerId: number | null;
         name: string;
         id: number;
@@ -157,7 +201,6 @@ export declare class ElectionRepository {
         scheduledDate: Date;
         startTime: Date | null;
         endTime: Date | null;
-        status: import(".prisma/client").$Enums.ElectionStatus;
         isResultPublished: boolean;
     }) | null>;
     findActive(): Promise<({
@@ -250,6 +293,7 @@ export declare class ElectionRepository {
             electionId: number;
         })[];
     } & {
+        status: import(".prisma/client").$Enums.ElectionStatus;
         officerId: number | null;
         name: string;
         id: number;
@@ -261,7 +305,6 @@ export declare class ElectionRepository {
         scheduledDate: Date;
         startTime: Date | null;
         endTime: Date | null;
-        status: import(".prisma/client").$Enums.ElectionStatus;
         isResultPublished: boolean;
     }) | null>;
     create(data: {
@@ -270,6 +313,7 @@ export declare class ElectionRepository {
         electionType: string;
         scheduledDate: Date;
     }): Promise<{
+        status: import(".prisma/client").$Enums.ElectionStatus;
         officerId: number | null;
         name: string;
         id: number;
@@ -281,7 +325,6 @@ export declare class ElectionRepository {
         scheduledDate: Date;
         startTime: Date | null;
         endTime: Date | null;
-        status: import(".prisma/client").$Enums.ElectionStatus;
         isResultPublished: boolean;
     }>;
     update(id: number, data: Partial<{
@@ -295,6 +338,7 @@ export declare class ElectionRepository {
         isResultPublished: boolean;
         officerId: number | null;
     }>): Promise<{
+        status: import(".prisma/client").$Enums.ElectionStatus;
         officerId: number | null;
         name: string;
         id: number;
@@ -306,7 +350,6 @@ export declare class ElectionRepository {
         scheduledDate: Date;
         startTime: Date | null;
         endTime: Date | null;
-        status: import(".prisma/client").$Enums.ElectionStatus;
         isResultPublished: boolean;
     }>;
     setOfficer(electionId: number, officerId: number | null): Promise<{
@@ -333,6 +376,7 @@ export declare class ElectionRepository {
             pollingStationId: number | null;
         }) | null;
     } & {
+        status: import(".prisma/client").$Enums.ElectionStatus;
         officerId: number | null;
         name: string;
         id: number;
@@ -344,10 +388,10 @@ export declare class ElectionRepository {
         scheduledDate: Date;
         startTime: Date | null;
         endTime: Date | null;
-        status: import(".prisma/client").$Enums.ElectionStatus;
         isResultPublished: boolean;
     }>;
     delete(id: number): Promise<{
+        status: import(".prisma/client").$Enums.ElectionStatus;
         officerId: number | null;
         name: string;
         id: number;
@@ -359,11 +403,11 @@ export declare class ElectionRepository {
         scheduledDate: Date;
         startTime: Date | null;
         endTime: Date | null;
-        status: import(".prisma/client").$Enums.ElectionStatus;
         isResultPublished: boolean;
     }>;
     getStats(electionId: number): Promise<{
         election: {
+            status: import(".prisma/client").$Enums.ElectionStatus;
             officerId: number | null;
             name: string;
             id: number;
@@ -375,7 +419,6 @@ export declare class ElectionRepository {
             scheduledDate: Date;
             startTime: Date | null;
             endTime: Date | null;
-            status: import(".prisma/client").$Enums.ElectionStatus;
             isResultPublished: boolean;
         };
         totalVoters: number;
@@ -394,6 +437,7 @@ export declare class ElectionRepository {
                 fullName: string;
             } | null;
         } & {
+            status: import(".prisma/client").$Enums.ElectionStatus;
             officerId: number | null;
             name: string;
             id: number;
@@ -405,7 +449,6 @@ export declare class ElectionRepository {
             scheduledDate: Date;
             startTime: Date | null;
             endTime: Date | null;
-            status: import(".prisma/client").$Enums.ElectionStatus;
             isResultPublished: boolean;
         };
         officer: {

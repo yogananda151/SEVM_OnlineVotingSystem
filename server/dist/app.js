@@ -20,6 +20,7 @@ const management_routes_1 = __importDefault(require("./routes/management.routes"
 const voter_routes_1 = __importDefault(require("./routes/voter.routes"));
 const voting_routes_1 = __importDefault(require("./routes/voting.routes"));
 const report_routes_1 = __importDefault(require("./routes/report.routes"));
+const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
 const app = (0, express_1.default)();
 exports.app = app;
 // ── Security ──────────────────────────────────────────────────────
@@ -34,11 +35,15 @@ app.use((0, cors_1.default)({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 // ── Rate limiting ─────────────────────────────────────────────────
-app.use('/api', (0, express_rate_limit_1.default)({
+const generalLimiter = (0, express_rate_limit_1.default)({
     windowMs: config_1.config.rateLimit.windowMs,
-    max: config_1.config.rateLimit.max,
+    max: config_1.config.env === 'development' ? 10000 : config_1.config.rateLimit.max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: () => config_1.config.env === 'development',
     message: { success: false, message: 'Too many requests. Please try again later.' },
-}));
+});
+app.use('/api', generalLimiter);
 // ── Parsing & Compression ─────────────────────────────────────────
 app.use((0, compression_1.default)());
 app.use(express_1.default.json({ limit: '10mb' }));
@@ -54,12 +59,31 @@ app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), env: config_1.config.env });
 });
 // ── API Routes ────────────────────────────────────────────────────
+// Dedicated rate limit for login endpoint (e.g. 25 attempts per 15 min per IP in prod)
+const authLoginLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    max: config_1.config.env === 'development' ? 200 : 25,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+});
+app.use('/api/auth/login', authLoginLimiter);
 app.use('/api/auth', auth_routes_1.default);
-app.use('/api/elections', election_routes_1.default);
-app.use('/api', management_routes_1.default);
-app.use('/api/voters', voter_routes_1.default);
+// Stricter rate limit for OTP/verification endpoints (10 req/min per IP in prod, 100 in dev)
+const votingVerifyLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000,
+    max: config_1.config.env === 'development' ? 100 : 10,
+    message: { success: false, message: 'Too many verification attempts. Please wait 1 minute before trying again.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/voting/verify', votingVerifyLimiter);
 app.use('/api/voting', voting_routes_1.default);
+app.use('/api/elections', election_routes_1.default);
+app.use('/api/voters', voter_routes_1.default);
+app.use('/api', management_routes_1.default);
 app.use('/api', report_routes_1.default);
+app.use('/api', notification_routes_1.default);
 // ── 404 & Error handlers ──────────────────────────────────────────
 app.use(error_middleware_1.notFoundHandler);
 app.use(error_middleware_1.errorHandler);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Search, CheckCircle2, Clock, Vote, ArrowLeft } from 'lucide-react';
 import { votingService } from '../../services/api.service';
 import { Spinner } from '../../components/ui';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 interface VvpatRecord {
   id: number;
@@ -20,8 +20,6 @@ interface VvpatRecord {
 }
 
 export const VvpatPage: React.FC = () => {
-  const location = useLocation();
-  const isOfficer = location.pathname.startsWith('/officer');
   const [refNum, setRefNum] = useState('');
   const [loading, setLoading] = useState(false);
   const [record, setRecord] = useState<VvpatRecord | null>(null);
@@ -49,19 +47,17 @@ export const VvpatPage: React.FC = () => {
   };
 
   return (
-    <div className={`${isOfficer ? 'py-4' : 'min-h-screen bg-slate-950'} flex flex-col items-center justify-center p-4 relative overflow-hidden`}>
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background glow */}
-      {!isOfficer && (
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-600/10 rounded-full blur-3xl pointer-events-none" />
-      )}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-600/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-lg relative z-10 space-y-6">
         <div className="text-center">
           <Link
-            to={isOfficer ? '/officer' : '/'}
+            to="/"
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white mb-4 transition-colors"
           >
-            <ArrowLeft size={14} /> {isOfficer ? 'Back to Officer Dashboard' : 'Back to Portal'}
+            <ArrowLeft size={14} /> Back to Portal
           </Link>
           <div className="w-14 h-14 rounded-2xl bg-primary-600/20 border border-primary-500/30 flex items-center justify-center mx-auto mb-3 shadow-lg">
             <Shield size={28} className="text-primary-400" />
@@ -98,8 +94,16 @@ export const VvpatPage: React.FC = () => {
           </form>
 
           {error && (
-            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-300">
-              {error}
+            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col gap-3">
+              <div className="text-xs text-red-300">{error}</div>
+              {error.includes('has not yet cast a vote') && (
+                <Link
+                  to="/voting-machine"
+                  className="inline-flex items-center justify-center bg-red-500/20 hover:bg-red-500/30 text-red-200 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-red-500/30"
+                >
+                  Go to Voting Machine to Cast Vote
+                </Link>
+              )}
             </div>
           )}
         </div>

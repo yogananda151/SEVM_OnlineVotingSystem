@@ -2,20 +2,18 @@ import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2, Users, CheckCircle, Clock, Activity,
-  Play, Lock, Unlock, Pause, Square, Shield, Search,
-  ArrowRight, CheckCircle2, AlertTriangle, RefreshCw,
+  Play, Lock, Unlock, Pause, Square, RefreshCw, Vote, ExternalLink,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useAsync } from '../../hooks/useAsync';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
-import { pollingStationService, votingService } from '../../services/api.service';
+import { pollingStationService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
 import { StatCard, Spinner, ConfirmDialog } from '../../components/ui';
 import { toast } from 'react-hot-toast';
 
 /**
  * MachineControlPage — Dedicated page for Officer machine controls at /officer/machine.
- * Shows full turnout stats, the EVM control buttons, and a Quick VVPAT lookup tool.
+ * Shows full turnout stats and EVM machine control buttons.
  */
 export const MachineControlPage: React.FC = () => {
   const user = authService.getCurrentUser();
@@ -43,31 +41,7 @@ export const MachineControlPage: React.FC = () => {
     message: string;
   } | null>(null);
 
-  // ── Quick VVPAT lookup ─────────────────────────────────────────────────────
-  const [quickRef, setQuickRef] = useState('');
-  const [vvpatLoading, setVvpatLoading] = useState(false);
-  const [vvpatRecord, setVvpatRecord] = useState<Record<string, unknown> | null>(null);
-  const [vvpatError, setVvpatError] = useState<string | null>(null);
 
-  const handleQuickVvpat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanRef = quickRef.trim();
-    if (!cleanRef) return;
-    setVvpatLoading(true);
-    setVvpatError(null);
-    setVvpatRecord(null);
-    try {
-      const data = await votingService.getVVPAT(cleanRef, stationId);
-      setVvpatRecord(data as Record<string, unknown>);
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'No verified vote record found.';
-      setVvpatError(msg);
-    } finally {
-      setVvpatLoading(false);
-    }
-  };
 
   // ── Machine update handler ─────────────────────────────────────────────────
   const updateMachineStatus = async (status: string, isPollingActive?: boolean) => {
@@ -139,6 +113,20 @@ export const MachineControlPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <a
+            href={`/voting-machine${stationId ? `?stationId=${stationId}` : ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              if (stationId) localStorage.setItem('evm_station_id', stationId.toString());
+            }}
+            className="btn-primary text-xs flex items-center gap-2 py-2 px-3 shadow-md hover:shadow-primary-500/20 transition-all"
+            title="Open EVM Voting Machine for this polling station"
+          >
+            <Vote size={15} />
+            <span>Open Voting Machine</span>
+            <ExternalLink size={13} className="text-primary-200" />
+          </a>
           <button
             onClick={() => { refetchStation(); refetchTurnout(); }}
             className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
@@ -248,62 +236,7 @@ export const MachineControlPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick VVPAT Lookup — filtered to this station (#13) */}
-      <div className="card p-6 bg-gradient-to-br from-slate-800/80 to-slate-900 border border-slate-700/70">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-600/20 border border-primary-500/30 flex items-center justify-center">
-              <Shield size={20} className="text-primary-400" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">Digital VVPAT Audit — This Booth Only</h3>
-              <p className="text-xs text-slate-400">Verify ballots cast at this polling station</p>
-            </div>
-          </div>
-          <Link to="/officer/vvpat" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            Full VVPAT Portal <ArrowRight size={12} />
-          </Link>
-        </div>
 
-        <form onSubmit={handleQuickVvpat} className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <input value={quickRef} onChange={(e) => setQuickRef(e.target.value)}
-              placeholder="Enter Vote Reference or Voter ID (e.g. DL/01/001/0001)"
-              className="input font-mono uppercase text-xs w-full pl-9 tracking-wider" />
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          </div>
-          <button type="submit" disabled={vvpatLoading || !quickRef.trim()} className="btn-primary text-xs py-2.5 px-4 justify-center">
-            {vvpatLoading ? <Spinner size={14} /> : <Shield size={14} />}
-            <span>Verify Ballot</span>
-          </button>
-        </form>
-
-        {vvpatError && (
-          <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center gap-2">
-            <AlertTriangle size={14} className="text-red-400 flex-shrink-0" />
-            <span>{vvpatError}</span>
-          </div>
-        )}
-        {vvpatRecord && (
-          <div className="mt-4 p-4 rounded-xl bg-white text-gray-900 border border-gray-200 animate-in space-y-3 text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-              <span className="font-bold text-emerald-700 flex items-center gap-1">
-                <CheckCircle2 size={14} className="text-emerald-600" /> Verified Electronic Ballot Record
-              </span>
-              <span className="font-mono text-[11px] text-gray-600 font-bold">{String(vvpatRecord.referenceNumber)}</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <div><p className="text-[10px] text-gray-500 uppercase">Election</p><p className="font-semibold text-gray-800">{String(vvpatRecord.electionName)}</p></div>
-              <div><p className="text-[10px] text-gray-500 uppercase">Candidate Choice</p><p className="font-bold text-gray-900">{String(vvpatRecord.candidateName)}</p></div>
-              <div><p className="text-[10px] text-gray-500 uppercase">Party</p><p className="font-semibold text-gray-700">{String(vvpatRecord.partyName)}</p></div>
-              <div className="col-span-2 sm:col-span-3"><p className="text-[10px] text-gray-500 uppercase">Timestamp</p><p className="font-mono text-gray-700">{new Date(String(vvpatRecord.timestamp)).toLocaleString('en-IN')}</p></div>
-            </div>
-            <div className="p-2 bg-gray-50 rounded-lg border border-gray-100 font-mono text-[9px] text-gray-600 break-all">
-              <span className="font-semibold text-gray-500">Audit Hash: </span>{String(vvpatRecord.voteHash)}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Station info */}
       {station && (

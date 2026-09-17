@@ -23,6 +23,47 @@ class ElectionRepository {
             orderBy: { scheduledDate: 'desc' },
         });
     }
+    async findByOfficer(officerId, pollingStationId) {
+        const orConditions = [{ officerId }];
+        if (pollingStationId) {
+            orConditions.push({
+                electionConstituencies: {
+                    some: {
+                        constituency: {
+                            pollingStations: {
+                                some: { id: pollingStationId },
+                            },
+                        },
+                    },
+                },
+            });
+        }
+        return database_1.prisma.election.findMany({
+            where: {
+                deletedAt: null,
+                OR: orConditions,
+            },
+            include: {
+                officer: {
+                    select: { id: true, fullName: true, employeeId: true, phone: true },
+                },
+                electionConstituencies: {
+                    include: {
+                        constituency: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true,
+                                _count: { select: { voters: true, candidates: true, pollingStations: true } },
+                            },
+                        },
+                    },
+                },
+                _count: { select: { electionConstituencies: true, candidates: true } },
+            },
+            orderBy: { scheduledDate: 'desc' },
+        });
+    }
     async findById(id) {
         return database_1.prisma.election.findUnique({
             where: { id, deletedAt: null },
@@ -102,7 +143,7 @@ class ElectionRepository {
         const constituencyIds = electionConstituencies.map((ec) => ec.constituencyId);
         const [totalVoters, votedCount, totalCandidates, totalStations] = await Promise.all([
             database_1.prisma.voter.count({ where: { constituencyId: { in: constituencyIds }, deletedAt: null } }),
-            database_1.prisma.voter.count({ where: { constituencyId: { in: constituencyIds }, hasVoted: true } }),
+            database_1.prisma.vote.count({ where: { electionId } }),
             database_1.prisma.candidate.count({ where: { electionId, deletedAt: null } }),
             database_1.prisma.pollingStation.count({ where: { constituencyId: { in: constituencyIds }, deletedAt: null } }),
         ]);

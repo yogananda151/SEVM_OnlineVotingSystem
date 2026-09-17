@@ -6,6 +6,8 @@ export declare class VoterController {
     update(req: Request, res: Response, next: NextFunction): Promise<void>;
     uploadPhoto(req: Request, res: Response, next: NextFunction): Promise<void>;
     delete(req: Request, res: Response, next: NextFunction): Promise<void>;
+    downloadTemplate(_req: Request, res: Response, next: NextFunction): Promise<void>;
+    uploadExcel(req: Request, res: Response, next: NextFunction): Promise<void>;
     bulkCreate(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 export declare const voterController: VoterController;

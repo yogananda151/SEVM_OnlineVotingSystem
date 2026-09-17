@@ -2,13 +2,11 @@ import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2, Users, CheckCircle, Clock, Lock, Unlock, Pause, Play,
-  Square, Activity, Vote, Shield, Search, AlertTriangle,
-  ArrowRight, CheckCircle2, RefreshCw,
+  Square, Activity, Vote, RefreshCw, ExternalLink,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useAsync } from '../../hooks/useAsync';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
-import { pollingStationService, electionService, votingService } from '../../services/api.service';
+import { pollingStationService, electionService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
 import { StatCard, Spinner, ConfirmDialog, StatusBadge } from '../../components/ui';
 import { toast } from 'react-hot-toast';
@@ -79,31 +77,7 @@ export const OfficerDashboard: React.FC = () => {
     actionType: 'start' | 'pause' | 'resume' | 'stop';
   } | null>(null);
 
-  // ── 5. Quick Digital VVPAT verification ────────────────────────────
-  const [quickVvpatRef, setQuickVvpatRef] = useState('');
-  const [vvpatLoading, setVvpatLoading] = useState(false);
-  const [vvpatRecord, setVvpatRecord] = useState<any | null>(null);
-  const [vvpatError, setVvpatError] = useState<string | null>(null);
 
-  const handleQuickVvpat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanRef = quickVvpatRef.trim();
-    if (!cleanRef) return;
-    setVvpatLoading(true);
-    setVvpatError(null);
-    setVvpatRecord(null);
-    try {
-      const data = await votingService.getVVPAT(cleanRef);
-      setVvpatRecord(data);
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'No verified vote record found with this reference number.';
-      setVvpatError(msg);
-    } finally {
-      setVvpatLoading(false);
-    }
-  };
 
   // ── Machine Control Handlers ───────────────────────────────────────
   const updateMachineStatus = async (status: string, isPollingActive?: boolean) => {
@@ -207,17 +181,24 @@ export const OfficerDashboard: React.FC = () => {
             <span className="text-gradient">Officer Control Center</span>
           </h1>
           <p className="page-subtitle">
-            Manage your assigned elections, digital audit trails, and polling stations
+            Manage your assigned elections, turnout monitoring, and polling stations
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            to="/officer/vvpat"
-            className="btn-secondary text-xs flex items-center gap-2 py-2 px-3 border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200"
+          <a
+            href={`/voting-machine${stationId ? `?stationId=${stationId}` : ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              if (stationId) localStorage.setItem('evm_station_id', stationId.toString());
+            }}
+            className="btn-primary text-xs flex items-center gap-2 py-2 px-3 shadow-md hover:shadow-primary-500/20 transition-all"
+            title="Open EVM Voting Machine for this polling station"
           >
-            <Shield size={14} className="text-emerald-400" />
-            <span>Digital VVPAT Portal</span>
-          </Link>
+            <Vote size={15} />
+            <span>Open Voting Machine</span>
+            <ExternalLink size={13} className="text-primary-200" />
+          </a>
           {station && (
             <div
               className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${
@@ -498,94 +479,7 @@ export const OfficerDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* ── SECTION 2: DIGITAL VVPAT QUICK AUDIT & LOOKUP ─────────── */}
-      <div className="card p-6 bg-gradient-to-br from-slate-800/80 to-slate-900 border border-slate-700/70 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-600/20 border border-primary-500/30 flex items-center justify-center shadow-md">
-              <Shield size={22} className="text-primary-400" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                Digital VVPAT Audit Trail
-              </h3>
-              <p className="text-xs text-slate-400">
-                Official Voter Verified Paper Audit Trail verification tool for Election Officers
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/officer/vvpat"
-            className="inline-flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 font-medium"
-          >
-            Open Full VVPAT Tool <ArrowRight size={14} />
-          </Link>
-        </div>
 
-        {/* Quick lookup bar */}
-        <form onSubmit={handleQuickVvpat} className="mt-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <input
-                value={quickVvpatRef}
-                onChange={(e) => setQuickVvpatRef(e.target.value)}
-                placeholder="Enter Vote Reference Number or Voter ID (e.g. DL/01/001/0001 or VOTE-...)"
-                className="input font-mono uppercase text-xs w-full pl-9 tracking-wider"
-              />
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
-            <button
-              type="submit"
-              disabled={vvpatLoading || !quickVvpatRef.trim()}
-              className="btn-primary text-xs py-2.5 px-4 justify-center"
-            >
-              {vvpatLoading ? <Spinner size={14} /> : <Shield size={14} />}
-              <span>Verify Ballot</span>
-            </button>
-          </div>
-        </form>
-
-        {/* Error */}
-        {vvpatError && (
-          <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center gap-2">
-            <AlertTriangle size={15} className="text-red-400 flex-shrink-0" />
-            <span>{vvpatError}</span>
-          </div>
-        )}
-
-        {/* Quick VVPAT result preview */}
-        {vvpatRecord && (
-          <div className="mt-4 p-4 rounded-xl bg-white text-gray-900 border border-gray-200 animate-in space-y-3 text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-              <span className="font-bold text-emerald-700 flex items-center gap-1">
-                <CheckCircle2 size={14} className="text-emerald-600" /> Verified Electronic Ballot Record
-              </span>
-              <span className="font-mono text-[11px] text-gray-600 font-bold">{vvpatRecord.referenceNumber}</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase">Election</p>
-                <p className="font-semibold text-gray-800">{vvpatRecord.electionName}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase">Candidate Choice</p>
-                <p className="font-bold text-gray-900">{vvpatRecord.candidateName}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase">Party</p>
-                <p className="font-semibold text-gray-700">{vvpatRecord.partyName}</p>
-              </div>
-              <div className="col-span-2 sm:col-span-3">
-                <p className="text-[10px] text-gray-500 uppercase">Timestamp</p>
-                <p className="font-mono text-gray-700">{new Date(vvpatRecord.timestamp).toLocaleString('en-IN')}</p>
-              </div>
-            </div>
-            <div className="p-2 bg-gray-50 rounded-lg border border-gray-100 font-mono text-[9px] text-gray-600 break-all">
-              <span className="font-semibold text-gray-500">Audit Hash: </span>{vvpatRecord.voteHash}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* ── SECTION 3: POLLING STATION BOOTH & MACHINE CONTROLS ───── */}
       {stationId && station ? (

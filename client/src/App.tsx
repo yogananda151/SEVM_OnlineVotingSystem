@@ -87,7 +87,7 @@ function App() {
         <Route path="/officer/voters" element={<RequireAuth role="OFFICER"><OfficerLayout><VotersPage /></OfficerLayout></RequireAuth>} />
         {/* #1 / #4: Real MachineControlPage instead of PlaceholderPage */}
         <Route path="/officer/machine" element={<RequireAuth role="OFFICER"><OfficerLayout><MachineControlPage /></OfficerLayout></RequireAuth>} />
-        <Route path="/officer/vvpat" element={<RequireAuth role="OFFICER"><OfficerLayout><VvpatPage /></OfficerLayout></RequireAuth>} />
+        <Route path="/officer/vvpat" element={<Navigate to="/officer" replace />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

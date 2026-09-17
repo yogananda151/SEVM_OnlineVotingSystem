@@ -53,15 +53,15 @@ export const LoginPage: React.FC = () => {
     try {
       const result = await authService.login(data);
       if (result.user.role !== selectedRole) {
-        toast.error(`This account is not an ${config.label}.`);
+        toast.error(`This account is not an ${config.label}.`, { id: 'login-toast' });
         authService.logout();
         return;
       }
-      toast.success(`Welcome back!`);
+      toast.success(`Welcome back!`, { id: 'login-toast' });
       navigate(config.route);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed';
-      toast.error(msg);
+      toast.error(msg, { id: 'login-toast' });
     } finally {
       setLoading(false);
     }
