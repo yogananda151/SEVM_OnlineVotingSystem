@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Vote, Shield, Fingerprint, Scan, CheckCircle, X, RefreshCw, Clock, User } from 'lucide-react';
+import { Vote, Shield, Scan, CheckCircle, X, RefreshCw, Clock, User } from 'lucide-react';
 import { votingService, candidateService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
 import { toast } from 'react-hot-toast';
@@ -245,7 +245,7 @@ const OTPScreen: React.FC<{
 }> = ({ voterId, voterName, simulatedOtp, onVerified, onBack }) => {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
-  const { remaining, running, start } = useCountdown(300);
+  const { remaining, start } = useCountdown(300);
 
   useEffect(() => { start(); }, []);
 

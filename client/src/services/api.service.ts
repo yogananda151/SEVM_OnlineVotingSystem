@@ -91,7 +91,7 @@ export const officerService = {
 const downloadBlob = async (url: string, filename: string): Promise<void> => {
   const response = await api.get(url, { responseType: 'blob' });
   const blob = new Blob([response.data], {
-    type: response.headers['content-type'] || 'application/octet-stream',
+    type: (response.headers['content-type'] as string) || 'application/octet-stream',
   });
   const link = document.createElement('a');
   link.href = window.URL.createObjectURL(blob);

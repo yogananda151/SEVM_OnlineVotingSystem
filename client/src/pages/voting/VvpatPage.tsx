@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Search, CheckCircle2, Clock, Vote, ArrowLeft } from 'lucide-react';
+import { Shield, Search, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { votingService } from '../../services/api.service';
 import { Spinner } from '../../components/ui';
 import { Link } from 'react-router-dom';

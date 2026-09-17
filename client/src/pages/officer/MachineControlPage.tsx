@@ -4,7 +4,7 @@ import {
   Building2, Users, CheckCircle, Clock, Activity,
   Play, Lock, Unlock, Pause, Square, RefreshCw, Vote, ExternalLink,
 } from 'lucide-react';
-import { useAsync } from '../../hooks/useAsync';
+import { Link } from 'react-router-dom';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { pollingStationService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';

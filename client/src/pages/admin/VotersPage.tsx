@@ -1063,7 +1063,7 @@ export const VotersPage: React.FC = () => {
         open={bulkModalOpen}
         onClose={() => setBulkModalOpen(false)}
         title="Bulk Import Voters (Excel / CSV)"
-        size="xl"
+        size="lg"
       >
         <div className="space-y-4">
           {/* ── Template Download Banner ── */}

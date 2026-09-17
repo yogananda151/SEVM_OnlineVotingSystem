@@ -642,6 +642,7 @@ const Step4Review: React.FC<{
   onStatusChanged: () => void;
   onGoToStep?: (step: number) => void;
 }> = ({ electionId, onStatusChanged, onGoToStep }) => {
+  const navigate = useNavigate();
   const fetchReadiness = useCallback(() => electionService.getReadiness(electionId), [electionId]);
   const { data: readiness, loading, execute: refresh } = useAsync<ReadinessData>(fetchReadiness);
 

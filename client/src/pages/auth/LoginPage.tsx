@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
     try {
-      const result = await authService.login(data);
+      const result = await authService.login(data as { email: string; password: string });
       if (result.user.role !== selectedRole) {
         toast.error(`This account is not an ${config.label}.`, { id: 'login-toast' });
         authService.logout();

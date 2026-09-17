@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2, Users, CheckCircle, Clock, Lock, Unlock, Pause, Play,
-  Square, Activity, Vote, RefreshCw, ExternalLink,
+  Square, Activity, Vote, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
 import { useAsync } from '../../hooks/useAsync';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
@@ -52,10 +52,10 @@ export const OfficerDashboard: React.FC = () => {
   );
   const {
     data: turnout,
-    execute: refetchTurnout,
     secondsSince: turnoutSecondsSince,
     refresh: refreshTurnout,
   } = useAutoRefresh(fetchTurnout, 30_000);
+  const refetchTurnout = refreshTurnout;
 
   // ── 3. Station Machine Action Confirmation ─────────────────────────
   const [stationActionLoading, setStationActionLoading] = useState(false);
