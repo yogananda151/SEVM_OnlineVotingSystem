@@ -12,7 +12,8 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset-data": "tsx prisma/reset_data.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "generate:voters": "tsx scripts/generate_voters_excel.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

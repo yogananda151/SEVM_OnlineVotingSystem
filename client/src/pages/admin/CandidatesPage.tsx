@@ -27,6 +27,7 @@ export const CandidatesPage: React.FC = () => {
   const [filterElection, setFilterElection] = useState('');
   const [filteredConstituencies, setFilteredConstituencies] = useState<Constituency[]>([]);
   const [selectedElectionForForm, setSelectedElectionForForm] = useState('');
+  const [selectedConstituencyForForm, setSelectedConstituencyForForm] = useState('');
   const navigate = useNavigate();
 
   const fetchCandidates = useCallback(
@@ -66,7 +67,7 @@ export const CandidatesPage: React.FC = () => {
   const { mutate: createCandidate, loading: creating } = useMutation(
     (data: object) => candidateService.create(data),
     {
-      onSuccess: () => { refetch(); setModalOpen(false); reset(); setSelectedElectionForForm(''); },
+      onSuccess: () => { refetch(); setModalOpen(false); reset(); setSelectedElectionForForm(''); setSelectedConstituencyForForm(''); },
       successMessage: 'Candidate registered',
       onServerErrors: (data) => {
         const fieldErrors = normaliseValidationErrors(data);
@@ -141,7 +142,7 @@ export const CandidatesPage: React.FC = () => {
           <p className="page-subtitle">Register candidates for specific elections and constituencies</p>
         </div>
         {!hasNoElections && (
-          <button onClick={() => { reset(); setEditTarget(null); setSelectedElectionForForm(''); setModalOpen(true); }} className="btn-primary">
+          <button onClick={() => { reset(); setEditTarget(null); setSelectedElectionForForm(''); setSelectedConstituencyForForm(''); setModalOpen(true); }} className="btn-primary">
             <Plus size={16} /> Add Candidate
           </button>
         )}
@@ -285,6 +286,7 @@ export const CandidatesPage: React.FC = () => {
                 className={`input ${errors.constituencyId ? 'input-error' : ''}`}
                 aria-invalid={!!errors.constituencyId}
                 aria-describedby={errors.constituencyId ? 'cand-constituency-error' : undefined}
+                onChange={(e) => { setValue('constituencyId', Number(e.target.value)); setSelectedConstituencyForForm(e.target.value); }}
               >
                 <option value="">{selectedElectionForForm ? 'Select constituency...' : 'Select election first'}</option>
                 {filteredConstituencies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -298,9 +300,25 @@ export const CandidatesPage: React.FC = () => {
           <div>
             <label className="label" htmlFor="cand-party">Political Party</label>
             <select id="cand-party" {...register('partyId')} className="input">
-              <option value="">Independent</option>
-              {(parties as { id: number; name: string }[] || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <option value="">Independent (no party)</option>
+              {(parties as { id: number; name: string }[] || []).map((p) => {
+                // Disable parties that already have a candidate in the selected election+constituency
+                const alreadyUsed = !editTarget && selectedConstituencyForForm && selectedElectionForForm &&
+                  (candidates || []).some(
+                    (c) => c.party?.id === p.id &&
+                      c.constituencyId === Number(selectedConstituencyForForm) &&
+                      c.electionId === Number(selectedElectionForForm)
+                  );
+                return (
+                  <option key={p.id} value={p.id} disabled={!!alreadyUsed}>
+                    {p.name}{alreadyUsed ? ' (already has a candidate here)' : ''}
+                  </option>
+                );
+              })}
             </select>
+            {selectedConstituencyForForm && !editTarget && (
+              <p className="mt-1 text-[11px] text-amber-400/80">⚠ Each party can have only one candidate per constituency per election.</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

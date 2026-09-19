@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface Region { id: number; name: string; _count: { constituencies: number } }
 interface Constituency { id: number; name: string; code: string; regionId: number; region: { name: string }; _count: { pollingStations: number; voters: number } }
-interface Candidate { id: number; fullName: string; serialNumber: number; age: number; constituencyId: number; party?: { name: string; color: string } }
+interface Candidate { id: number; fullName: string; serialNumber: number; age: number; constituencyId: number; party?: { id: number; name: string; color: string } }
 interface Party { id: number; name: string; abbreviation: string; color: string }
 interface Election { id: number; name: string; status: string; electionType: string; scheduledDate: string }
 interface Officer {
@@ -516,6 +516,15 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
   electionId, electionConstituencies, readOnly,
 }) => {
   const [selectedConstituency, setSelectedConstituency] = useState<Constituency | null>(electionConstituencies[0] || null);
+  const [showExtra, setShowExtra] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [selectedPartyId, setSelectedPartyId] = useState<number | ''>('');
+  const [ageInput, setAgeInput] = useState('');
+  const [qualInput, setQualInput] = useState('');
+  const [isIndep, setIsIndep] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const fetchCandidates = useCallback(
     () => candidateService.getAll(electionId, selectedConstituency?.id),
@@ -526,24 +535,60 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
   const fetchParties = useCallback(() => partyService.getAll(), []);
   const { data: parties } = useAsync<Party[]>(fetchParties);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<{
-    fullName: string; age: number; serialNumber: number; partyId?: number; qualification?: string; isIndependent: boolean;
-  }>();
-
-  const { mutate: addCandidate, loading: adding } = useMutation(
-    (data: object) => candidateService.create(data),
-    { onSuccess: () => { reset(); refetchCandidates(); }, successMessage: 'Candidate added' },
-  );
   const { mutate: removeCandidate } = useMutation(
     (id: number) => candidateService.delete(id),
     { onSuccess: () => refetchCandidates(), successMessage: 'Candidate removed' },
   );
 
-  const onSubmit = (data: object) => {
-    if (!selectedConstituency) return;
-    const d = data as { partyId?: string };
-    addCandidate({ ...data, electionId, constituencyId: selectedConstituency.id, partyId: d.partyId ? Number(d.partyId) : null });
+  const nextSerial = (candidates?.length ?? 0) + 1;
+
+  const resetForm = () => {
+    setNameInput('');
+    setSelectedPartyId('');
+    setAgeInput('');
+    setQualInput('');
+    setIsIndep(false);
+    setShowExtra(false);
+    setFormError('');
   };
+
+  const handleAddCandidate = async () => {
+    if (!selectedConstituency) return;
+    const name = nameInput.trim();
+    if (!name) { setFormError('Candidate name is required.'); return; }
+    if (ageInput && (Number(ageInput) < 18 || Number(ageInput) > 100)) {
+      setFormError('Age must be between 18 and 100.');
+      return;
+    }
+    setFormError('');
+    setAdding(true);
+    try {
+      await candidateService.create({
+        fullName: name,
+        electionId,
+        constituencyId: selectedConstituency.id,
+        partyId: isIndep ? null : (selectedPartyId ? Number(selectedPartyId) : null),
+        serialNumber: nextSerial,
+        age: ageInput ? Number(ageInput) : 30,
+        qualification: qualInput.trim() || undefined,
+        isIndependent: isIndep,
+      });
+      toast.success(`${name} added as candidate #${nextSerial}`);
+      resetForm();
+      refetchCandidates();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to add candidate.';
+      setFormError(msg);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const filteredCandidates = (candidates || []).filter((c) =>
+    !searchFilter || c.fullName.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
+  const selectedParty = (parties || []).find((p) => p.id === Number(selectedPartyId));
 
   if (electionConstituencies.length === 0) {
     return (
@@ -555,100 +600,292 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4 h-[480px]">
-      {/* Left: Constituency list */}
-      <div className="border-r border-slate-700/50 pr-4 overflow-y-auto space-y-1">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Constituencies</p>
-        {electionConstituencies.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setSelectedConstituency(c)}
-            className={`w-full text-left p-3 rounded-xl text-sm transition-all ${
-              selectedConstituency?.id === c.id ? 'bg-primary-500/15 border border-primary-500/30 text-white' : 'text-slate-300 hover:bg-slate-800/60'
-            }`}
-          >
-            {c.name}
-          </button>
-        ))}
+    <div className="grid grid-cols-3 gap-5 min-h-[500px]">
+      {/* ── Left: Constituency list ── */}
+      <div className="border-r border-slate-700/50 pr-4 overflow-y-auto space-y-1.5">
+        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Constituencies</p>
+        {electionConstituencies.map((c) => {
+          const cCount = (candidates || []).filter((x) => x.constituencyId === c.id).length;
+          const isActive = selectedConstituency?.id === c.id;
+          return (
+            <button
+              key={c.id}
+              onClick={() => { setSelectedConstituency(c); setSearchFilter(''); }}
+              className={`w-full text-left p-3 rounded-xl text-sm transition-all flex items-center justify-between gap-2 ${
+                isActive
+                  ? 'bg-primary-500/15 border border-primary-500/30 text-white'
+                  : 'text-slate-300 hover:bg-slate-800/60 border border-transparent'
+              }`}
+            >
+              <span className="font-medium truncate">{c.name}</span>
+              {/* candidate count bubble */}
+              <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                cCount > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/60 text-slate-500'
+              }`}>
+                {cCount === 0 ? 'None' : `${cCount} cand.`}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Right: Candidates for selected constituency */}
-      <div className="col-span-2 overflow-y-auto space-y-3">
-        {selectedConstituency && (
+      {/* ── Right: Candidate management panel ── */}
+      <div className="col-span-2 flex flex-col gap-4 overflow-y-auto">
+        {selectedConstituency ? (
           <>
+            {/* Header */}
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-white">{selectedConstituency.name}</p>
-              <span className="badge badge-blue text-xs">{candidates?.length ?? 0} candidate(s)</span>
+              <div>
+                <p className="font-bold text-white text-base">{selectedConstituency.name}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {filteredCandidates.length} candidate{filteredCandidates.length !== 1 ? 's' : ''} registered
+                </p>
+              </div>
+              {/* Search among existing candidates */}
+              {(candidates?.length ?? 0) > 2 && (
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Search candidates..."
+                    className="input text-xs py-1.5 pl-8 w-44"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Existing candidates */}
             <div className="space-y-2">
-              {(candidates || []).map((cand) => (
-                <div key={cand.id} className="flex items-center gap-3 p-3 bg-slate-800/60 rounded-xl border border-slate-700/40">
-                  <div className="w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center text-sm font-bold text-primary-400">{cand.serialNumber}</div>
+              {filteredCandidates.length === 0 && !searchFilter && (
+                <div className="py-6 text-center text-slate-500 text-sm border border-dashed border-slate-700/60 rounded-xl">
+                  <Award size={24} className="mx-auto mb-2 opacity-40" />
+                  No candidates yet. Add one below.
+                </div>
+              )}
+              {filteredCandidates.length === 0 && searchFilter && (
+                <p className="text-sm text-slate-400 py-4 text-center">No candidates match "{searchFilter}".</p>
+              )}
+              {filteredCandidates.map((cand) => (
+                <div
+                  key={cand.id}
+                  className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl border border-slate-700/30 hover:border-slate-600/50 transition-all"
+                >
+                  {/* Serial number bubble */}
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{
+                      backgroundColor: cand.party?.color ? `${cand.party.color}22` : '#3b82f620',
+                      color: cand.party?.color || '#60a5fa',
+                    }}
+                  >
+                    #{cand.serialNumber}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white text-sm">{cand.fullName}</p>
-                    <p className="text-xs text-slate-400">{cand.party?.name ?? 'Independent'} · Age {cand.age}</p>
+                    <p className="font-semibold text-white text-sm truncate">{cand.fullName}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {cand.party ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: `${cand.party.color}22`, color: cand.party.color }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cand.party.color }} />
+                          {cand.party.name}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400">
+                          Independent
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-500">Age {cand.age}</span>
+                    </div>
                   </div>
                   {!readOnly && (
-                    <button onClick={() => removeCandidate(cand.id)} className="p-1.5 text-slate-500 hover:text-red-400"><Trash2 size={13} /></button>
+                    <button
+                      onClick={() => removeCandidate(cand.id)}
+                      className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all flex-shrink-0"
+                      title="Remove candidate"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Add candidate form */}
+            {/* ── Add Candidate Panel ── */}
             {!readOnly ? (
-              <div className="border border-slate-700/50 rounded-xl p-4 bg-slate-900/50">
-                <p className="text-xs font-semibold text-slate-400 mb-3">ADD CANDIDATE</p>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <input
-                        {...register('fullName', { required: 'Full name is required.' })}
-                        className={`input text-sm ${errors.fullName ? 'input-error' : ''}`}
-                        placeholder="Full name *"
-                        aria-label="Full name"
-                        aria-invalid={!!errors.fullName}
-                      />
-                      {errors.fullName && <p className="field-error-message"><AlertCircle size={11} />{errors.fullName.message}</p>}
-                    </div>
-                    <select {...register('partyId')} className="input text-sm" aria-label="Party">
-                      <option value="">Independent</option>
-                      {(parties || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+              <div className="border border-slate-700/50 rounded-xl bg-slate-900/40 overflow-hidden">
+                {/* Panel header */}
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-700/40 bg-slate-800/30">
+                  <Plus size={14} className="text-primary-400" />
+                  <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                    Add Candidate — #{nextSerial}
+                  </p>
+                  <span className="ml-auto text-[10px] text-slate-500">Serial # auto-assigned: {nextSerial}</span>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* Row 1: Name (main field) */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+                      Candidate Full Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => { setNameInput(e.target.value); setFormError(''); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddCandidate(); }}
+                      placeholder="Enter candidate's full name..."
+                      className={`input text-sm ${formError && !nameInput.trim() ? 'input-error' : ''}`}
+                      autoComplete="off"
+                    />
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <input
-                        {...register('age', { required: 'Age is required.', valueAsNumber: true, min: { value: 18, message: 'Must be at least 18.' } })}
-                        type="number"
-                        className={`input text-sm ${errors.age ? 'input-error' : ''}`}
-                        placeholder="Age *"
-                        aria-label="Age"
-                        aria-invalid={!!errors.age}
-                      />
-                      {errors.age && <p className="field-error-message"><AlertCircle size={11} />{errors.age.message}</p>}
+
+                  {/* Row 2: Party selection — visual party picker */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                      Party Affiliation
+                    </label>
+                    <p className="text-[10px] text-amber-400/80 mb-2">
+                      ⚠ Each party can have only <strong>one candidate per constituency</strong>. Parties already assigned are disabled.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {/* Independent option */}
+                      <button
+                        type="button"
+                        onClick={() => { setIsIndep(true); setSelectedPartyId(''); }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          isIndep
+                            ? 'bg-slate-600 border-slate-400 text-white'
+                            : 'border-slate-700/60 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full border-2 border-slate-400 flex-shrink-0" />
+                        Independent
+                      </button>
+                      {/* Party buttons */}
+                      {(parties || []).map((party) => {
+                        const isSelected = !isIndep && Number(selectedPartyId) === party.id;
+                        // Check if this party already has a candidate in this constituency
+                        const alreadyUsed = !isSelected && (candidates || []).some(
+                          (c) => c.party?.id === party.id && c.constituencyId === selectedConstituency?.id
+                        );
+                        return (
+                          <button
+                            key={party.id}
+                            type="button"
+                            disabled={alreadyUsed}
+                            onClick={() => { if (!alreadyUsed) { setIsIndep(false); setSelectedPartyId(party.id); } }}
+                            title={alreadyUsed ? `${party.name} already has a candidate in this constituency` : undefined}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                              alreadyUsed
+                                ? 'border-slate-800 text-slate-600 bg-slate-800/30 cursor-not-allowed opacity-50'
+                                : isSelected
+                                ? 'text-white border-transparent'
+                                : 'border-slate-700/60 text-slate-400 hover:text-slate-200'
+                            }`}
+                            style={isSelected ? {
+                              backgroundColor: `${party.color}33`,
+                              borderColor: `${party.color}66`,
+                              color: party.color,
+                            } : {}}
+                          >
+                            <span
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: alreadyUsed ? '#475569' : party.color }}
+                            />
+                            {party.abbreviation}
+                            <span className="text-[10px] opacity-70 hidden sm:inline">– {party.name}</span>
+                            {alreadyUsed && <span className="text-[9px] opacity-60 ml-0.5">✓ assigned</span>}
+                          </button>
+                        );
+                      })}
                     </div>
-                    <div>
-                      <input
-                        {...register('serialNumber', { required: 'Serial # required.', valueAsNumber: true, min: { value: 1, message: 'Must be > 0.' } })}
-                        type="number"
-                        className={`input text-sm ${errors.serialNumber ? 'input-error' : ''}`}
-                        placeholder="Serial # *"
-                        aria-label="Serial number"
-                        aria-invalid={!!errors.serialNumber}
-                      />
-                      {errors.serialNumber && <p className="field-error-message"><AlertCircle size={11} />{errors.serialNumber.message}</p>}
-                    </div>
-                    <input {...register('qualification')} className="input text-sm" placeholder="Qualification" aria-label="Qualification" />
+                    {/* Show selected party name */}
+                    {!isIndep && selectedParty && (
+                      <p className="mt-1.5 text-[11px] text-slate-400">
+                        Selected: <span style={{ color: selectedParty.color }} className="font-semibold">{selectedParty.name}</span>
+                      </p>
+                    )}
+                    {isIndep && (
+                      <p className="mt-1.5 text-[11px] text-slate-400">Candidate will be registered as <span className="text-slate-300 font-medium">Independent</span></p>
+                    )}
                   </div>
-                  <div className="flex gap-2 justify-end">
-                    <button type="submit" className="btn-primary text-sm py-2" disabled={adding}>
-                      {adding ? <Spinner size={14} /> : <Plus size={14} />} Add
+
+                  {/* Collapsible extra fields */}
+                  <button
+                    type="button"
+                    onClick={() => setShowExtra((v) => !v)}
+                    className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    <span className={`transition-transform ${showExtra ? 'rotate-90' : ''}`}>▶</span>
+                    {showExtra ? 'Hide' : 'Add'} optional details (Age, Qualification)
+                  </button>
+
+                  {showExtra && (
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                          Age
+                        </label>
+                        <input
+                          type="number"
+                          value={ageInput}
+                          onChange={(e) => setAgeInput(e.target.value)}
+                          className="input text-sm"
+                          placeholder="e.g. 35"
+                          min={18}
+                          max={100}
+                        />
+                        <p className="text-[10px] text-slate-600 mt-0.5">Defaults to 30 if blank</p>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                          Qualification
+                        </label>
+                        <input
+                          type="text"
+                          value={qualInput}
+                          onChange={(e) => setQualInput(e.target.value)}
+                          className="input text-sm"
+                          placeholder="e.g. B.Tech, LLB..."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {formError && (
+                    <div className="flex items-center gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                      <AlertCircle size={13} className="flex-shrink-0" /> {formError}
+                    </div>
+                  )}
+
+                  {/* Submit */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleAddCandidate}
+                      disabled={adding || !nameInput.trim()}
+                      className="btn-primary py-2 px-5 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                      Add Candidate #{nextSerial}
                     </button>
+                    {(nameInput || selectedPartyId || ageInput || qualInput) && (
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                      >
+                        Clear form
+                      </button>
+                    )}
+                    <span className="ml-auto text-[10px] text-slate-600">Press Enter to quickly add</span>
                   </div>
-                </form>
+                </div>
               </div>
             ) : (
               <div className="p-4 rounded-xl border border-slate-700/40 bg-slate-800/30 text-center text-xs text-slate-400">
@@ -656,6 +893,10 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
               </div>
             )}
           </>
+        ) : (
+          <div className="flex items-center justify-center h-full text-slate-500">
+            <p>Select a constituency from the left to manage candidates.</p>
+          </div>
         )}
       </div>
     </div>

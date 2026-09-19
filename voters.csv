@@ -1,21 +1,41 @@
 Full Name *,Voter ID (EPIC) *,Constituency ID *,Polling Station ID *,Serial Number,Date of Birth (YYYY-MM-DD) *,Gender (Male/Female/Other) *,Address *,Phone (10 digits),Aadhaar Number (12 digits)
-John Doe,VOT1001,2,2,1001,1985-04-12,Male,123 Main St Springfield,5550101000,123456789012
-Jane Smith,VOT1002,2,2,1002,1990-08-25,Female,456 Oak Ave Shelbyville,5550102000,123456789013
-Robert Brown,VOT1003,2,2,1003,1978-11-03,Male,789 Pine Rd Capital City,5550103000,123456789014
-Emily Davis,VOT1004,2,2,1004,2001-02-14,Female,321 Elm St Ogdenville,5550104000,123456789015
-Michael Miller,VOT1005,2,2,1005,1965-07-30,Male,654 Maple Dr North Haverbrook,5550105000,123456789016
-Sarah Wilson,VOT1006,2,2,1006,1995-12-05,Female,987 Cedar Ln Springfield,5550106000,123456789017
-David Moore,VOT1007,2,2,1007,1982-03-21,Male,159 Birch Ct Shelbyville,5550107000,123456789018
-Laura Taylor,VOT1008,2,2,1008,1970-09-18,Female,753 Walnut St Capital City,5550108000,123456789019
-James Anderson,VOT1009,2,2,1009,1988-01-09,Male,852 Chestnut Blvd Ogdenville,5550109000,123456789020
-Linda Thomas,VOT1010,2,2,1010,1992-06-11,Female,951 Ash Pkwy North Haverbrook,5550110000,123456789021
-William Jackson,VOT1011,2,3,1011,1960-10-27,Male,357 Spruce Cir Springfield,5550111000,123456789022
-Barbara White,VOT1012,2,3,1012,1980-05-15,Female,468 Fir Pl Shelbyville,5550112000,123456789023
-Richard Harris,VOT1013,2,3,1013,1998-03-08,Male,246 Sycamore Sq Capital City,5550113000,123456789024
-Susan Martin,VOT1014,2,3,1014,1975-11-22,Female,135 Redwood Way Ogdenville,5550114000,123456789025
-Joseph Thompson,VOT1015,2,3,1015,1986-07-04,Male,864 Sequoia Terr North Haverbrook,5550115000,123456789026
-Jessica Garcia,VOT1016,2,3,1016,1993-09-30,Female,975 Cypress Cv Springfield,5550116000,123456789027
-Thomas Martinez,VOT1017,2,3,1017,1968-12-12,Male,531 Magnolia Trl Shelbyville,5550117000,123456789028
-Margaret Robinson,VOT1018,2,3,1018,1984-02-28,Female,642 Poplar Run Capital City,5550118000,123456789029
-Charles Clark,VOT1019,2,3,1019,1991-06-19,Male,753 Willow Pass Ogdenville,5550119000,123456789030
-Betty Rodriguez,VOT1020,2,3,1020,1979-04-01,Female,159 Holly Glen North Haverbrook,5550120000,123456789031
+"Venkata Subbaiah","VOT1001",2,2,1,"1976-05-14","Male","D.No 2/104, Near Govt Junior College, Badvel","9848001001","234567001001"
+"Lakshmi Prasanna","VOT1002",2,2,2,"1982-08-20","Female","D.No 2/108, College Road, Badvel","9848001002","234567001002"
+"Rajesh Kumar Reddy","VOT1003",2,2,3,"1989-11-12","Male","Plot 15, RTC Colony, Near GJC, Badvel","9848001003","234567001003"
+"Anuradha Devi","VOT1004",2,2,4,"1991-03-25","Female","H.No 3/45, Teachers Colony, Badvel","9848001004","234567001004"
+"Siva Prasad Rao","VOT1005",2,2,5,"1968-07-19","Male","D.No 1/88, Main Bazaar, Badvel","9848001005","234567001005"
+"Kavitha Rani","VOT1006",2,2,6,"1995-12-04","Female","H.No 2/210, GJC Quarters, Badvel","9848001006","234567001006"
+"Babu Janardhan","VOT1007",2,2,7,"1984-09-30","Male","D.No 4/12, Market Street, Badvel","9848001007","234567001007"
+"Sunitha Kumari","VOT1008",2,2,8,"1998-02-17","Female","H.No 2/155, Sanjeeva Nagar, Badvel","9848001008","234567001008"
+"Nagaraju Chetty","VOT1009",2,2,9,"1973-04-08","Male","D.No 3/89, Old Bus Stand Road, Badvel","9848001009","234567001009"
+"Padmavathi Bai","VOT1010",2,2,10,"1987-10-15","Female","D.No 2/176, College Road, Badvel","9848001010","234567001010"
+"Chandra Sekhar","VOT1011",2,3,1,"1979-06-11","Male","H.No 5-21, Anna Street, Badvel","9848002001","234567002001"
+"Gayathri Devi","VOT1012",2,3,2,"1985-01-29","Female","H.No 5-34, Near Anna Statue, Badvel","9848002002","234567002002"
+"Ramanjaneyulu V","VOT1013",2,3,3,"1970-12-18","Male","D.No 5-42, Anna Street Corner, Badvel","9848002003","234567002003"
+"Swarna Latha","VOT1014",2,3,4,"1993-07-09","Female","H.No 5-55, Anna Street 2nd Cross, Badvel","9848002004","234567002004"
+"Kishore Babu","VOT1015",2,3,5,"1988-04-03","Male","D.No 5-68, Anna Street, Badvel","9848002005","234567002005"
+"Bharathi Reddy","VOT1016",2,3,6,"1996-09-14","Female","H.No 5-77, Anna Street Main Road, Badvel","9848002006","234567002006"
+"Surendra Nath","VOT1017",2,3,7,"1981-11-22","Male","D.No 5-89, Anna Street, Badvel","9848002007","234567002007"
+"Madhavi Latha","VOT1018",2,3,8,"1990-03-16","Female","H.No 5-102, Anna Street, Badvel","9848002008","234567002008"
+"Venkata Ramana","VOT1019",2,3,9,"1965-08-05","Male","D.No 5-115, Anna Street Extension, Badvel","9848002009","234567002009"
+"Hemalatha M","VOT1020",2,3,10,"2000-05-27","Female","H.No 5-128, Anna Street, Badvel","9848002010","234567002010"
+"Rama Mohan Rao","VOT1021",3,4,1,"1974-03-15","Male","D.No 12/4, Rama Street, Badvel North","9848003001","234567003001"
+"Saraswathi Bai","VOT1022",3,4,2,"1980-09-10","Female","H.No 12/18, Rama Temple Lane, Badvel North","9848003002","234567003002"
+"Naveen Kumar","VOT1023",3,4,3,"1992-07-21","Male","D.No 12/29, Rama Street 1st Lane, Badvel North","9848003003","234567003003"
+"Radha Krishna Kumari","VOT1024",3,4,4,"1986-11-02","Female","H.No 12/35, Rama Street, Badvel North","9848003004","234567003004"
+"Govindarajulu K","VOT1025",3,4,5,"1969-01-14","Male","D.No 12/48, Rama Street, Badvel North","9848003005","234567003005"
+"Bhavani Devi","VOT1026",3,4,6,"1994-04-19","Female","H.No 12/60, Rama Street North Extension, Badvel North","9848003006","234567003006"
+"Srinivasaulu Reddy","VOT1027",3,4,7,"1983-10-28","Male","D.No 12/72, Rama Street, Badvel North","9848003007","234567003007"
+"Usha Rani","VOT1028",3,4,8,"1997-08-08","Female","H.No 12/84, Rama Street, Badvel North","9848003008","234567003008"
+"Praveen Kumar","VOT1029",3,4,9,"1991-12-30","Male","D.No 12/96, Rama Street, Badvel North","9848003009","234567003009"
+"Meenakshi Sundaram","VOT1030",3,4,10,"1977-02-12","Female","H.No 12/108, Rama Street, Badvel North","9848003010","234567003010"
+"Hari Prasad","VOT1031",4,5,1,"1975-08-14","Male","D.No 8/12, Main Road, Chennur Town","9848004001","234567004001"
+"Venkata Lakshmi","VOT1032",4,5,2,"1983-05-22","Female","H.No 8/25, Main Road, Near Clock Tower, Chennur","9848004002","234567004002"
+"Pratap Reddy","VOT1033",4,5,3,"1988-10-17","Male","D.No 8/38, Main Road, Chennur Town","9848004003","234567004003"
+"Kalyani Kumari","VOT1034",4,5,4,"1995-02-09","Female","H.No 8/50, Main Road, Opp SBI, Chennur","9848004004","234567004004"
+"Dhanunjaya Rao","VOT1035",4,5,5,"1971-06-30","Male","D.No 8/64, Main Road, Chennur Town","9848004005","234567004005"
+"Geetha Vani","VOT1036",4,5,6,"1990-12-05","Female","H.No 8/78, Main Road, Chennur Town","9848004006","234567004006"
+"Mahesh Babu C","VOT1037",4,5,7,"1984-04-18","Male","D.No 8/92, Main Road Commercial Area, Chennur","9848004007","234567004007"
+"Sujatha Bai","VOT1038",4,5,8,"1978-09-26","Female","H.No 8/105, Main Road, Chennur Town","9848004008","234567004008"
+"Anand Kumar","VOT1039",4,5,9,"1999-01-11","Male","D.No 8/118, Main Road, Chennur Town","9848004009","234567004009"
+"Shanthi Priya","VOT1040",4,5,10,"1993-07-14","Female","H.No 8/132, Main Road, Chennur Town","9848004010","234567004010"
