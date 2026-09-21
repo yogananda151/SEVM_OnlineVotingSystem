@@ -14,6 +14,9 @@ export const electionService = {
   getOfficer: async (id: number) => (await api.get(`/elections/${id}/officer`)).data.data,
   setOfficer: async (id: number, officerId: number | null) =>
     (await api.put(`/elections/${id}/officer`, { officerId })).data.data,
+  autoAssignOfficers: async (id: number) =>
+    (await api.post(`/elections/${id}/auto-assign-officers`)).data,
+  clone: async (id: number) => (await api.post(`/elections/${id}/clone`)).data.data,
   create: async (data: object) => (await api.post('/elections', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/elections/${id}`, data)).data.data,
   updateStatus: async (id: number, status: string) =>
@@ -72,6 +75,18 @@ export const candidateService = {
   getById: async (id: number) => (await api.get(`/candidates/${id}`)).data.data,
   create: async (data: object) => (await api.post('/candidates', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/candidates/${id}`, data)).data.data,
+  bulkCreate: async (candidates: object[]) => (await api.post('/candidates/bulk', { candidates })).data,
+  downloadExcelTemplate: async () =>
+    downloadBlob('/candidates/template/excel', 'candidate_template.xlsx'),
+  uploadExcel: async (file: File, electionId: number, defaultConstituencyId?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('electionId', String(electionId));
+    if (defaultConstituencyId) formData.append('defaultConstituencyId', String(defaultConstituencyId));
+    return (await api.post('/candidates/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
   uploadPhoto: async (id: number, file: File) => {
     const formData = new FormData();
     formData.append('photo', file);

@@ -94,9 +94,25 @@ export const PollingStationsPage: React.FC = () => {
   };
 
   const onSubmit = (data: FormData) => {
-    const d = { ...data, constituencyId: Number(data.constituencyId) };
-    if (editTarget) update({ id: editTarget.id, d });
-    else create(d);
+    if (editTarget) {
+      const payload: Record<string, any> = {
+        name: data.name,
+        address: data.address,
+      };
+      if (data.capacity && !isNaN(data.capacity)) payload.capacity = Number(data.capacity);
+      if (data.totalBooths && !isNaN(data.totalBooths)) payload.totalBooths = Number(data.totalBooths);
+      update({ id: editTarget.id, d: payload });
+    } else {
+      const d: Record<string, any> = {
+        ...data,
+        constituencyId: Number(data.constituencyId),
+      };
+      if (!data.capacity || isNaN(data.capacity)) delete d.capacity;
+      else d.capacity = Number(data.capacity);
+      if (!data.totalBooths || isNaN(data.totalBooths)) delete d.totalBooths;
+      else d.totalBooths = Number(data.totalBooths);
+      create(d);
+    }
   };
 
   const hasNoConstituencies = allConstituencies && allConstituencies.length === 0;

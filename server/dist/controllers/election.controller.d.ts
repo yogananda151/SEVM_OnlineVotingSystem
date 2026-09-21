@@ -15,6 +15,8 @@ export declare class ElectionController {
     setOfficer(req: Request, res: Response, next: NextFunction): Promise<void>;
     publishResults(req: Request, res: Response, next: NextFunction): Promise<void>;
     getResults(req: Request, res: Response, next: NextFunction): Promise<void>;
+    clone(req: Request, res: Response, next: NextFunction): Promise<void>;
+    autoAssignOfficers(req: Request, res: Response, next: NextFunction): Promise<void>;
     delete(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 export declare const electionController: ElectionController;

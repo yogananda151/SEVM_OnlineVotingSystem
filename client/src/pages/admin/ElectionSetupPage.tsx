@@ -15,7 +15,7 @@ import { useForm } from 'react-hook-form';
 import {
   MapPin, Users, Award, CheckCircle, ChevronRight, ChevronLeft,
   AlertCircle, Loader2, Globe, RefreshCw, Plus, Trash2, UserCog, Search,
-  ShieldCheck, BarChart3, Lock,
+  ShieldCheck, BarChart3, Lock, Upload, FileSpreadsheet, X,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -186,6 +186,7 @@ const Step2Officer: React.FC<{
   const [selectedId, setSelectedId] = useState<number | null>(currentOfficerId);
   const [localError, setLocalError] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [autoAssigning, setAutoAssigning] = useState(false);
 
   const fetchOfficers = useCallback(() => officerService.getAll(), []);
   const { data: allOfficers, loading, execute: refetchOfficers } = useAsync<Officer[]>(fetchOfficers);
@@ -282,6 +283,21 @@ const Step2Officer: React.FC<{
       refetchOfficers();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to assign booth officer');
+    }
+  };
+
+  const handleAutoAssign = async () => {
+    setAutoAssigning(true);
+    setLocalError(null);
+    try {
+      const res = await electionService.autoAssignOfficers(electionId);
+      toast.success(res.message || 'Auto-assignment completed');
+      refetchStations();
+      refetchOfficers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to auto-assign officers');
+    } finally {
+      setAutoAssigning(false);
     }
   };
 
@@ -442,9 +458,22 @@ const Step2Officer: React.FC<{
 
       {activeTab === 'booths' && (
         <div className="space-y-4">
-          <p className="text-xs text-slate-400">
-            Every polling station in the participating constituencies must have an assigned Officer before the election can be scheduled.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              Every polling station in the participating constituencies must have an assigned Officer before the election can be scheduled.
+            </p>
+            {!readOnly && unassignedStations.length > 0 && (
+              <button
+                type="button"
+                onClick={handleAutoAssign}
+                disabled={autoAssigning}
+                className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2 flex-shrink-0"
+              >
+                {autoAssigning ? <Loader2 size={14} className="animate-spin" /> : <Users size={14} />}
+                Auto-Assign Remaining
+              </button>
+            )}
+          </div>
 
           {participatingStations.length === 0 ? (
             <div className="text-center py-8 text-slate-400">
@@ -525,6 +554,13 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
   const [searchFilter, setSearchFilter] = useState('');
   const [adding, setAdding] = useState(false);
   const [formError, setFormError] = useState('');
+  
+  // Bulk Import State
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [spreadsheetFile, setSpreadsheetFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   const fetchCandidates = useCallback(
     () => candidateService.getAll(electionId, selectedConstituency?.id),
@@ -584,6 +620,40 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      await candidateService.downloadExcelTemplate();
+      toast.success('Template downloaded successfully');
+    } catch (err) {
+      toast.error('Failed to download template');
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleBulkSubmit = async () => {
+    if (!spreadsheetFile) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const res = await candidateService.uploadExcel(
+        spreadsheetFile,
+        electionId,
+        selectedConstituency?.id
+      );
+      toast.success(`Imported ${res.importedCount} candidates successfully!`);
+      setBulkModalOpen(false);
+      setSpreadsheetFile(null);
+      refetchCandidates();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to upload file.';
+      setUploadError(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const filteredCandidates = (candidates || []).filter((c) =>
     !searchFilter || c.fullName.toLowerCase().includes(searchFilter.toLowerCase())
   );
@@ -637,9 +707,23 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-bold text-white text-base">{selectedConstituency.name}</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {filteredCandidates.length} candidate{filteredCandidates.length !== 1 ? 's' : ''} registered
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {filteredCandidates.length} candidate{filteredCandidates.length !== 1 ? 's' : ''} registered
+                  </p>
+                  {!readOnly && (
+                    <button
+                      onClick={() => {
+                        setSpreadsheetFile(null);
+                        setUploadError('');
+                        setBulkModalOpen(true);
+                      }}
+                      className="text-xs flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors mt-0.5"
+                    >
+                      <FileSpreadsheet size={13} /> Bulk Import
+                    </button>
+                  )}
+                </div>
               </div>
               {/* Search among existing candidates */}
               {(candidates?.length ?? 0) > 2 && (
@@ -899,6 +983,102 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
           </div>
         )}
       </div>
+
+      {/* ── Bulk Import Modal ── */}
+      {bulkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Bulk Import Candidates</h3>
+                  <p className="text-xs text-slate-400">Upload an Excel or CSV file</p>
+                </div>
+              </div>
+              <button onClick={() => setBulkModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-5 overflow-y-auto">
+              <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                <div className="text-xs text-slate-300">Need the correct format?</div>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  disabled={downloadingTemplate}
+                  className="btn-secondary text-xs py-1.5 px-3"
+                >
+                  {downloadingTemplate ? <Loader2 size={13} className="animate-spin mr-1" /> : null}
+                  Download Template
+                </button>
+              </div>
+
+              <div>
+                <label className="label">Select Spreadsheet File *</label>
+                {!spreadsheetFile ? (
+                  <label className="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer bg-slate-800/20 hover:bg-slate-800/40 transition-colors">
+                    <Upload size={28} className="text-slate-400 mb-2" />
+                    <span className="text-sm font-medium text-slate-300">Click to browse or drop file</span>
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls, .csv"
+                      onChange={(e) => setSpreadsheetFile(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet size={20} className="text-emerald-400" />
+                      <div>
+                        <p className="text-sm font-medium text-white">{spreadsheetFile.name}</p>
+                        <p className="text-xs text-slate-400">{(spreadsheetFile.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSpreadsheetFile(null)}
+                      className="text-slate-400 hover:text-red-400 p-1.5"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {uploadError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 whitespace-pre-wrap">
+                  {uploadError}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-900/50">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setBulkModalOpen(false)}
+                disabled={uploading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkSubmit}
+                disabled={uploading || !spreadsheetFile}
+                className="btn-primary"
+              >
+                {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                Import Candidates
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

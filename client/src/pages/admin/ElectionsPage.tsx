@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Vote, Play, Square, Eye, BarChart3, Settings2, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Vote, Play, Square, Eye, BarChart3, Settings2, AlertCircle, Copy } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -133,11 +133,20 @@ export const ElectionsPage: React.FC = () => {
                             </button>
                           )}
                           {e.status === 'RESULTS_PUBLISHED' && (
-                            <button onClick={() => navigate('/admin/results')}
+                            <button onClick={() => navigate(`/admin/results?electionId=${e.id}`)}
                               className="p-1.5 text-blue-400 hover:text-blue-300" title="View Published Results">
                               <BarChart3 size={14} />
                             </button>
                           )}
+                          <button onClick={() => {
+                            toast.promise(electionService.clone(e.id), {
+                              loading: 'Cloning election...',
+                              success: () => { refetch(); return 'Election cloned!'; },
+                              error: 'Failed to clone election'
+                            });
+                          }} className="p-1.5 text-slate-400 hover:text-emerald-400" title="Clone Election">
+                            <Copy size={14} />
+                          </button>
                           {(e.status === 'DRAFT' || e.status === 'SCHEDULED') && (
                             <button onClick={() => openEdit(e)} className="p-1.5 text-slate-400 hover:text-blue-400" title="Edit Election"><Pencil size={14} /></button>
                           )}

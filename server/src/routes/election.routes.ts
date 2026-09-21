@@ -28,9 +28,11 @@ router.patch('/:id/status', authorize(UserRole.COMMISSIONER, UserRole.OFFICER), 
 
 // Commissioner only
 router.post('/', authorize(UserRole.COMMISSIONER), validate(createElectionSchema), electionController.create.bind(electionController));
+router.post('/:id/clone', authorize(UserRole.COMMISSIONER), electionController.clone.bind(electionController));
 router.put('/:id', authorize(UserRole.COMMISSIONER), validate(updateElectionSchema), electionController.update.bind(electionController));
 router.put('/:id/constituencies', authorize(UserRole.COMMISSIONER), validate(setElectionConstituenciesSchema), electionController.setConstituencies.bind(electionController));
 router.put('/:id/officer', authorize(UserRole.COMMISSIONER), validate(setElectionOfficerSchema), electionController.setOfficer.bind(electionController));
+router.post('/:id/auto-assign-officers', authorize(UserRole.COMMISSIONER), electionController.autoAssignOfficers.bind(electionController));
 router.post('/:id/publish-results', authorize(UserRole.COMMISSIONER), electionController.publishResults.bind(electionController));
 router.delete('/:id', authorize(UserRole.COMMISSIONER), electionController.delete.bind(electionController));
 

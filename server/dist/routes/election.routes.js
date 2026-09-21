@@ -20,9 +20,11 @@ router.get('/:id/officer', election_controller_1.electionController.getOfficer.b
 router.patch('/:id/status', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER, client_1.UserRole.OFFICER), election_controller_1.electionController.updateStatus.bind(election_controller_1.electionController));
 // Commissioner only
 router.post('/', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), (0, validation_middleware_1.validate)(validation_middleware_1.createElectionSchema), election_controller_1.electionController.create.bind(election_controller_1.electionController));
+router.post('/:id/clone', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), election_controller_1.electionController.clone.bind(election_controller_1.electionController));
 router.put('/:id', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), (0, validation_middleware_1.validate)(validation_middleware_1.updateElectionSchema), election_controller_1.electionController.update.bind(election_controller_1.electionController));
 router.put('/:id/constituencies', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), (0, validation_middleware_1.validate)(validation_middleware_1.setElectionConstituenciesSchema), election_controller_1.electionController.setConstituencies.bind(election_controller_1.electionController));
 router.put('/:id/officer', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), (0, validation_middleware_1.validate)(validation_middleware_1.setElectionOfficerSchema), election_controller_1.electionController.setOfficer.bind(election_controller_1.electionController));
+router.post('/:id/auto-assign-officers', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), election_controller_1.electionController.autoAssignOfficers.bind(election_controller_1.electionController));
 router.post('/:id/publish-results', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), election_controller_1.electionController.publishResults.bind(election_controller_1.electionController));
 router.delete('/:id', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), election_controller_1.electionController.delete.bind(election_controller_1.electionController));
 exports.default = router;

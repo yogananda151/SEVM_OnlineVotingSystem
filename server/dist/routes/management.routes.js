@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const candidate_controller_1 = require("../controllers/candidate.controller");
@@ -10,6 +13,11 @@ const auth_middleware_1 = require("../middleware/auth.middleware");
 const upload_middleware_1 = require("../middleware/upload.middleware");
 const validation_middleware_1 = require("../middleware/validation.middleware");
 const client_1 = require("@prisma/client");
+const multer_1 = __importDefault(require("multer"));
+const uploadExcelFile = (0, multer_1.default)({
+    storage: multer_1.default.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
+}).single('file');
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.authenticate);
 // ── Regions ───────────────────────────────────────────────────────
@@ -40,6 +48,9 @@ router.put('/officers/:id', (0, auth_middleware_1.authorize)(client_1.UserRole.C
 router.delete('/officers/:id', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), officer_controller_1.officerController.delete.bind(officer_controller_1.officerController));
 // ── Candidates ────────────────────────────────────────────────────
 router.get('/candidates', candidate_controller_1.candidateController.getAll.bind(candidate_controller_1.candidateController));
+router.get('/candidates/template/excel', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), candidate_controller_1.candidateController.downloadTemplate.bind(candidate_controller_1.candidateController));
+router.post('/candidates/upload-excel', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), uploadExcelFile, candidate_controller_1.candidateController.uploadExcel.bind(candidate_controller_1.candidateController));
+router.post('/candidates/bulk', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), candidate_controller_1.candidateController.bulkCreate.bind(candidate_controller_1.candidateController));
 router.get('/candidates/:id', candidate_controller_1.candidateController.getById.bind(candidate_controller_1.candidateController));
 router.post('/candidates', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), (0, validation_middleware_1.validate)(validation_middleware_1.createCandidateSchema), candidate_controller_1.candidateController.create.bind(candidate_controller_1.candidateController));
 router.put('/candidates/:id', (0, auth_middleware_1.authorize)(client_1.UserRole.COMMISSIONER), candidate_controller_1.candidateController.update.bind(candidate_controller_1.candidateController));

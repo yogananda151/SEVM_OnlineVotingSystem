@@ -1,4 +1,5 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TrendingUp, Trophy, Users, Vote } from 'lucide-react';
 import { useAsync } from '../../hooks/useAsync';
 import { electionService, reportService } from '../../services/api.service';
@@ -15,11 +16,21 @@ interface ElectionResult {
 }
 
 export const ResultsPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const fetchElections = useCallback(() => electionService.getAll(), []);
   const { data: elections, loading: electionsLoading } = useAsync(fetchElections);
 
   const publishedElections = (elections as { id: number; name: string; status: string; isResultPublished: boolean }[] | null)?.filter((e) => e.isResultPublished) ?? [];
-  const [selectedElection, setSelectedElection] = React.useState<number | null>(null);
+  const [selectedElection, setSelectedElection] = useState<number | null>(null);
+
+  useEffect(() => {
+    const qId = searchParams.get('electionId');
+    if (qId) {
+      setSelectedElection(Number(qId));
+    } else if (selectedElection === null && publishedElections.length > 0) {
+      setSelectedElection(publishedElections[0].id);
+    }
+  }, [searchParams, publishedElections, selectedElection]);
 
   const fetchResults = useCallback(
     () => selectedElection ? electionService.getResults(selectedElection) : Promise.resolve(null),

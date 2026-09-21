@@ -5,6 +5,7 @@ import { sendSuccess } from '../utils/response';
 import { auditRepository } from '../repositories/audit.repository';
 import { AppError } from '../middleware/error.middleware';
 import { ElectionStatus } from '@prisma/client';
+import { candidateExcelService } from '../services/candidate-excel.service';
 
 export class CandidateController {
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -104,6 +105,69 @@ export class CandidateController {
 
       await candidateRepository.delete(id);
       sendSuccess(res, null, 'Candidate removed');
+    } catch (err) { next(err); }
+  }
+
+  async downloadTemplate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await candidateExcelService.generateTemplate(res);
+    } catch (err) { next(err); }
+  }
+
+  async uploadExcel(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.file) throw new AppError('No file uploaded', 400);
+
+      const electionId = Number(req.body.electionId);
+      if (!electionId) throw new AppError('electionId is required', 400);
+
+      const defaultConstituencyId = req.body.defaultConstituencyId ? Number(req.body.defaultConstituencyId) : undefined;
+
+      const result = await candidateExcelService.parseAndValidateExcel(
+        req.file.buffer,
+        electionId,
+        defaultConstituencyId,
+      );
+
+      if (result.validCandidates.length > 0) {
+        for (const candidate of result.validCandidates) {
+          await candidateRepository.create(candidate);
+        }
+        await auditRepository.create({
+          userId: req.user?.userId,
+          action: 'CREATE',
+          module: 'Candidate',
+          description: `Bulk imported ${result.validCandidates.length} candidates for election ${electionId}`,
+          ipAddress: req.ip,
+        });
+      }
+
+      sendSuccess(res, result, 'Excel file processed successfully');
+    } catch (err) { next(err); }
+  }
+
+  async bulkCreate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { candidates } = req.body as { candidates: any[] };
+      if (!Array.isArray(candidates) || candidates.length === 0) {
+        throw new AppError('No candidates provided', 400);
+      }
+
+      const electionId = candidates[0]?.electionId;
+
+      const created = [];
+      for (const candidate of candidates) {
+        created.push(await candidateRepository.create(candidate));
+      }
+
+      await auditRepository.create({
+        userId: req.user?.userId,
+        action: 'CREATE',
+        module: 'Candidate',
+        description: `Bulk registered ${created.length} candidates via manual json`,
+        ipAddress: req.ip,
+      });
+      sendSuccess(res, { count: created.length }, 'Candidates registered successfully', 201);
     } catch (err) { next(err); }
   }
 }

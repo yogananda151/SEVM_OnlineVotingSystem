@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Award, Upload, User, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Plus, Pencil, Trash2, Award, Upload, User, ArrowRight, AlertCircle, ShieldCheck, FileSpreadsheet, Loader2, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { candidateService, constituencyService, partyService, electionService } from '../../services/api.service';
@@ -28,6 +28,12 @@ export const CandidatesPage: React.FC = () => {
   const [filteredConstituencies, setFilteredConstituencies] = useState<Constituency[]>([]);
   const [selectedElectionForForm, setSelectedElectionForForm] = useState('');
   const [selectedConstituencyForForm, setSelectedConstituencyForForm] = useState('');
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkElectionId, setBulkElectionId] = useState('');
+  const [spreadsheetFile, setSpreadsheetFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const navigate = useNavigate();
 
   const fetchCandidates = useCallback(
@@ -99,6 +105,39 @@ export const CandidatesPage: React.FC = () => {
     { onSuccess: () => { refetch(); setDeleteTarget(null); }, successMessage: 'Candidate removed' },
   );
 
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      await candidateService.downloadExcelTemplate();
+      toast.success('Template downloaded successfully');
+    } catch {
+      toast.error('Failed to download template');
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleBulkSubmit = async () => {
+    if (!spreadsheetFile || !bulkElectionId) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const res = await candidateService.uploadExcel(
+        spreadsheetFile,
+        Number(bulkElectionId)
+      );
+      toast.success(`Imported ${res.importedCount} candidates successfully!`);
+      setBulkModalOpen(false);
+      setSpreadsheetFile(null);
+      refetch();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to upload file.';
+      setUploadError(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handlePhotoUpload = async (file: File) => {
     if (!uploadTarget) return;
     try {
@@ -142,9 +181,22 @@ export const CandidatesPage: React.FC = () => {
           <p className="page-subtitle">Register candidates for specific elections and constituencies</p>
         </div>
         {!hasNoElections && (
-          <button onClick={() => { reset(); setEditTarget(null); setSelectedElectionForForm(''); setSelectedConstituencyForForm(''); setModalOpen(true); }} className="btn-primary">
-            <Plus size={16} /> Add Candidate
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setBulkElectionId(filterElection || (elections?.[0]?.id ? String(elections[0].id) : ''));
+                setSpreadsheetFile(null);
+                setUploadError('');
+                setBulkModalOpen(true);
+              }}
+              className="btn-secondary flex items-center gap-2 text-emerald-400 hover:text-emerald-300"
+            >
+              <FileSpreadsheet size={16} /> Bulk Import
+            </button>
+            <button onClick={() => { reset(); setEditTarget(null); setSelectedElectionForForm(''); setSelectedConstituencyForForm(''); setModalOpen(true); }} className="btn-primary">
+              <Plus size={16} /> Add Candidate
+            </button>
+          </div>
         )}
       </div>
 
@@ -372,6 +424,118 @@ export const CandidatesPage: React.FC = () => {
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && deleteCandidate(deleteTarget.id)}
         title="Remove Candidate" message={`Remove "${deleteTarget?.fullName}" from the election?`} confirmText="Remove" loading={deleting} />
+
+      {/* Bulk Import Modal */}
+      {bulkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Bulk Import Candidates</h3>
+                  <p className="text-xs text-slate-400">Upload an Excel or CSV file</p>
+                </div>
+              </div>
+              <button onClick={() => setBulkModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-5 overflow-y-auto">
+              <div>
+                <label className="label">Target Election *</label>
+                <select
+                  value={bulkElectionId}
+                  onChange={(e) => setBulkElectionId(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Select Election...</option>
+                  {(elections || []).map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name} ({e.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                <div className="text-xs text-slate-300">Need the correct template?</div>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  disabled={downloadingTemplate}
+                  className="btn-secondary text-xs py-1.5 px-3"
+                >
+                  {downloadingTemplate ? <Loader2 size={13} className="animate-spin mr-1" /> : null}
+                  Download Template
+                </button>
+              </div>
+
+              <div>
+                <label className="label">Select Spreadsheet File (.xlsx or .csv) *</label>
+                {!spreadsheetFile ? (
+                  <label className="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer bg-slate-800/20 hover:bg-slate-800/40 transition-colors">
+                    <Upload size={28} className="text-slate-400 mb-2" />
+                    <span className="text-sm font-medium text-slate-300">Click to browse or drop file</span>
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls, .csv"
+                      onChange={(e) => setSpreadsheetFile(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet size={20} className="text-emerald-400" />
+                      <div>
+                        <p className="text-sm font-medium text-white">{spreadsheetFile.name}</p>
+                        <p className="text-xs text-slate-400">{(spreadsheetFile.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSpreadsheetFile(null)}
+                      className="text-slate-400 hover:text-red-400 p-1.5"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {uploadError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 whitespace-pre-wrap">
+                  {uploadError}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-900/50">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setBulkModalOpen(false)}
+                disabled={uploading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkSubmit}
+                disabled={uploading || !spreadsheetFile || !bulkElectionId}
+                className="btn-primary"
+              >
+                {uploading ? <Loader2 size={16} className="animate-spin mr-1" /> : <Upload size={16} className="mr-1" />}
+                Import Candidates
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

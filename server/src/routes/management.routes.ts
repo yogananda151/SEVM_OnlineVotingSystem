@@ -11,6 +11,12 @@ import {
   createPollingStationSchema, createOfficerSchema, createRegionSchema,
 } from '../middleware/validation.middleware';
 import { UserRole } from '@prisma/client';
+import multer from 'multer';
+
+const uploadExcelFile = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
+}).single('file');
 
 const router = Router();
 router.use(authenticate);
@@ -47,6 +53,9 @@ router.delete('/officers/:id', authorize(UserRole.COMMISSIONER), officerControll
 
 // ── Candidates ────────────────────────────────────────────────────
 router.get('/candidates', candidateController.getAll.bind(candidateController));
+router.get('/candidates/template/excel', authorize(UserRole.COMMISSIONER), candidateController.downloadTemplate.bind(candidateController));
+router.post('/candidates/upload-excel', authorize(UserRole.COMMISSIONER), uploadExcelFile, candidateController.uploadExcel.bind(candidateController));
+router.post('/candidates/bulk', authorize(UserRole.COMMISSIONER), candidateController.bulkCreate.bind(candidateController));
 router.get('/candidates/:id', candidateController.getById.bind(candidateController));
 router.post('/candidates', authorize(UserRole.COMMISSIONER), validate(createCandidateSchema), candidateController.create.bind(candidateController));
 router.put('/candidates/:id', authorize(UserRole.COMMISSIONER), candidateController.update.bind(candidateController));

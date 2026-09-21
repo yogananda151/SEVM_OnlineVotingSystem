@@ -71,9 +71,15 @@ export const PartiesPage: React.FC = () => {
     } catch { toast.error('Upload failed'); }
   };
 
-  const onSubmit = (data: object) => {
-    if (editTarget) updateParty({ id: editTarget.id, data });
-    else createParty(data);
+  const onSubmit = (data: any) => {
+    const payload = { ...data };
+    if (!payload.foundedYear || isNaN(payload.foundedYear)) {
+      delete payload.foundedYear;
+    } else {
+      payload.foundedYear = Number(payload.foundedYear);
+    }
+    if (editTarget) updateParty({ id: editTarget.id, data: payload });
+    else createParty(payload);
   };
 
   return (

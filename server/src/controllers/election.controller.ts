@@ -323,6 +323,123 @@ export class ElectionController {
     } catch (err) { next(err); }
   }
 
+  async clone(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      const original = await electionRepository.findById(id);
+      if (!original) throw new AppError('Election not found.', 404);
+
+      const baseName = `Copy of ${original.name}`;
+      const name = baseName.length > 200 ? baseName.substring(0, 200) : baseName;
+
+      const cloned = await electionRepository.create({
+        name,
+        description: original.description ?? undefined,
+        electionType: original.electionType,
+        scheduledDate: original.scheduledDate,
+      });
+
+      if (original.electionConstituencies && original.electionConstituencies.length > 0) {
+        const constituencyIds = original.electionConstituencies.map((ec) => ec.constituencyId);
+        await electionConstituencyRepository.setConstituencies(cloned.id, constituencyIds);
+      }
+
+      await auditRepository.create({
+        userId: req.user!.userId,
+        electionId: cloned.id,
+        action: 'CREATE',
+        module: 'Election',
+        description: `Cloned election from ID ${id} (${original.name}) into new draft ID ${cloned.id}`,
+        ipAddress: req.ip,
+      });
+
+      const fullCloned = await electionRepository.findById(cloned.id);
+      sendSuccess(res, fullCloned, 'Election cloned successfully', 201);
+    } catch (err) { next(err); }
+  }
+
+  async autoAssignOfficers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      const election = await electionRepository.findById(id);
+      if (!election) throw new AppError('Election not found.', 404);
+
+      if (election.status !== ElectionStatus.DRAFT && election.status !== ElectionStatus.SCHEDULED) {
+        throw new AppError('Cannot assign officers after election has started.', 400);
+      }
+
+      const participatingLinks = await electionConstituencyRepository.findByElection(id);
+      const constituencyIds = participatingLinks.map((link) => link.constituencyId);
+
+      if (constituencyIds.length === 0) {
+        throw new AppError('No constituencies are selected for this election. Select constituencies first.', 400);
+      }
+
+      const stations = await prisma.pollingStation.findMany({
+        where: {
+          constituencyId: { in: constituencyIds },
+          deletedAt: null,
+        },
+        include: {
+          officers: {
+            where: { deletedAt: null },
+          },
+        },
+      });
+
+      const unassignedStations = stations.filter((s) => s.officers.length === 0);
+      if (unassignedStations.length === 0) {
+        sendSuccess(res, { count: 0 }, 'All polling stations already have assigned officers.');
+        return;
+      }
+
+      const availableOfficers = await prisma.electionOfficer.findMany({
+        where: {
+          deletedAt: null,
+          pollingStationId: null,
+          id: election.officerId ? { not: election.officerId } : undefined,
+          user: { isActive: true },
+        },
+        orderBy: { id: 'asc' },
+      });
+
+      if (availableOfficers.length === 0) {
+        throw new AppError('No unassigned officers available. Please register more officers in Master Data → Officers.', 400);
+      }
+
+      let assignedCount = 0;
+      const assignLimit = Math.min(unassignedStations.length, availableOfficers.length);
+
+      for (let i = 0; i < assignLimit; i++) {
+        const station = unassignedStations[i];
+        const officer = availableOfficers[i];
+
+        await prisma.electionOfficer.update({
+          where: { id: officer.id },
+          data: { pollingStationId: station.id },
+        });
+        assignedCount++;
+      }
+
+      await auditRepository.create({
+        userId: req.user!.userId,
+        electionId: id,
+        action: 'UPDATE',
+        module: 'Election',
+        description: `Auto-assigned ${assignedCount} officers to polling stations for election ${election.name}`,
+        ipAddress: req.ip,
+      });
+
+      sendSuccess(
+        res,
+        { count: assignedCount, totalNeeded: unassignedStations.length },
+        `Successfully auto-assigned ${assignedCount} officer(s) to polling stations.${
+          assignedCount < unassignedStations.length ? ` (${unassignedStations.length - assignedCount} station(s) still need officers)` : ''
+        }`
+      );
+    } catch (err) { next(err); }
+  }
+
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Number(req.params.id);

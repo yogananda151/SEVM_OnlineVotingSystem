@@ -52,6 +52,23 @@ class CandidateRepository {
         if (existingSerial) {
             throw new error_middleware_1.AppError(`Serial number ${data.serialNumber} is already assigned to another active candidate in this constituency. Please use a different serial number.`, 409);
         }
+        // Pre-check: each party can have at most ONE candidate per constituency per election.
+        // Independents (partyId === null) are exempt from this rule.
+        if (data.partyId) {
+            const existingPartyCandidate = await database_1.prisma.candidate.findFirst({
+                where: {
+                    electionId: data.electionId,
+                    constituencyId: data.constituencyId,
+                    partyId: data.partyId,
+                    deletedAt: null,
+                    isActive: true,
+                },
+                include: { party: { select: { name: true } } },
+            });
+            if (existingPartyCandidate) {
+                throw new error_middleware_1.AppError(`Party "${existingPartyCandidate.party?.name}" already has a candidate (${existingPartyCandidate.fullName}) registered in this constituency. Each party can have only one candidate per constituency per election.`, 409);
+            }
+        }
         return database_1.prisma.candidate.create({ data, include: { constituency: true, party: true } });
     }
     async update(id, data) {
