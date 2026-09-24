@@ -232,10 +232,10 @@ export const OfficersPage: React.FC = () => {
                     <td className="text-slate-500">{i + 1}</td>
                     <td className="font-medium text-white">{o.fullName}</td>
                     <td className="font-mono text-xs text-slate-300">{o.employeeId}</td>
-                    <td className="text-xs text-slate-400">{o.user.email}</td>
+                    <td className="text-xs text-slate-400">{o.user?.email ?? '–'}</td>
                     <td className="text-xs text-slate-400">{o.pollingStation?.name ?? '–'}</td>
                     <td className="text-xs text-slate-500">
-                      {o.user.lastLoginAt ? new Date(o.user.lastLoginAt).toLocaleDateString('en-IN') : 'Never'}
+                      {o.user?.lastLoginAt ? new Date(o.user.lastLoginAt).toLocaleDateString('en-IN') : 'Never'}
                     </td>
                     <td>
                       <div className="flex items-center gap-2">

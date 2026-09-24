@@ -11,8 +11,8 @@ import { normaliseValidationErrors } from '../../lib/validationErrors';
 interface Station {
   id: number; name: string; code: string; address: string;
   totalBooths: number; machineStatus?: string; isPollingActive?: boolean;
-  constituency: { name: string; code: string; region: { name: string } };
-  officers: { user: { email: string } }[];
+  constituency: { name: string; code?: string; region?: { name: string } | null };
+  officers: { id: number; fullName: string; phone?: string; user?: { email: string } | null }[];
   _count: { voters: number; votes: number };
 }
 interface Region { id: number; name: string }
@@ -169,7 +169,7 @@ export const PollingStationsPage: React.FC = () => {
                         </td>
                         <td>
                           {s.officers.length > 0
-                            ? <span className="badge badge-green text-xs">{s.officers[0].user.email}</span>
+                            ? <span className="badge badge-green text-xs">{s.officers[0].user?.email ?? s.officers[0].fullName}</span>
                             : <span className="badge badge-red text-xs">⚠ No Officer</span>}
                         </td>
                         <td>{s._count.voters}</td>

@@ -158,8 +158,8 @@ export const ConstituenciesPage: React.FC = () => {
                         <td><span className="badge badge-blue font-mono text-xs">{c.code}</span></td>
                         <td>
                           <span className="text-xs text-slate-400">
-                            <span className="badge badge-gray text-xs">{c.region.code}</span>{' '}
-                            {c.region.name}
+                            <span className="badge badge-gray text-xs">{c.region?.code}</span>{' '}
+                            {c.region?.name}
                           </span>
                         </td>
                         <td>{c._count.pollingStations}</td>

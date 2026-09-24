@@ -87,7 +87,7 @@ const Step1: React.FC<{
 
   const grouped: Record<string, Constituency[]> = {};
   (constituencies || []).forEach((c) => {
-    const key = c.region.name;
+    const key = c.region?.name ?? 'Unknown Region';
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(c);
   });
@@ -200,7 +200,7 @@ const Step2Officer: React.FC<{
     ? activeOfficers.filter((o) =>
         o.fullName.toLowerCase().includes(search.toLowerCase()) ||
         o.employeeId.toLowerCase().includes(search.toLowerCase()) ||
-        o.user.email.toLowerCase().includes(search.toLowerCase()),
+        o.user?.email?.toLowerCase().includes(search.toLowerCase()),
       )
     : activeOfficers;
 
@@ -365,7 +365,7 @@ const Step2Officer: React.FC<{
                       <span className="badge badge-green text-xs">Supervising</span>
                     </p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {selectedOfficer.employeeId} · {selectedOfficer.user.email}
+                      {selectedOfficer.employeeId} · {selectedOfficer.user?.email}
                     </p>
                   </div>
                 </div>
@@ -420,7 +420,7 @@ const Step2Officer: React.FC<{
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-300'}`}>{officer.fullName}</p>
                         <p className="text-xs text-slate-500 truncate">
-                          {officer.employeeId} · {officer.user.email}
+                           {officer.employeeId} · {officer.user?.email}
                         </p>
                       </div>
                       {isSelected && <CheckCircle size={16} className="text-primary-400 flex-shrink-0" />}

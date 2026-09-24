@@ -11,10 +11,10 @@ import { normaliseValidationErrors } from '../../lib/validationErrors';
 interface Candidate {
   id: number; fullName: string; age: number; qualification?: string; serialNumber: number;
   isIndependent: boolean; photoUrl?: string; constituencyId: number; electionId: number;
-  constituency: { name: string };
+  constituency?: { id?: number; name: string };
   election?: { id: number; name: string; status: string };
   party?: { id: number; name: string; color: string };
-  _count: { votes: number };
+  _count?: { votes: number };
 }
 interface Election { id: number; name: string; status: string }
 interface Constituency { id: number; name: string; code: string }

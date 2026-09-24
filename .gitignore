@@ -34,8 +34,11 @@ build/
 .vscode/*
 !.vscode/extensions.json
 
-# Temporary & scratch files
-*.tmp
-*.tmp*
-composio_test*
-scratch_*
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+server_node_backup/node_modules/
+

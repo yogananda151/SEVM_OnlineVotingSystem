@@ -5,11 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "concurrently --names \"SERVER,CLIENT\" --prefix-colors \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd server && npm run dev",
+    "dev:server": "cd server && IF EXIST venv\\Scripts\\python.exe (venv\\Scripts\\python.exe run.py) ELSE (python run.py)",
     "dev:client": "cd client && npm run dev",
-    "install:all": "cd server && npm install && cd ../client && npm install",
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "cd server && npm run build",
+    "seed": "cd server && IF EXIST venv\\Scripts\\python.exe (venv\\Scripts\\python.exe scripts/seed.py) ELSE (python scripts/seed.py)",
     "build:client": "cd client && npm run build"
   },
   "devDependencies": {
