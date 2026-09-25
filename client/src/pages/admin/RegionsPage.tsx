@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Globe, Search, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Globe, Search, CheckCircle, XCircle, AlertCircle, FileSpreadsheet, Layers } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
-import { regionService, constituencyService } from '../../services/api.service';
+import { regionService, constituencyService, electoralHierarchyService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
+import { BulkExcelModal } from '../../components/common/BulkExcelModal';
 import { useNavigate } from 'react-router-dom';
 import { normaliseValidationErrors } from '../../lib/validationErrors';
 import { toast } from 'react-hot-toast';
@@ -22,6 +23,8 @@ type FormData = { name: string; code: string; description?: string };
 
 export const RegionsPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
+  const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Region | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Region | null>(null);
   const [search, setSearch] = useState('');
@@ -40,7 +43,18 @@ export const RegionsPage: React.FC = () => {
       onServerErrors: (data) => {
         const fieldErrors = normaliseValidationErrors(data);
         if (fieldErrors) {
-          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+          let hasFieldErrors = false;
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            if (field === '_form') {
+              toast.error(message);
+            } else {
+              hasFieldErrors = true;
+              setError(field as keyof FormData, { message });
+            }
+          });
+          if (!hasFieldErrors && !fieldErrors['_form']) {
+            toast.error(data.message || 'Failed to create region.');
+          }
         } else {
           toast.error(data.message || 'Failed to create region.');
         }
@@ -56,7 +70,18 @@ export const RegionsPage: React.FC = () => {
       onServerErrors: (data) => {
         const fieldErrors = normaliseValidationErrors(data);
         if (fieldErrors) {
-          Object.entries(fieldErrors).forEach(([field, message]) => setError(field as keyof FormData, { message }));
+          let hasFieldErrors = false;
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            if (field === '_form') {
+              toast.error(message);
+            } else {
+              hasFieldErrors = true;
+              setError(field as keyof FormData, { message });
+            }
+          });
+          if (!hasFieldErrors && !fieldErrors['_form']) {
+            toast.error(data.message || 'Failed to update region.');
+          }
         } else {
           toast.error(data.message || 'Failed to update region.');
         }
@@ -94,9 +119,28 @@ export const RegionsPage: React.FC = () => {
           <h1 className="page-title">Regions</h1>
           <p className="page-subtitle">Manage geographic regions — the top level of the location hierarchy</p>
         </div>
-        <button onClick={() => { reset(); setEditTarget(null); setModalOpen(true); }} className="btn-primary">
-          <Plus size={16} /> Add Region
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHierarchyModalOpen(true)}
+            className="btn-secondary flex items-center gap-1.5 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+            title="Import all 3 hierarchy levels (Regions, Constituencies, Polling Stations) from a single workbook"
+          >
+            <Layers size={16} className="text-emerald-400" />
+            <span>Import All Hierarchy</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setExcelModalOpen(true)}
+            className="btn-secondary flex items-center gap-1.5"
+          >
+            <FileSpreadsheet size={16} className="text-emerald-400" />
+            <span>Import Regions</span>
+          </button>
+          <button onClick={() => { reset(); setEditTarget(null); setModalOpen(true); }} className="btn-primary">
+            <Plus size={16} /> Add Region
+          </button>
+        </div>
       </div>
 
       {/* Info banner */}
@@ -245,6 +289,28 @@ export const RegionsPage: React.FC = () => {
         message={`Deactivate "${deleteTarget?.name}"? This will hide it from active lists. Existing data will be preserved.`}
         confirmText="Deactivate"
         loading={deleting}
+      />
+
+      <BulkExcelModal
+        open={excelModalOpen}
+        onClose={() => setExcelModalOpen(false)}
+        title="Bulk Import Regions"
+        subtitle="Upload an Excel or CSV file to import multiple regions in one step."
+        templateFilename="regions_template.xlsx"
+        onDownloadTemplate={() => regionService.downloadExcelTemplate()}
+        onUpload={(file) => regionService.uploadExcel(file)}
+        onSuccess={() => refetch()}
+      />
+
+      <BulkExcelModal
+        open={hierarchyModalOpen}
+        onClose={() => setHierarchyModalOpen(false)}
+        title="Import Master Electoral Hierarchy (All Sheets)"
+        subtitle="Upload your master Excel workbook containing Regions, Constituencies, and Polling Stations tabs. All levels will be imported in proper hierarchy order."
+        templateFilename="electoral_hierarchy_template.xlsx"
+        onDownloadTemplate={() => electoralHierarchyService.downloadExcelTemplate()}
+        onUpload={(file) => electoralHierarchyService.uploadExcel(file)}
+        onSuccess={() => refetch()}
       />
     </div>
   );

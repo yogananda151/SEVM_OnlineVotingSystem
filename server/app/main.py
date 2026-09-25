@@ -11,9 +11,11 @@ from app.config import settings
 from app.database import engine, Base
 import app.models  # ensure all models are imported so relationships are linked
 from app.utils.logger import logger
+from sqlalchemy.exc import IntegrityError
 from app.middleware.error_handler import (
     http_exception_handler,
     validation_exception_handler,
+    integrity_exception_handler,
     generic_exception_handler,
 )
 from app.routers import (
@@ -76,6 +78,7 @@ app.mount("/uploads", StaticFiles(directory=upload_abs_path), name="uploads")
 # ── Exception Handlers ────────────────────────────────────────────────────────
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(IntegrityError, integrity_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
 # ── Health Check ──────────────────────────────────────────────────────────────

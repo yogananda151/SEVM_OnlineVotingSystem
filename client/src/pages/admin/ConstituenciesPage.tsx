@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, MapPin, ArrowRight, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, ArrowRight, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { constituencyService, regionService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
+import { BulkExcelModal } from '../../components/common/BulkExcelModal';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { normaliseValidationErrors } from '../../lib/validationErrors';
 import { toast } from 'react-hot-toast';
@@ -22,6 +23,8 @@ type FormData = { regionId: number; name: string; code: string; description?: st
 
 export const ConstituenciesPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
+  const [excelDefaultRegionId, setExcelDefaultRegionId] = useState('');
   const [editTarget, setEditTarget] = useState<Constituency | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Constituency | null>(null);
   const [filterRegion, setFilterRegion] = useState('');
@@ -105,9 +108,22 @@ export const ConstituenciesPage: React.FC = () => {
           <p className="page-subtitle">Manage constituencies — each belongs to a region</p>
         </div>
         {!hasNoRegions && (
-          <button onClick={() => { reset(); setEditTarget(null); setModalOpen(true); }} className="btn-primary">
-            <Plus size={16} /> Add Constituency
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setExcelDefaultRegionId(filterRegion || '');
+                setExcelModalOpen(true);
+              }}
+              className="btn-secondary flex items-center gap-1.5"
+            >
+              <FileSpreadsheet size={16} className="text-emerald-400" />
+              <span>Import Excel</span>
+            </button>
+            <button onClick={() => { reset(); setEditTarget(null); setModalOpen(true); }} className="btn-primary">
+              <Plus size={16} /> Add Constituency
+            </button>
+          </div>
         )}
       </div>
 
@@ -255,6 +271,41 @@ export const ConstituenciesPage: React.FC = () => {
         message={`Delete "${deleteTarget?.name}"? This will fail if polling stations or voters are attached.`}
         confirmText="Delete"
         loading={deleting}
+      />
+
+      <BulkExcelModal
+        open={excelModalOpen}
+        onClose={() => setExcelModalOpen(false)}
+        title="Bulk Import Constituencies"
+        subtitle="Upload an Excel or CSV file. You can specify Region ID, Code, or Name in each row or select a default Region below."
+        templateFilename="constituencies_template.xlsx"
+        onDownloadTemplate={() => constituencyService.downloadExcelTemplate()}
+        onUpload={(file) =>
+          constituencyService.uploadExcel(
+            file,
+            excelDefaultRegionId ? Number(excelDefaultRegionId) : undefined
+          )
+        }
+        onSuccess={() => refetch()}
+        extraControls={
+          <div>
+            <label className="text-xs font-semibold text-slate-300 mb-1.5 block">
+              Default Region (Optional fallback if empty in spreadsheet)
+            </label>
+            <select
+              className="input text-xs py-1.5"
+              value={excelDefaultRegionId}
+              onChange={(e) => setExcelDefaultRegionId(e.target.value)}
+            >
+              <option value="">None (Specify in spreadsheet)</option>
+              {(regions || []).map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.code})
+                </option>
+              ))}
+            </select>
+          </div>
+        }
       />
     </div>
   );

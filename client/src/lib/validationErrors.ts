@@ -157,8 +157,10 @@ export function normaliseValidationErrors(
       fieldErrors['email'] = 'An account with this email already exists. Please use a different email.';
     } else if (msg.includes('employee id') || msg.includes('employeeid') || msg.includes('employee_id')) {
       fieldErrors['employeeId'] = 'An officer with this Employee ID already exists. Please use a different ID.';
-    } else if (msg.includes('code') && msg.includes('already')) {
-      fieldErrors['code'] = 'This code is already in use. Please choose a unique code.';
+    } else if (msg.includes('regions_name_key') || (msg.includes('name') && (msg.includes('already') || msg.includes('duplicate')))) {
+      fieldErrors['name'] = responseData.message || 'This name is already in use. Please choose a different name.';
+    } else if (msg.includes('code') && (msg.includes('already') || msg.includes('duplicate'))) {
+      fieldErrors['code'] = responseData.message || 'This code is already in use. Please choose a unique code.';
     } else if ((msg.includes('polling station') || msg.includes('station')) && msg.includes('already')) {
       fieldErrors['pollingStationId'] = responseData.message;
     } else {

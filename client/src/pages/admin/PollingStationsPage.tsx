@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Building2, ArrowRight, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, ArrowRight, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { pollingStationService, constituencyService, regionService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
+import { BulkExcelModal } from '../../components/common/BulkExcelModal';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { normaliseValidationErrors } from '../../lib/validationErrors';
@@ -21,6 +22,8 @@ type FormData = { constituencyId: number; name: string; code: string; address: s
 
 export const PollingStationsPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
+  const [excelDefaultConstituencyId, setExcelDefaultConstituencyId] = useState('');
   const [editTarget, setEditTarget] = useState<Station | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Station | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState('');
@@ -125,9 +128,22 @@ export const PollingStationsPage: React.FC = () => {
           <p className="page-subtitle">Manage voting locations — each belongs to a constituency</p>
         </div>
         {!hasNoConstituencies && (
-          <button onClick={() => { reset(); setEditTarget(null); setSelectedRegionId(''); setModalOpen(true); }} className="btn-primary">
-            <Plus size={16} /> Add Station
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setExcelDefaultConstituencyId('');
+                setExcelModalOpen(true);
+              }}
+              className="btn-secondary flex items-center gap-1.5"
+            >
+              <FileSpreadsheet size={16} className="text-emerald-400" />
+              <span>Import Excel</span>
+            </button>
+            <button onClick={() => { reset(); setEditTarget(null); setSelectedRegionId(''); setModalOpen(true); }} className="btn-primary">
+              <Plus size={16} /> Add Station
+            </button>
+          </div>
         )}
       </div>
 
@@ -288,6 +304,41 @@ export const PollingStationsPage: React.FC = () => {
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && del(deleteTarget.id)}
         title="Delete Station" message={`Delete "${deleteTarget?.name}"? This will fail if voters are registered here.`} confirmText="Delete" loading={deleting} />
+
+      <BulkExcelModal
+        open={excelModalOpen}
+        onClose={() => setExcelModalOpen(false)}
+        title="Bulk Import Polling Stations"
+        subtitle="Upload an Excel or CSV file. You can specify Constituency ID, Code, or Name in each row or select a default Constituency below."
+        templateFilename="polling_stations_template.xlsx"
+        onDownloadTemplate={() => pollingStationService.downloadExcelTemplate()}
+        onUpload={(file) =>
+          pollingStationService.uploadExcel(
+            file,
+            excelDefaultConstituencyId ? Number(excelDefaultConstituencyId) : undefined
+          )
+        }
+        onSuccess={() => refetch()}
+        extraControls={
+          <div>
+            <label className="text-xs font-semibold text-slate-300 mb-1.5 block">
+              Default Constituency (Optional fallback if empty in spreadsheet)
+            </label>
+            <select
+              className="input text-xs py-1.5"
+              value={excelDefaultConstituencyId}
+              onChange={(e) => setExcelDefaultConstituencyId(e.target.value)}
+            >
+              <option value="">None (Specify in spreadsheet)</option>
+              {(allConstituencies || []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.code})
+                </option>
+              ))}
+            </select>
+          </div>
+        }
+      />
     </div>
   );
 };

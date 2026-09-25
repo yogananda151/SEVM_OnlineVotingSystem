@@ -1,5 +1,20 @@
 import api from '../lib/axios';
 
+// Helper to trigger authenticated file download from binary blob response
+const downloadBlob = async (url: string, filename: string): Promise<void> => {
+  const response = await api.get(url, { responseType: 'blob' });
+  const blob = new Blob([response.data], {
+    type: (response.headers['content-type'] as string) || 'application/octet-stream',
+  });
+  const link = document.createElement('a');
+  link.href = window.URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(link.href);
+};
+
 export const electionService = {
   getAll: async () => (await api.get('/elections')).data.data,
   getMyElections: async () => (await api.get('/elections/my/assigned')).data.data,
@@ -30,7 +45,28 @@ export const regionService = {
   getById: async (id: number) => (await api.get(`/regions/${id}`)).data.data,
   create: async (data: object) => (await api.post('/regions', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/regions/${id}`, data)).data.data,
+  downloadExcelTemplate: async () =>
+    downloadBlob('/regions/template/excel', 'regions_template.xlsx'),
+  uploadExcel: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return (await api.post('/regions/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
   delete: async (id: number) => (await api.delete(`/regions/${id}`)).data,
+};
+
+export const electoralHierarchyService = {
+  downloadExcelTemplate: async () =>
+    downloadBlob('/electoral-hierarchy/template/excel', 'electoral_hierarchy_template.xlsx'),
+  uploadExcel: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return (await api.post('/electoral-hierarchy/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
 };
 
 export const constituencyService = {
@@ -41,6 +77,16 @@ export const constituencyService = {
   getById: async (id: number) => (await api.get(`/constituencies/${id}`)).data.data,
   create: async (data: object) => (await api.post('/constituencies', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/constituencies/${id}`, data)).data.data,
+  downloadExcelTemplate: async () =>
+    downloadBlob('/constituencies/template/excel', 'constituencies_template.xlsx'),
+  uploadExcel: async (file: File, defaultRegionId?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (defaultRegionId) formData.append('defaultRegionId', String(defaultRegionId));
+    return (await api.post('/constituencies/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
   delete: async (id: number) => (await api.delete(`/constituencies/${id}`)).data,
 };
 
@@ -53,6 +99,16 @@ export const pollingStationService = {
   update: async (id: number, data: object) => (await api.put(`/polling-stations/${id}`, data)).data.data,
   updateMachineStatus: async (id: number, status: string, isPollingActive?: boolean) =>
     (await api.patch(`/polling-stations/${id}/machine-status`, { status, isPollingActive })).data.data,
+  downloadExcelTemplate: async () =>
+    downloadBlob('/polling-stations/template/excel', 'polling_stations_template.xlsx'),
+  uploadExcel: async (file: File, defaultConstituencyId?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (defaultConstituencyId) formData.append('defaultConstituencyId', String(defaultConstituencyId));
+    return (await api.post('/polling-stations/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
   delete: async (id: number) => (await api.delete(`/polling-stations/${id}`)).data,
 };
 
@@ -61,6 +117,15 @@ export const partyService = {
   getById: async (id: number) => (await api.get(`/parties/${id}`)).data.data,
   create: async (data: object) => (await api.post('/parties', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/parties/${id}`, data)).data.data,
+  downloadExcelTemplate: async () =>
+    downloadBlob('/parties/template/excel', 'parties_template.xlsx'),
+  uploadExcel: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return (await api.post('/parties/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
   uploadSymbol: async (id: number, file: File) => {
     const formData = new FormData();
     formData.append('symbol', file);
@@ -99,22 +164,16 @@ export const officerService = {
   getAll: async () => (await api.get('/officers')).data.data,
   create: async (data: object) => (await api.post('/officers', data)).data.data,
   update: async (id: number, data: object) => (await api.put(`/officers/${id}`, data)).data.data,
+  downloadExcelTemplate: async () =>
+    downloadBlob('/officers/template/excel', 'officers_template.xlsx'),
+  uploadExcel: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return (await api.post('/officers/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
   delete: async (id: number) => (await api.delete(`/officers/${id}`)).data,
-};
-
-// Helper to trigger authenticated file download from binary blob response
-const downloadBlob = async (url: string, filename: string): Promise<void> => {
-  const response = await api.get(url, { responseType: 'blob' });
-  const blob = new Blob([response.data], {
-    type: (response.headers['content-type'] as string) || 'application/octet-stream',
-  });
-  const link = document.createElement('a');
-  link.href = window.URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(link.href);
 };
 
 export const voterService = {

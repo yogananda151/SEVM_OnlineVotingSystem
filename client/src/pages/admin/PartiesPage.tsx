@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Flag, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Flag, Upload, FileSpreadsheet } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { partyService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
+import { BulkExcelModal } from '../../components/common/BulkExcelModal';
 import { toast } from 'react-hot-toast';
 
 import { normaliseValidationErrors } from '../../lib/validationErrors';
@@ -12,6 +13,7 @@ interface Party { id: number; name: string; abbreviation: string; symbol?: strin
 
 export const PartiesPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Party | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Party | null>(null);
   const [uploadTarget, setUploadTarget] = useState<Party | null>(null);
@@ -89,9 +91,19 @@ export const PartiesPage: React.FC = () => {
           <h1 className="page-title">Political Parties</h1>
           <p className="page-subtitle">Manage registered political parties and their symbols</p>
         </div>
-        <button onClick={() => { reset(); setEditTarget(null); setModalOpen(true); }} className="btn-primary">
-          <Plus size={16} /> Add Party
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setExcelModalOpen(true)}
+            className="btn-secondary flex items-center gap-1.5"
+          >
+            <FileSpreadsheet size={16} className="text-emerald-400" />
+            <span>Import Excel</span>
+          </button>
+          <button onClick={() => { reset(); setEditTarget(null); setModalOpen(true); }} className="btn-primary">
+            <Plus size={16} /> Add Party
+          </button>
+        </div>
       </div>
 
       {loading ? <TableSkeleton rows={5} cols={5} /> : (
@@ -168,6 +180,17 @@ export const PartiesPage: React.FC = () => {
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={() => deleteTarget && deleteParty(deleteTarget.id)}
         title="Delete Party" message={`Delete "${deleteTarget?.name}"? Candidates linked to this party will become independent.`} confirmText="Delete" loading={deleting} />
+
+      <BulkExcelModal
+        open={excelModalOpen}
+        onClose={() => setExcelModalOpen(false)}
+        title="Bulk Import Political Parties"
+        subtitle="Upload an Excel or CSV file to import political parties in bulk."
+        templateFilename="parties_template.xlsx"
+        onDownloadTemplate={() => partyService.downloadExcelTemplate()}
+        onUpload={(file) => partyService.uploadExcel(file)}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 };

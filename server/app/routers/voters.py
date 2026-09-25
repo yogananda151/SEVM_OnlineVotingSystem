@@ -239,6 +239,10 @@ def delete_voter(voter_id: int, current_user: CurrentUser = Depends(require_role
     v = db.query(Voter).filter(Voter.id == voter_id, Voter.deletedAt.is_(None)).first()
     if not v:
         raise HTTPException(status_code=404, detail="Voter not found")
-    v.deletedAt = datetime.utcnow()
+    now = datetime.utcnow()
+    ts = int(now.timestamp())
+    v.voterId = f"{v.voterId}_del_{ts}_{v.id}"
+    v.isActive = False
+    v.deletedAt = now
     db.commit()
     return success_response(data=None, message="Voter deleted")

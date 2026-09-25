@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, UserCog, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserCog, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { officerService, pollingStationService } from '../../services/api.service';
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
+import { BulkExcelModal } from '../../components/common/BulkExcelModal';
 import { normaliseValidationErrors } from '../../lib/validationErrors';
 import { toast } from 'react-hot-toast';
 
@@ -35,6 +36,7 @@ interface StationWithOfficers {
 
 export const OfficersPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Officer | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Officer | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -195,18 +197,28 @@ export const OfficersPage: React.FC = () => {
           <h1 className="page-title">Election Officers</h1>
           <p className="page-subtitle">Manage officers assigned to polling stations</p>
         </div>
-        <button
-          onClick={() => {
-            refetchStations();
-            reset();
-            setEditTarget(null);
-            setGeneralError(null);
-            setModalOpen(true);
-          }}
-          className="btn-primary"
-        >
-          <Plus size={16} /> Register Officer
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setExcelModalOpen(true)}
+            className="btn-secondary flex items-center gap-1.5"
+          >
+            <FileSpreadsheet size={16} className="text-emerald-400" />
+            <span>Import Excel</span>
+          </button>
+          <button
+            onClick={() => {
+              refetchStations();
+              reset();
+              setEditTarget(null);
+              setGeneralError(null);
+              setModalOpen(true);
+            }}
+            className="btn-primary"
+          >
+            <Plus size={16} /> Register Officer
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -458,6 +470,20 @@ export const OfficersPage: React.FC = () => {
         message={`Remove officer "${deleteTarget?.fullName}"? Their login access will be revoked.`}
         confirmText="Remove"
         loading={deleting}
+      />
+
+      <BulkExcelModal
+        open={excelModalOpen}
+        onClose={() => setExcelModalOpen(false)}
+        title="Bulk Import Election Officers"
+        subtitle="Upload an Excel or CSV file to register officers and assign them to polling stations in bulk."
+        templateFilename="officers_template.xlsx"
+        onDownloadTemplate={() => officerService.downloadExcelTemplate()}
+        onUpload={(file) => officerService.uploadExcel(file)}
+        onSuccess={() => {
+          refetch();
+          refetchStations();
+        }}
       />
     </div>
   );
