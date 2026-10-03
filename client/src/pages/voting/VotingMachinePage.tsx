@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Vote, Shield, Scan, CheckCircle, X, RefreshCw, Clock, User } from 'lucide-react';
+import { Vote, Shield, Scan, CheckCircle, X, RefreshCw, Clock, User, Lock } from 'lucide-react';
 import { votingService, candidateService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
 import { toast } from 'react-hot-toast';
@@ -38,12 +38,12 @@ interface PollingStationInfo {
   code: string;
   machineStatus?: string;
   isPollingActive?: boolean;
+  constituency?: { id: number; name: string } | null;
 }
 
 const EVMHeader: React.FC<{
   station?: PollingStationInfo | null;
-  onOpenStationSelect?: () => void;
-}> = ({ station, onOpenStationSelect }) => {
+}> = ({ station }) => {
   const isOfficer = authService.hasRole('OFFICER');
 
   return (
@@ -69,17 +69,18 @@ const EVMHeader: React.FC<{
           </a>
         )}
         {station && (
-          <button
-            onClick={onOpenStationSelect}
-            className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
-            title="Change Polling Station"
+          <div
+            className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 font-medium select-none"
+            title={`Assigned to ${station.name}`}
           >
-            Station #{station.id}
-          </button>
+            <Lock size={10} className="text-emerald-400" />
+            <span className="font-semibold text-slate-200">Booth #{station.id}</span>
+            <span className="text-slate-400 font-mono text-[9px]">({station.code})</span>
+          </div>
         )}
         <div className="flex items-center gap-1.5">
           <div className={`evm-led ${station?.machineStatus === 'LOCKED' ? 'evm-led-red' : station?.machineStatus === 'PAUSED' ? 'evm-led-yellow' : 'evm-led-green'}`} />
-          <span className="text-[10px] text-slate-400">{station?.machineStatus ?? 'ONLINE'}</span>
+          <span className="text-[10px] text-slate-400 font-mono">{station?.machineStatus ?? 'ONLINE'}</span>
         </div>
         <div className="text-[10px] text-slate-500 font-mono hidden sm:block">{new Date().toLocaleTimeString('en-IN')}</div>
       </div>
@@ -92,45 +93,76 @@ const WelcomeScreen: React.FC<{
   station?: PollingStationInfo | null;
   allStations: PollingStationInfo[];
   onSelectStation: (id: number) => void;
-}> = ({ onStart, station, allStations, onSelectStation }) => {
+  isLocked: boolean;
+}> = ({ onStart, station, allStations, onSelectStation, isLocked }) => {
   const isNotActive = station && station.machineStatus && station.machineStatus !== 'ACTIVE';
 
   return (
-    <motion.div className="flex flex-col items-center justify-center h-full gap-6 text-center px-8"
+    <motion.div className="flex flex-col items-center justify-center h-full gap-5 text-center px-8"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 3 }}>
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary-600 to-blue-700 flex items-center justify-center shadow-2xl shadow-primary-900/50 mx-auto">
-          <Vote size={48} className="text-white" />
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary-600 to-blue-700 flex items-center justify-center shadow-2xl shadow-primary-900/50 mx-auto">
+          <Vote size={42} className="text-white" />
         </div>
       </motion.div>
       <div>
         <h1 className="text-3xl font-black text-white leading-tight">SMART EVM</h1>
         <p className="text-base text-primary-400 font-semibold mt-0.5">Electronic Voting Machine</p>
-        <p className="text-slate-400 text-xs mt-2 max-w-md">Welcome. Please verify your identity to cast your vote. Your vote is confidential and secured.</p>
+        <p className="text-slate-400 text-xs mt-1.5 max-w-md">
+          Official Election Commission voting terminal. Your vote is secret, encrypted, and verifiable.
+        </p>
       </div>
 
-      {/* Station Selector badge */}
-      {allStations.length > 0 && (
-        <div className="flex items-center gap-2 p-2 px-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs">
-          <span className="text-slate-400">Booth:</span>
-          <select
-            value={station?.id ?? ''}
-            onChange={(e) => onSelectStation(Number(e.target.value))}
-            className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
-          >
-            {allStations.map((s) => (
-              <option key={s.id} value={s.id} className="bg-slate-800 text-white">
-                {s.name} ({s.code})
-              </option>
-            ))}
-          </select>
+      {/* Designated Assigned Polling Station — Locked & Secure */}
+      {station ? (
+        <div className="flex flex-col items-center gap-1.5 max-w-lg w-full">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-md text-xs backdrop-blur-sm">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-semibold shrink-0">
+              <Lock size={12} className="text-emerald-400" />
+              <span className="uppercase text-[10px] tracking-wider bg-emerald-950/80 text-emerald-300 border border-emerald-700/50 px-1.5 py-0.5 rounded font-mono">
+                Booth #{station.id}
+              </span>
+            </div>
+            <span className="text-white font-semibold truncate max-w-[240px]" title={station.name}>
+              {station.name}
+            </span>
+            <span className="text-slate-400 font-mono text-[11px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+              {station.code}
+            </span>
+            {station.constituency && (
+              <span className="text-primary-300 text-[11px] font-medium border-l border-slate-700 pl-2">
+                {station.constituency.name}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] text-slate-500 flex items-center gap-1 select-none">
+            <Shield size={10} className="text-primary-400" /> Assigned Polling Station · Locked & Tamper-Proof
+          </span>
         </div>
+      ) : (
+        /* Only fallback when completely unassigned and not locked */
+        !isLocked && allStations.length > 0 && (
+          <div className="flex items-center gap-2 p-2 px-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs">
+            <span className="text-slate-400">Initialize Booth:</span>
+            <select
+              value={station?.id ?? ''}
+              onChange={(e) => onSelectStation(Number(e.target.value))}
+              className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
+            >
+              {allStations.map((s) => (
+                <option key={s.id} value={s.id} className="bg-slate-800 text-white">
+                  {s.name} ({s.code})
+                </option>
+              ))}
+            </select>
+          </div>
+        )
       )}
 
       {isNotActive && (
-        <div className="p-2.5 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+        <div className="p-2.5 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2 max-w-md">
           <span>⚠️</span>
-          <span>Machine is currently {station?.machineStatus}. Please wait for the Election Officer to activate voting.</span>
+          <span>Machine is currently {station?.machineStatus ?? 'INACTIVE'}. Please wait for the Election Officer to activate voting.</span>
         </div>
       )}
 
@@ -544,44 +576,79 @@ export const VotingMachinePage: React.FC = () => {
   const [vvpatData, setVvpatData] = useState<VvpatRecord | null>(null);
   const [castingVote, setCastingVote] = useState(false);
 
-  // Dynamic Polling Station setup (defaults to query param, localStorage, or first station)
+  // Dynamic Polling Station setup (defaults to query param, officer profile station, or stored station)
   const [allStations, setAllStations] = useState<PollingStationInfo[]>([]);
   const [selectedStationId, setSelectedStationId] = useState<number>(() => {
     const params = new URLSearchParams(window.location.search);
     const fromUrl = params.get('stationId');
     if (fromUrl) return Number(fromUrl);
+    const user = authService.getCurrentUser();
+    const officerStation = user?.role === 'OFFICER' ? (user?.profile?.pollingStationId ?? user?.stationId) : null;
+    if (officerStation) return Number(officerStation);
     const saved = localStorage.getItem('evm_station_id');
     if (saved) return Number(saved);
-    return 1;
+    return 42;
   });
 
+  const [currentStation, setCurrentStation] = useState<PollingStationInfo | null>(null);
+
+  // Check if locked: if station is specified in URL or assigned to the logged-in officer
+  const isStationLocked = Boolean(
+    new URLSearchParams(window.location.search).get('stationId') ||
+    (authService.getCurrentUser()?.role === 'OFFICER' && (authService.getCurrentUser()?.profile?.pollingStationId ?? authService.getCurrentUser()?.stationId))
+  );
+
+  // Initial and reactive station fetch
   useEffect(() => {
+    if (selectedStationId) {
+      votingService.getPublicStationById(selectedStationId)
+        .then((station) => {
+          if (station) {
+            setCurrentStation(station);
+            localStorage.setItem('evm_station_id', station.id.toString());
+          }
+        })
+        .catch(() => {});
+    }
+
     votingService.getPublicStations()
       .then((data: PollingStationInfo[]) => {
         if (data && data.length > 0) {
           setAllStations(data);
-          const params = new URLSearchParams(window.location.search);
-          const fromUrl = params.get('stationId');
-          const targetId = fromUrl ? Number(fromUrl) : (localStorage.getItem('evm_station_id') ? Number(localStorage.getItem('evm_station_id')) : null);
-
-          setSelectedStationId((curr) => {
-            if (targetId && data.some((s) => s.id === targetId)) {
-              localStorage.setItem('evm_station_id', targetId.toString());
-              return targetId;
-            }
-            const exists = data.some((s) => s.id === curr);
-            const finalId = exists ? curr : data[0].id;
-            localStorage.setItem('evm_station_id', finalId.toString());
-            return finalId;
-          });
+          setCurrentStation((curr) => curr || data.find((s) => s.id === selectedStationId) || data[0]);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [selectedStationId]);
 
-  const currentStation = allStations.find((s) => s.id === selectedStationId) || null;
+  // Live poll machine status every 3 seconds so status toggles from Officer portal update live
+  useEffect(() => {
+    if (!selectedStationId) return;
+    let isMounted = true;
+    const interval = setInterval(() => {
+      votingService.getPublicStationById(selectedStationId)
+        .then((st) => {
+          if (isMounted && st) {
+            setCurrentStation((prev) => {
+              if (!prev) return st;
+              if (prev.machineStatus !== st.machineStatus || prev.isPollingActive !== st.isPollingActive) {
+                return { ...prev, machineStatus: st.machineStatus, isPollingActive: st.isPollingActive };
+              }
+              return prev;
+            });
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [selectedStationId]);
 
   const handleStationChange = (id: number) => {
+    if (isStationLocked) return;
     setSelectedStationId(id);
     localStorage.setItem('evm_station_id', id.toString());
   };
@@ -631,7 +698,7 @@ export const VotingMachinePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-3xl h-[700px] bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-700/50 shadow-2xl flex flex-col">
-        <EVMHeader station={currentStation} onOpenStationSelect={() => setScreen('welcome')} />
+        <EVMHeader station={currentStation} />
 
         <div className="flex-1 overflow-hidden relative">
           <AnimatePresence mode="wait">
@@ -642,6 +709,7 @@ export const VotingMachinePage: React.FC = () => {
                   station={currentStation}
                   allStations={allStations}
                   onSelectStation={handleStationChange}
+                  isLocked={isStationLocked}
                 />
               </div>
             )}
