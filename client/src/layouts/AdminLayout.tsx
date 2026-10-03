@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { authService } from '../services/auth.service';
 import { toast } from 'react-hot-toast';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 
 const navGroups = [
   {
@@ -156,7 +157,9 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </motion.div>
         </main>
       </div>

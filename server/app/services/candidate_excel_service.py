@@ -97,24 +97,39 @@ class CandidateExcelService:
         if len(rows) < 2:
             raise HTTPException(status_code=400, detail="The uploaded sheet is empty or contains no data rows.")
 
+        constituencies = db.query(Constituency).filter(Constituency.deletedAt.is_(None)).all()
+        parties = db.query(PoliticalParty).filter(PoliticalParty.deletedAt.is_(None)).all()
+
+        con_by_id = {c.id: c for c in constituencies}
+        con_by_name = {c.name.strip().lower(): c for c in constituencies}
+        con_by_code = {c.code.strip().lower(): c for c in constituencies}
+
+        party_by_id = {p.id: p for p in parties}
+        party_by_abbr = {p.abbreviation.strip().lower(): p for p in parties}
+        party_by_name = {p.name.strip().lower(): p for p in parties}
+
         header_row = [str(cell or "").lower().strip() for cell in rows[0]]
         col_map = {}
         for idx, h in enumerate(header_row):
             h_clean = "".join(ch for ch in h if ch.isalnum())
-            if any(k in h_clean for k in ["fullname", "name", "candidatename"]):
-                col_map["fullName"] = idx
-            elif any(k in h_clean for k in ["age"]):
-                col_map["age"] = idx
-            elif any(k in h_clean for k in ["serialnumber", "serialno"]):
-                col_map["serialNumber"] = idx
-            elif any(k in h_clean for k in ["qualification"]):
-                col_map["qualification"] = idx
-            elif any(k in h_clean for k in ["independent", "isindependent"]):
-                col_map["isIndependent"] = idx
-            elif any(k in h_clean for k in ["partyid", "party"]):
+            if "partyid" in h_clean:
                 col_map["partyId"] = idx
-            elif any(k in h_clean for k in ["constituencyid", "constituency"]):
+            elif "independent" in h_clean and "party" not in h_clean:
+                col_map["isIndependent"] = idx
+            elif "constituencyid" in h_clean:
                 col_map["constituencyId"] = idx
+            elif any(k in h_clean for k in ["constituencyname", "constituency"]) and "constituencyId" not in col_map:
+                col_map["constituency"] = idx
+            elif any(k in h_clean for k in ["partyname", "partyabbr", "party"]) and "partyId" not in col_map:
+                col_map["party"] = idx
+            elif any(k in h_clean for k in ["fullname", "candidatename", "name"]) and "party" not in h_clean and "constituency" not in h_clean:
+                col_map["fullName"] = idx
+            elif "age" in h_clean:
+                col_map["age"] = idx
+            elif any(k in h_clean for k in ["serialnumber", "serialno", "serial", "ballot"]):
+                col_map["serialNumber"] = idx
+            elif any(k in h_clean for k in ["qualification", "education"]):
+                col_map["qualification"] = idx
 
         if "fullName" not in col_map:
             raise HTTPException(status_code=400, detail='Could not find "Full Name" column.')
@@ -133,11 +148,29 @@ class CandidateExcelService:
                 errors.append(f"Row {r_idx}: Full Name is required.")
                 continue
 
-            raw_cid = row[col_map.get("constituencyId")] if "constituencyId" in col_map else None
-            constituency_id = int(raw_cid) if raw_cid is not None and str(raw_cid).isdigit() else default_constituency_id
-            if not constituency_id:
-                errors.append(f"Row {r_idx}: Constituency ID is missing.")
+            # Resolve Constituency
+            con = None
+            if "constituencyId" in col_map and row[col_map["constituencyId"]] is not None:
+                val = str(row[col_map["constituencyId"]]).strip()
+                if val.isdigit():
+                    con = con_by_id.get(int(val))
+                if not con:
+                    con = con_by_name.get(val.lower()) or con_by_code.get(val.lower())
+
+            if not con and "constituency" in col_map and row[col_map["constituency"]] is not None:
+                val = str(row[col_map["constituency"]]).strip()
+                if val.isdigit():
+                    con = con_by_id.get(int(val))
+                if not con:
+                    con = con_by_name.get(val.lower()) or con_by_code.get(val.lower())
+
+            if not con and default_constituency_id:
+                con = con_by_id.get(default_constituency_id)
+
+            if not con:
+                errors.append(f"Row {r_idx}: Valid Constituency ID or Name is required.")
                 continue
+            constituency_id = con.id
 
             dedup_key = f"{full_name.lower()}-{constituency_id}"
             if dedup_key in seen_names:
@@ -146,18 +179,41 @@ class CandidateExcelService:
             seen_names.add(dedup_key)
 
             raw_age = row[col_map.get("age")] if "age" in col_map else None
-            age = int(raw_age) if raw_age is not None and str(raw_age).isdigit() else 25
+            try:
+                age = int(float(str(raw_age).strip())) if raw_age is not None and str(raw_age).strip() else 35
+            except Exception:
+                age = 35
 
             raw_serial = row[col_map.get("serialNumber")] if "serialNumber" in col_map else None
-            serial_no = int(raw_serial) if raw_serial is not None and str(raw_serial).isdigit() else len(raw_candidates) + 1
+            try:
+                serial_no = int(float(str(raw_serial).strip())) if raw_serial is not None and str(raw_serial).strip() else len(raw_candidates) + 1
+            except Exception:
+                serial_no = len(raw_candidates) + 1
 
             indep_str = str(row[col_map.get("isIndependent")] or "").lower().strip() if "isIndependent" in col_map else "no"
             is_independent = indep_str.startswith("y") or indep_str == "true" or indep_str == "1"
 
+            # Resolve Party
             party_id = None
-            if not is_independent and "partyId" in col_map:
-                raw_pid = row[col_map["partyId"]]
-                party_id = int(raw_pid) if raw_pid is not None and str(raw_pid).isdigit() else None
+            if not is_independent:
+                p_val = None
+                if "partyId" in col_map and row[col_map["partyId"]] is not None:
+                    p_val = str(row[col_map["partyId"]]).strip()
+                elif "party" in col_map and row[col_map["party"]] is not None:
+                    p_val = str(row[col_map["party"]]).strip()
+
+                if p_val:
+                    if p_val.isdigit():
+                        p_obj = party_by_id.get(int(p_val))
+                    else:
+                        p_obj = party_by_abbr.get(p_val.lower()) or party_by_name.get(p_val.lower())
+                    if p_obj:
+                        party_id = p_obj.id
+                    else:
+                        errors.append(f"Row {r_idx}: Political Party '{p_val}' not found.")
+                        continue
+                else:
+                    is_independent = True
 
             qualification = str(row[col_map.get("qualification")] or "").strip() if "qualification" in col_map else None
 
@@ -173,17 +229,27 @@ class CandidateExcelService:
             })
 
         # Check existing in DB
-        existing = db.query(Candidate.fullName, Candidate.constituencyId).filter(
+        existing = db.query(Candidate.fullName, Candidate.constituencyId, Candidate.partyId, Candidate.isIndependent).filter(
             Candidate.electionId == election_id,
             Candidate.deletedAt.is_(None),
         ).all()
         existing_set = {f"{c[0].lower()}-{c[1]}" for c in existing}
+        existing_parties_in_con = {f"{c[1]}-{c[2]}" for c in existing if c[2] and not c[3]}
 
+        seen_parties_in_batch = set()
         valid_candidates = []
         for c in raw_candidates:
             if f"{c['fullName'].lower()}-{c['constituencyId']}" in existing_set:
                 duplicate_names.append(c["fullName"])
                 continue
+
+            if c["partyId"] and not c["isIndependent"]:
+                p_key = f"{c['constituencyId']}-{c['partyId']}"
+                if p_key in existing_parties_in_con or p_key in seen_parties_in_batch:
+                    errors.append(f"Candidate '{c['fullName']}': A candidate from this party is already registered in constituency ID {c['constituencyId']}. Max 1 candidate per party allowed.")
+                    continue
+                seen_parties_in_batch.add(p_key)
+
             valid_candidates.append(c)
 
         return {

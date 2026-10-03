@@ -27,3 +27,1323 @@
 2026-09-24 21:39:27,610 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
 2026-09-24 21:44:34,109 [INFO] smart_evm: Database tables verified.
 2026-09-24 21:44:34,109 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 08:46:22,330 [INFO] smart_evm: Database tables verified.
+2026-09-25 08:46:22,332 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:06:46,533 [ERROR] smart_evm: Unhandled error processing request: http://localhost:5000/api/regions
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+pymysql.err.IntegrityError: (1062, "Duplicate entry 'Tirupathi' for key 'regions.regions_name_key'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "D:\Yoga\DBMS\DBMS_project\server\app\routers\management.py", line 80, in create_region
+    db.commit()
+    ~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2035, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1316, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1290, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 465, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 641, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 94, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1234, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1062, "Duplicate entry 'Tirupathi' for key 'regions.regions_name_key'")
+[SQL: INSERT INTO regions (name, code, description, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (%(name)s, %(code)s, %(description)s, %(isActive)s, %(createdAt)s, %(updatedAt)s, %(deletedAt)s)]
+[parameters: {'name': 'Tirupathi', 'code': 'TP-CY', 'description': 'Tirupathi complete city\n', 'isActive': 1, 'createdAt': datetime.datetime(2026, 9, 25, 5, 36, 46, 515810), 'updatedAt': datetime.datetime(2026, 9, 25, 5, 36, 46, 515819), 'deletedAt': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-09-25 11:07:35,331 [ERROR] smart_evm: Unhandled error processing request: http://localhost:5000/api/regions
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+pymysql.err.IntegrityError: (1062, "Duplicate entry 'Tirupathi' for key 'regions.regions_name_key'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "D:\Yoga\DBMS\DBMS_project\server\app\routers\management.py", line 80, in create_region
+    db.commit()
+    ~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2035, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1316, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1290, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 465, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 641, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 94, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1234, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1062, "Duplicate entry 'Tirupathi' for key 'regions.regions_name_key'")
+[SQL: INSERT INTO regions (name, code, description, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (%(name)s, %(code)s, %(description)s, %(isActive)s, %(createdAt)s, %(updatedAt)s, %(deletedAt)s)]
+[parameters: {'name': 'Tirupathi', 'code': 'TP-cy', 'description': '', 'isActive': 1, 'createdAt': datetime.datetime(2026, 9, 25, 5, 37, 35, 324902), 'updatedAt': datetime.datetime(2026, 9, 25, 5, 37, 35, 324921), 'deletedAt': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-09-25 11:14:13,795 [ERROR] smart_evm: Unhandled error processing request: http://localhost:5000/api/constituencies
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+pymysql.err.IntegrityError: (1062, "Duplicate entry 'BD-01' for key 'constituencies.constituencies_code_key'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "D:\Yoga\DBMS\DBMS_project\server\app\routers\management.py", line 165, in create_constituency
+    db.commit()
+    ~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2035, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1316, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1290, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 465, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 641, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 94, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1234, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1062, "Duplicate entry 'BD-01' for key 'constituencies.constituencies_code_key'")
+[SQL: INSERT INTO constituencies (`regionId`, name, code, description, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (%(regionId)s, %(name)s, %(code)s, %(description)s, %(isActive)s, %(createdAt)s, %(updatedAt)s, %(deletedAt)s)]
+[parameters: {'regionId': 9, 'name': 'Badvel', 'code': 'BD-01', 'description': 'Badvel Constituency in kadapa dict', 'isActive': 1, 'createdAt': datetime.datetime(2026, 9, 25, 5, 44, 13, 772994), 'updatedAt': datetime.datetime(2026, 9, 25, 5, 44, 13, 773012), 'deletedAt': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-09-25 11:15:18,304 [ERROR] smart_evm: Unhandled error processing request: http://localhost:5000/api/constituencies
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+pymysql.err.IntegrityError: (1062, "Duplicate entry 'BD-01' for key 'constituencies.constituencies_code_key'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "D:\Yoga\DBMS\DBMS_project\server\app\routers\management.py", line 165, in create_constituency
+    db.commit()
+    ~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2035, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1316, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1290, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 465, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 641, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 94, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1234, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1062, "Duplicate entry 'BD-01' for key 'constituencies.constituencies_code_key'")
+[SQL: INSERT INTO constituencies (`regionId`, name, code, description, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (%(regionId)s, %(name)s, %(code)s, %(description)s, %(isActive)s, %(createdAt)s, %(updatedAt)s, %(deletedAt)s)]
+[parameters: {'regionId': 9, 'name': 'Badvel', 'code': 'BD-01', 'description': 'Badvel con kadapa Dict', 'isActive': 1, 'createdAt': datetime.datetime(2026, 9, 25, 5, 45, 18, 280561), 'updatedAt': datetime.datetime(2026, 9, 25, 5, 45, 18, 280579), 'deletedAt': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-09-25 11:15:58,800 [ERROR] smart_evm: Unhandled error processing request: http://localhost:5000/api/regions
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+pymysql.err.IntegrityError: (1062, "Duplicate entry 'Tirupathi' for key 'regions.regions_name_key'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "D:\Yoga\DBMS\DBMS_project\server\app\routers\management.py", line 80, in create_region
+    db.commit()
+    ~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2035, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1316, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1290, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 465, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 641, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 94, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1234, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 170, in execute
+    result = self._query(query)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\cursors.py", line 335, in _query
+    conn.query(q)
+    ~~~~~~~~~~^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 581, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+                          ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 857, in _read_query_result
+    result.read()
+    ~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 1290, in read
+    first_packet = self.connection._read_packet()
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\connections.py", line 810, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\pymysql\err.py", line 154, in raise_mysql_exception
+    raise errorclass(errno, errval, sqlstate=sqlstate)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1062, "Duplicate entry 'Tirupathi' for key 'regions.regions_name_key'")
+[SQL: INSERT INTO regions (name, code, description, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (%(name)s, %(code)s, %(description)s, %(isActive)s, %(createdAt)s, %(updatedAt)s, %(deletedAt)s)]
+[parameters: {'name': 'Tirupathi', 'code': 'TP-DT', 'description': 'All Tirupathi dict', 'isActive': 1, 'createdAt': datetime.datetime(2026, 9, 25, 5, 45, 58, 776332), 'updatedAt': datetime.datetime(2026, 9, 25, 5, 45, 58, 776350), 'deletedAt': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-09-25 11:40:08,781 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:40:13,243 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:40:13,244 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:40:28,008 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:40:30,403 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:40:30,403 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:40:49,068 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:40:51,496 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:40:51,497 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:41:01,959 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:41:04,835 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:41:04,836 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:41:25,634 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:41:28,046 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:41:28,046 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:41:36,937 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:41:39,871 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:41:39,871 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:41:56,958 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:41:59,437 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:41:59,438 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:42:05,438 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:42:08,130 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:42:08,130 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 11:45:12,511 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 11:45:15,417 [INFO] smart_evm: Database tables verified.
+2026-09-25 11:45:15,417 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 13:24:19,127 [INFO] smart_evm: Database tables verified.
+2026-09-25 13:24:19,128 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 18:29:06,886 [INFO] smart_evm: Database tables verified.
+2026-09-25 18:29:06,886 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 18:29:06,894 [INFO] smart_evm: Database tables verified.
+2026-09-25 18:29:06,894 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 18:29:20,383 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 18:29:20,481 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 18:29:21,961 [INFO] smart_evm: Database tables verified.
+2026-09-25 18:29:21,962 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 18:29:34,701 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 18:29:36,184 [INFO] smart_evm: Database tables verified.
+2026-09-25 18:29:36,185 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 18:29:54,082 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 18:29:55,581 [INFO] smart_evm: Database tables verified.
+2026-09-25 18:29:55,582 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 18:30:07,368 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 18:30:08,892 [INFO] smart_evm: Database tables verified.
+2026-09-25 18:30:08,892 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 18:31:17,249 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 18:31:18,662 [INFO] smart_evm: Database tables verified.
+2026-09-25 18:31:18,663 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 20:30:34,968 [INFO] smart_evm: Database tables verified.
+2026-09-25 20:30:34,968 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 20:45:53,725 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 20:45:55,533 [INFO] smart_evm: Database tables verified.
+2026-09-25 20:45:55,533 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 20:45:55,611 [INFO] smart_evm: Database tables verified.
+2026-09-25 20:45:55,611 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 20:47:40,227 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 20:47:40,242 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 20:47:41,960 [INFO] smart_evm: Database tables verified.
+2026-09-25 20:47:41,960 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 20:48:40,000 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 20:48:41,589 [INFO] smart_evm: Database tables verified.
+2026-09-25 20:48:41,590 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 21:01:02,212 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-09-25 21:01:03,811 [INFO] smart_evm: Database tables verified.
+2026-09-25 21:01:03,812 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 21:49:10,092 [INFO] smart_evm: Database tables verified.
+2026-09-25 21:49:10,092 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 22:23:22,525 [INFO] smart_evm: Database tables verified.
+2026-09-25 22:23:22,525 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 22:23:22,529 [INFO] smart_evm: Database tables verified.
+2026-09-25 22:23:22,529 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-09-25 22:33:22,481 [INFO] smart_evm: Database tables verified.
+2026-09-25 22:33:22,482 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-02 12:50:37,059 [INFO] smart_evm: Database tables verified.
+2026-10-02 12:50:37,060 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 20:12:39,491 [INFO] smart_evm: Database tables verified.
+2026-10-03 20:12:39,492 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 20:46:34,916 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 20:46:38,031 [INFO] smart_evm: Database tables verified.
+2026-10-03 20:46:38,032 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 20:49:08,995 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 20:49:11,248 [INFO] smart_evm: Database tables verified.
+2026-10-03 20:49:11,249 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 20:49:19,673 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 20:49:22,166 [INFO] smart_evm: Database tables verified.
+2026-10-03 20:49:22,167 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 20:49:54,606 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 20:49:57,242 [INFO] smart_evm: Database tables verified.
+2026-10-03 20:49:57,242 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 20:50:24,705 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 20:50:27,338 [INFO] smart_evm: Database tables verified.
+2026-10-03 20:50:27,339 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 20:50:45,462 [ERROR] smart_evm: Unhandled error processing request: http://localhost:5000/api/candidates
+Traceback (most recent call last):
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Yoga\DBMS\DBMS_project\server\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "D:\Yoga\DBMS\DBMS_project\server\app\routers\management.py", line 787, in create_candidate
+    link = db.query(ElectionConstituency).filter(
+                    ^^^^^^^^^^^^^^^^^^^^
+NameError: name 'ElectionConstituency' is not defined. Did you mean: 'delete_constituency'?
+2026-10-03 20:50:59,651 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 20:51:02,152 [INFO] smart_evm: Database tables verified.
+2026-10-03 20:51:02,153 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:02:31,321 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:02:31,321 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:14:27,721 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:14:31,275 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:14:31,275 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:14:44,961 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:14:48,004 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:14:48,005 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:32:53,287 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:32:53,288 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:43:01,912 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:43:01,928 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:43:04,303 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:43:04,303 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:43:04,416 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:43:04,417 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:47:19,438 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:47:19,439 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:52:20,905 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:52:20,905 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:52:20,906 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:52:25,247 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:52:25,247 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:55:00,867 [INFO] smart_evm: Smart EVM FastAPI Server stopping.
+2026-10-03 21:55:04,053 [INFO] smart_evm: Database tables verified.
+2026-10-03 21:55:04,054 [INFO] smart_evm: Smart EVM FastAPI Server started on 0.0.0.0:5000 (development)
+2026-10-03 21:56:24,497 [INFO] smart_evm: Smart EVM FastAPI Server stopping.

@@ -226,6 +226,13 @@ def seed_database():
         db.add(audit)
         db.commit()
 
+        # Run proper party and candidate arrangement
+        try:
+            from scripts.arrange_parties_candidates import arrange_parties_and_candidates
+            arrange_parties_and_candidates()
+        except Exception as e:
+            print(f"[WARN] Failed to arrange parties/candidates: {e}")
+
         print("\n=== Seeding complete! ===")
         print("\nDefault Credentials:")
         print("   Commissioner -> commissioner@evm.gov.in / Admin@12345")

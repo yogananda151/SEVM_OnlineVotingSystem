@@ -33,6 +33,8 @@ def format_election_summary(e: Election, db: Session):
             "id": con.id,
             "name": con.name,
             "code": con.code,
+            "regionId": con.regionId,
+            "region": {"id": con.region.id, "name": con.region.name} if con.region else None,
             "_count": {
                 "voters": voter_count,
                 "candidates": candidate_count,
@@ -374,7 +376,24 @@ def set_constituencies(
         ip_address=ip_addr,
     )
     links = db.query(ElectionConstituency).filter(ElectionConstituency.electionId == election_id).all()
-    return success_response(data=[{"id": l.id, "constituencyId": l.constituencyId} for l in links], message="Election constituencies updated")
+    data = [{
+        "id": l.id,
+        "electionId": l.electionId,
+        "constituencyId": l.constituencyId,
+        "constituency": {
+            "id": l.constituency.id,
+            "name": l.constituency.name,
+            "code": l.constituency.code,
+            "regionId": l.constituency.regionId,
+            "region": {"id": l.constituency.region.id, "name": l.constituency.region.name} if l.constituency.region else None,
+            "_count": {
+                "pollingStations": len([ps for ps in l.constituency.pollingStations if not ps.deletedAt]),
+                "voters": len([v for v in l.constituency.voters if not v.deletedAt]),
+                "candidates": len([c for c in l.constituency.candidates if c.electionId == election_id and not c.deletedAt]),
+            },
+        } if l.constituency else None,
+    } for l in links if l.constituency and not l.constituency.deletedAt]
+    return success_response(data=data, message="Election constituencies updated")
 
 @router.put("/{election_id}/officer")
 def set_officer(

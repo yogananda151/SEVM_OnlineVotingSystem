@@ -14,7 +14,7 @@ from app.models.party_candidate import PoliticalParty, Candidate
 from app.models.user import User, ElectionOfficer
 from app.models.voter import Voter, ElectionVoterStatus
 from app.models.vote import Vote
-from app.models.election import Election
+from app.models.election import Election, ElectionConstituency
 from app.models.enums import UserRole, MachineStatus, AuditAction, ElectionStatus
 from app.middleware.auth import get_current_user, require_roles, CurrentUser
 from app.schemas.location import (
@@ -220,7 +220,18 @@ def get_active_constituencies(regionId: Optional[int] = None, current_user: Curr
         q = q.filter(Constituency.regionId == regionId)
     constituencies = q.order_by(Constituency.name.asc()).all()
     data = [{
-        "id": c.id, "name": c.name, "code": c.code, "regionId": c.regionId,
+        "id": c.id,
+        "regionId": c.regionId,
+        "name": c.name,
+        "code": c.code,
+        "description": c.description,
+        "isActive": c.isActive,
+        "region": {"id": c.region.id, "name": c.region.name} if c.region else None,
+        "_count": {
+            "pollingStations": len([ps for ps in c.pollingStations if not ps.deletedAt]),
+            "voters": len([v for v in c.voters if not v.deletedAt]),
+            "candidates": len([cd for cd in c.candidates if not cd.deletedAt]),
+        },
     } for c in constituencies]
     return success_response(data=data)
 
@@ -780,10 +791,51 @@ def create_candidate(payload: CreateCandidateRequest, request: Request, current_
     if st_val not in ["DRAFT", "SCHEDULED"]:
         raise HTTPException(status_code=400, detail=f'Cannot add candidate. Election "{election.name}" is in "{st_val}" status.')
 
+    # Ensure election is linked to this constituency
+    con = db.query(Constituency).filter(Constituency.id == payload.constituencyId, Constituency.deletedAt.is_(None)).first()
+    if not con:
+        raise HTTPException(status_code=404, detail="Constituency not found or has been deleted.")
+    link = db.query(ElectionConstituency).filter(
+        ElectionConstituency.electionId == payload.electionId,
+        ElectionConstituency.constituencyId == payload.constituencyId
+    ).first()
+    if not link:
+        db.add(ElectionConstituency(electionId=payload.electionId, constituencyId=payload.constituencyId))
+        db.flush()
+
+    # Rule: Each constituency can have multiple parties, but each party can nominate at most ONE candidate
+    if payload.partyId and not payload.isIndependent:
+        existing_party_cand = db.query(Candidate).filter(
+            Candidate.electionId == payload.electionId,
+            Candidate.constituencyId == payload.constituencyId,
+            Candidate.partyId == payload.partyId,
+            Candidate.deletedAt.is_(None),
+        ).first()
+        if existing_party_cand:
+            party = db.query(PoliticalParty).filter(PoliticalParty.id == payload.partyId).first()
+            party_name = f"{party.name} ({party.abbreviation})" if party else "This political party"
+            raise HTTPException(
+                status_code=409,
+                detail=f"{party_name} already has candidate '{existing_party_cand.fullName}' in constituency '{con.name}'. Each political party can have only one candidate per constituency."
+            )
+
+    # Validate serial number uniqueness in election + constituency
+    existing_serial = db.query(Candidate).filter(
+        Candidate.electionId == payload.electionId,
+        Candidate.constituencyId == payload.constituencyId,
+        Candidate.serialNumber == payload.serialNumber,
+        Candidate.deletedAt.is_(None),
+    ).first()
+    if existing_serial:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Serial number {payload.serialNumber} is already allocated to candidate '{existing_serial.fullName}' in constituency '{con.name}'."
+        )
+
     c = Candidate(
         electionId=payload.electionId,
         constituencyId=payload.constituencyId,
-        partyId=payload.partyId,
+        partyId=payload.partyId if not payload.isIndependent else None,
         fullName=payload.fullName.strip(),
         age=payload.age,
         qualification=payload.qualification,
@@ -803,12 +855,51 @@ def update_candidate(candidate_id: int, payload: UpdateCandidateRequest, current
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
+    new_party_id = payload.partyId if payload.partyId is not None else c.partyId
+    new_is_ind = payload.isIndependent if payload.isIndependent is not None else c.isIndependent
+
+    # Rule: Each political party can only have one candidate per constituency
+    if new_party_id and not new_is_ind:
+        existing_party_cand = db.query(Candidate).filter(
+            Candidate.electionId == c.electionId,
+            Candidate.constituencyId == c.constituencyId,
+            Candidate.partyId == new_party_id,
+            Candidate.id != candidate_id,
+            Candidate.deletedAt.is_(None),
+        ).first()
+        if existing_party_cand:
+            party = db.query(PoliticalParty).filter(PoliticalParty.id == new_party_id).first()
+            party_name = f"{party.name} ({party.abbreviation})" if party else "This political party"
+            raise HTTPException(
+                status_code=409,
+                detail=f"{party_name} already has candidate '{existing_party_cand.fullName}' in this constituency. Each political party can have only one candidate per constituency."
+            )
+
+    if payload.serialNumber is not None and payload.serialNumber != c.serialNumber:
+        existing_serial = db.query(Candidate).filter(
+            Candidate.electionId == c.electionId,
+            Candidate.constituencyId == c.constituencyId,
+            Candidate.serialNumber == payload.serialNumber,
+            Candidate.id != candidate_id,
+            Candidate.deletedAt.is_(None),
+        ).first()
+        if existing_serial:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Serial number {payload.serialNumber} is already assigned to '{existing_serial.fullName}' in this constituency."
+            )
+
     if payload.fullName is not None: c.fullName = payload.fullName.strip()
-    if payload.partyId is not None: c.partyId = payload.partyId
+    if payload.isIndependent is True:
+        c.isIndependent = True
+        c.partyId = None
+    elif payload.partyId is not None:
+        c.partyId = payload.partyId
+        c.isIndependent = False
+
     if payload.age is not None: c.age = payload.age
     if payload.qualification is not None: c.qualification = payload.qualification
     if payload.serialNumber is not None: c.serialNumber = payload.serialNumber
-    if payload.isIndependent is not None: c.isIndependent = payload.isIndependent
     if payload.photoUrl is not None: c.photoUrl = payload.photoUrl
     if payload.isActive is not None: c.isActive = payload.isActive
 

@@ -25,7 +25,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 // ─────────────────────────────────────────────────────────────────
 
 interface Region { id: number; name: string; _count: { constituencies: number } }
-interface Constituency { id: number; name: string; code: string; regionId: number; region: { name: string }; _count: { pollingStations: number; voters: number } }
+interface Constituency {
+  id: number;
+  name: string;
+  code: string;
+  regionId: number;
+  region?: { id?: number; name: string } | null;
+  _count?: { pollingStations?: number; voters?: number; candidates?: number };
+}
 interface Candidate { id: number; fullName: string; serialNumber: number; age: number; constituencyId: number; party?: { id: number; name: string; color: string } }
 interface Party { id: number; name: string; abbreviation: string; color: string }
 interface Election { id: number; name: string; status: string; electionType: string; scheduledDate: string }
@@ -35,6 +42,7 @@ interface Officer {
   employeeId: string;
   phone: string;
   deletedAt?: string | null;
+  pollingStationId?: number | null;
   pollingStation?: { id: number; name: string; code: string };
   user: { id: number; email: string; isActive: boolean };
 }
@@ -86,11 +94,13 @@ const Step1: React.FC<{
   const { data: constituencies, loading } = useAsync<Constituency[]>(fetchConstituencies);
 
   const grouped: Record<string, Constituency[]> = {};
-  (constituencies || []).forEach((c) => {
-    const key = c.region?.name ?? 'Unknown Region';
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(c);
-  });
+  (constituencies || [])
+    .filter((c): c is Constituency => Boolean(c && typeof c.id === 'number'))
+    .forEach((c) => {
+      const key = c.region?.name ?? 'Unknown Region';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(c);
+    });
 
   return (
     <div className="space-y-4">
@@ -104,12 +114,12 @@ const Step1: React.FC<{
         <div className="flex gap-3 items-center">
           <select className="input max-w-[200px] text-sm" value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)}>
             <option value="">All Regions</option>
-            {(regions || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            {(regions || []).filter((r) => Boolean(r && typeof r.id === 'number')).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </div>
         {!readOnly && (
           <div className="flex gap-2">
-            <button onClick={() => onSelectAll((constituencies || []).map((c) => c.id))} className="btn-secondary text-xs py-1.5 px-3">Select All Visible</button>
+            <button onClick={() => onSelectAll((constituencies || []).map((c) => c?.id).filter((id): id is number => typeof id === 'number'))} className="btn-secondary text-xs py-1.5 px-3">Select All Visible</button>
             <button onClick={onClear} className="btn-secondary text-xs py-1.5 px-3">Clear</button>
           </div>
         )}
@@ -130,7 +140,7 @@ const Step1: React.FC<{
                 <span className="text-xs text-slate-400">({cons.length})</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {cons.map((c) => {
+                {cons.filter((c) => Boolean(c && typeof c.id === 'number')).map((c) => {
                   const isSelected = selectedIds.includes(c.id);
                   return (
                     <button
@@ -149,7 +159,9 @@ const Step1: React.FC<{
                       </div>
                       <div className="min-w-0">
                         <p className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-300'}`}>{c.name}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{c._count.pollingStations} stations · {c._count.voters.toLocaleString()} voters</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {c._count?.pollingStations ?? 0} stations · {(c._count?.voters ?? 0).toLocaleString()} voters
+                        </p>
                       </div>
                     </button>
                   );
@@ -515,7 +527,8 @@ const Step2Officer: React.FC<{
                           <option value="">{assigned ? 'Change officer...' : 'Assign officer...'}</option>
                           {assigned && <option value="__unassign__">❌ Unassign</option>}
                           {activeOfficers.map((o) => {
-                            const isAtOtherStation = o.pollingStationId && o.pollingStationId !== station.id;
+                            const officerStationId = o.pollingStation?.id || o.pollingStationId;
+                            const isAtOtherStation = Boolean(officerStationId && officerStationId !== station.id);
                             const isAlreadyHere = assigned && assigned.id === o.id;
                             return (
                               <option key={o.id} value={o.id} disabled={Boolean(isAtOtherStation || isAlreadyHere)}>
@@ -544,7 +557,18 @@ const Step2Officer: React.FC<{
 const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Constituency[]; readOnly?: boolean }> = ({
   electionId, electionConstituencies, readOnly,
 }) => {
-  const [selectedConstituency, setSelectedConstituency] = useState<Constituency | null>(electionConstituencies[0] || null);
+  const validConstituencies = (electionConstituencies || []).filter(
+    (c): c is Constituency => Boolean(c && typeof c.id === 'number')
+  );
+  const [selectedConstituency, setSelectedConstituency] = useState<Constituency | null>(validConstituencies[0] || null);
+
+  useEffect(() => {
+    if (!selectedConstituency && validConstituencies.length > 0) {
+      setSelectedConstituency(validConstituencies[0]);
+    } else if (selectedConstituency && !validConstituencies.some((c) => c.id === selectedConstituency.id)) {
+      setSelectedConstituency(validConstituencies[0] || null);
+    }
+  }, [validConstituencies, selectedConstituency]);
   const [showExtra, setShowExtra] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [selectedPartyId, setSelectedPartyId] = useState<number | ''>('');
@@ -642,7 +666,8 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
         electionId,
         selectedConstituency?.id
       );
-      toast.success(`Imported ${res.importedCount} candidates successfully!`);
+      const count = res?.data?.importedCount ?? res?.importedCount ?? 0;
+      toast.success(`Imported ${count} candidates successfully!`);
       setBulkModalOpen(false);
       setSpreadsheetFile(null);
       refetchCandidates();
@@ -660,7 +685,7 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
 
   const selectedParty = (parties || []).find((p) => p.id === Number(selectedPartyId));
 
-  if (electionConstituencies.length === 0) {
+  if (validConstituencies.length === 0) {
     return (
       <div className="text-center py-12">
         <MapPin size={40} className="mx-auto text-slate-500 mb-3" />
@@ -674,8 +699,8 @@ const Step3Candidates: React.FC<{ electionId: number; electionConstituencies: Co
       {/* ── Left: Constituency list ── */}
       <div className="border-r border-slate-700/50 pr-4 overflow-y-auto space-y-1.5">
         <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Constituencies</p>
-        {electionConstituencies.map((c) => {
-          const cCount = (candidates || []).filter((x) => x.constituencyId === c.id).length;
+        {validConstituencies.map((c) => {
+          const cCount = (candidates || []).filter((x) => x?.constituencyId === c.id).length;
           const isActive = selectedConstituency?.id === c.id;
           return (
             <button
@@ -1111,7 +1136,7 @@ const Step4Review: React.FC<{
   const stats = [
     { label: 'Constituencies', value: readiness.totalConstituencies, ok: readiness.totalConstituencies > 0 },
     { label: 'Polling Stations', value: readiness.totalStations, ok: readiness.totalStations > 0 },
-    { label: 'Total Voters', value: readiness.totalVoters.toLocaleString(), ok: readiness.totalVoters > 0 },
+    { label: 'Total Voters', value: (readiness.totalVoters ?? 0).toLocaleString(), ok: (readiness.totalVoters ?? 0) > 0 },
     { label: 'Candidates', value: readiness.totalCandidates, ok: readiness.totalCandidates > 0 },
     { label: 'Election Officer', value: readiness.hasElectionOfficer ? readiness.officer?.fullName ?? '✓' : 'None', ok: readiness.hasElectionOfficer },
     { label: 'Stations w/o Officer', value: readiness.stationsWithoutOfficer, ok: readiness.stationsWithoutOfficer === 0 },
@@ -1252,14 +1277,21 @@ export const ElectionSetupPage: React.FC = () => {
   const [stepErrors, setStepErrors] = useState<Record<number, string>>({});
 
   const fetchElection = useCallback(() => electionService.getById(electionId), [electionId]);
-  const { data: election } = useAsync<Election & { electionConstituencies: ElectionLink[]; officer: Officer | null }>(fetchElection);
+  const { data: election, loading: electionLoading, error: electionError } = useAsync<Election & { electionConstituencies: ElectionLink[]; officer: Officer | null }>(fetchElection);
 
   // Load initial selected constituency IDs and current officer
   useEffect(() => {
     if (election?.electionConstituencies) {
-      const ids = election.electionConstituencies.map((l) => l.constituency.id);
+      const validLinks = (election.electionConstituencies as any[]).filter(Boolean);
+      const ids: number[] = validLinks
+        .map((l: any) => l?.constituency?.id ?? l?.constituencyId ?? l?.id)
+        .filter((id): id is number => typeof id === 'number');
       setSelectedConstituencyIds(ids);
-      setElectionConstituencies(election.electionConstituencies.map((l) => l.constituency));
+
+      const cons: Constituency[] = validLinks
+        .map((l: any) => l?.constituency ?? l)
+        .filter((c: any): c is Constituency => Boolean(c && typeof c.id === 'number'));
+      setElectionConstituencies(cons);
     }
     if (election?.officer !== undefined) {
       setAssignedOfficer(election.officer);
@@ -1270,8 +1302,11 @@ export const ElectionSetupPage: React.FC = () => {
     (ids: number[]) => electionService.setConstituencies(electionId, ids),
     {
       onSuccess: (result) => {
-        const links = result as ElectionLink[];
-        setElectionConstituencies(links.map((l) => l.constituency));
+        const raw = (result as any[]) || [];
+        const cons: Constituency[] = raw
+          .map((l: any) => l?.constituency ?? l)
+          .filter((c: any): c is Constituency => Boolean(c && typeof c.id === 'number'));
+        setElectionConstituencies(cons);
         toast.success('Constituencies saved');
       },
     },
@@ -1333,7 +1368,22 @@ export const ElectionSetupPage: React.FC = () => {
     }
   };
 
-  if (!election) return <div className="flex justify-center py-20"><Loader2 size={28} className="animate-spin text-primary-400" /></div>;
+  if (electionLoading) {
+    return <div className="flex justify-center py-20"><Loader2 size={28} className="animate-spin text-primary-400" /></div>;
+  }
+
+  if (electionError || !election) {
+    return (
+      <div className="card p-8 text-center max-w-md mx-auto my-12 space-y-4">
+        <AlertCircle size={40} className="mx-auto text-red-400" />
+        <h2 className="text-lg font-bold text-white">Election Not Found</h2>
+        <p className="text-sm text-slate-400">{electionError || 'The requested election could not be loaded.'}</p>
+        <button onClick={() => navigate('/admin/elections')} className="btn-primary mx-auto">
+          ← Back to Elections
+        </button>
+      </div>
+    );
+  }
 
   // Step status indicators
   const getStepStatus = (stepId: number): 'done' | 'active' | 'error' | 'pending' => {
