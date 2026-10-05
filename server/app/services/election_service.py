@@ -143,26 +143,27 @@ class ElectionService:
         if not election:
             raise HTTPException(status_code=404, detail="Election not found.")
 
-        # Officer guard for starting/stopping
+        # Authority guard for starting/stopping
         status_val = new_status.value if hasattr(new_status, "value") else str(new_status)
         if status_val in ["ACTIVE", "CLOSED", "PAUSED"]:
-            if current_user.role != UserRole.OFFICER:
-                raise HTTPException(status_code=403, detail="Elections can only be started and stopped by assigned Election Officers.")
+            if current_user.role not in [UserRole.OFFICER, UserRole.COMMISSIONER]:
+                raise HTTPException(status_code=403, detail="Elections can only be started and stopped by authorized election officials.")
 
-            officer = db.query(ElectionOfficer).filter(ElectionOfficer.userId == current_user.userId, ElectionOfficer.deletedAt.is_(None)).first()
-            if not officer:
-                raise HTTPException(status_code=404, detail="Election Officer profile not found.")
+            if current_user.role == UserRole.OFFICER:
+                officer = db.query(ElectionOfficer).filter(ElectionOfficer.userId == current_user.userId, ElectionOfficer.deletedAt.is_(None)).first()
+                if not officer:
+                    raise HTTPException(status_code=404, detail="Election Officer profile not found.")
 
-            is_supervising = election.officerId == officer.id
-            is_station_officer = False
-            if officer.pollingStationId:
-                for ec in election.electionConstituencies:
-                    if any(ps.id == officer.pollingStationId for ps in ec.constituency.pollingStations):
-                        is_station_officer = True
-                        break
+                is_supervising = election.officerId == officer.id
+                is_station_officer = False
+                if officer.pollingStationId:
+                    for ec in election.electionConstituencies:
+                        if any(ps.id == officer.pollingStationId for ps in ec.constituency.pollingStations):
+                            is_station_officer = True
+                            break
 
-            if not is_supervising and not is_station_officer:
-                raise HTTPException(status_code=403, detail="You are not assigned to this election.")
+                if not is_supervising and not is_station_officer:
+                    raise HTTPException(status_code=403, detail="You are not assigned to this election.")
 
         # Status transition check
         curr_status = str(election.status.value if hasattr(election.status, "value") else election.status)

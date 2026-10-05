@@ -1216,21 +1216,49 @@ const Step4Review: React.FC<{
             {updating ? <Spinner size={16} /> : null} Schedule Election
           </button>
         )}
-        {(election.status === 'SCHEDULED' || election.status === 'ACTIVE' || election.status === 'PAUSED') && (
-          <div className="flex-1 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <UserCog size={20} className="text-emerald-400 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {election.status === 'SCHEDULED' ? 'Ready for Officer Activation' : 'Election Voting in Progress'}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Elections can only be started and stopped by assigned Election Officers from their dashboard.
-                  {readiness.officer?.fullName && ` Assigned Officer: ${readiness.officer.fullName}.`}
-                </p>
-              </div>
-            </div>
-            <span className="badge badge-emerald text-xs flex-shrink-0">Officer Controlled</span>
+        {election.status === 'SCHEDULED' && (
+          <button
+            onClick={() => updateStatus('ACTIVE')}
+            disabled={updating}
+            className="flex-1 btn-primary py-3 justify-center bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 font-bold"
+          >
+            {updating ? <Spinner size={16} /> : <Play size={16} />} Start Election
+          </button>
+        )}
+        {election.status === 'ACTIVE' && (
+          <div className="flex-1 flex gap-3">
+            <button
+              onClick={() => updateStatus('PAUSED')}
+              disabled={updating}
+              className="flex-1 py-3 rounded-xl bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-300 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              {updating ? <Spinner size={16} /> : <Pause size={16} />} Pause Election
+            </button>
+            <button
+              onClick={() => updateStatus('CLOSED')}
+              disabled={updating}
+              className="flex-1 py-3 rounded-xl bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 text-red-300 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              {updating ? <Spinner size={16} /> : <Square size={16} />} Close Election
+            </button>
+          </div>
+        )}
+        {election.status === 'PAUSED' && (
+          <div className="flex-1 flex gap-3">
+            <button
+              onClick={() => updateStatus('ACTIVE')}
+              disabled={updating}
+              className="flex-1 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              {updating ? <Spinner size={16} /> : <Play size={16} />} Resume Election
+            </button>
+            <button
+              onClick={() => updateStatus('CLOSED')}
+              disabled={updating}
+              className="flex-1 py-3 rounded-xl bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 text-red-300 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              {updating ? <Spinner size={16} /> : <Square size={16} />} Close Election
+            </button>
           </div>
         )}
         {election.status === 'CLOSED' && (

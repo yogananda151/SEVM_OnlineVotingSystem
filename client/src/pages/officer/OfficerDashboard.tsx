@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2, Users, CheckCircle, Clock, Lock, Unlock, Pause, Play,
-  Square, Activity, Vote, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2,
+  Square, Activity, Vote, RefreshCw, ExternalLink, CheckCircle2,
 } from 'lucide-react';
 import { useAsync } from '../../hooks/useAsync';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
@@ -66,19 +66,6 @@ export const OfficerDashboard: React.FC = () => {
     message: string;
   } | null>(null);
 
-  // ── 4. Election Start / Stop Confirmation ──────────────────────────
-  const [electionActionLoading, setElectionActionLoading] = useState<number | null>(null);
-  const [confirmElectionAction, setConfirmElectionAction] = useState<{
-    electionId: number;
-    electionName: string;
-    targetStatus: string;
-    title: string;
-    message: string;
-    actionType: 'start' | 'pause' | 'resume' | 'stop';
-  } | null>(null);
-
-
-
   // ── Machine Control Handlers ───────────────────────────────────────
   const updateMachineStatus = async (status: string, isPollingActive?: boolean) => {
     if (!stationId) return;
@@ -98,62 +85,6 @@ export const OfficerDashboard: React.FC = () => {
     if (confirmStationAction) {
       updateMachineStatus(confirmStationAction.status, confirmStationAction.isPollingActive);
       setConfirmStationAction(null);
-    }
-  };
-
-  // ── Election Start / Stop Handlers ─────────────────────────────────
-  const requestElectionStatusChange = (
-    election: AssignedElection,
-    targetStatus: string,
-    actionType: 'start' | 'pause' | 'resume' | 'stop',
-  ) => {
-    let title = '';
-    let message = '';
-    if (actionType === 'start') {
-      title = `Start Election: ${election.name}?`;
-      message = `Starting this election will activate voting across all linked polling stations. Voters will be able to cast ballots. Are you sure you want to start this election?`;
-    } else if (actionType === 'pause') {
-      title = `Pause Election: ${election.name}?`;
-      message = `Pausing this election will temporarily suspend voting across all stations. You can resume it at any time.`;
-    } else if (actionType === 'resume') {
-      title = `Resume Election: ${election.name}?`;
-      message = `Resuming will reopen voting across all polling stations for this election.`;
-    } else if (actionType === 'stop') {
-      title = `STOP ELECTION: ${election.name}?`;
-      message = `WARNING: Stopping the election will permanently close voting across all polling stations. No further votes can be cast, and this cannot be undone. Are you sure you want to stop this election?`;
-    }
-
-    setConfirmElectionAction({
-      electionId: election.id,
-      electionName: election.name,
-      targetStatus,
-      title,
-      message,
-      actionType,
-    });
-  };
-
-  const handleConfirmElectionAction = async () => {
-    if (!confirmElectionAction) return;
-    const { electionId, electionName, targetStatus, actionType } = confirmElectionAction;
-    setElectionActionLoading(electionId);
-    try {
-      await electionService.updateStatus(electionId, targetStatus);
-      const actionLabel =
-        actionType === 'start' ? 'started' : actionType === 'stop' ? 'stopped' : actionType === 'pause' ? 'paused' : 'resumed';
-      toast.success(`Election "${electionName}" ${actionLabel} successfully!`);
-      await refetchElections();
-      if (stationId) {
-        await Promise.all([refetchStation(), refetchTurnout()]);
-      }
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Failed to update election status.';
-      toast.error(msg);
-    } finally {
-      setElectionActionLoading(null);
-      setConfirmElectionAction(null);
     }
   };
 
@@ -251,7 +182,7 @@ export const OfficerDashboard: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-400">
-            Official regulations: Elections can <span className="text-emerald-400 font-semibold">only</span> be started and stopped by assigned Election Officers.
+            Supervised election overview. Operate and control your booth EVM machine below.
           </p>
         </div>
 
@@ -276,7 +207,6 @@ export const OfficerDashboard: React.FC = () => {
               const isElectionPaused = election.status === 'PAUSED';
               const isElectionClosed = election.status === 'CLOSED';
               const isResultPublished = election.status === 'RESULTS_PUBLISHED';
-              const isUpdatingThis = electionActionLoading === election.id;
 
               return (
                 <div
@@ -358,119 +288,38 @@ export const OfficerDashboard: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Election Control Buttons (Officer exclusive) */}
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Officer Voting Controls
-                    </p>
-
-                    <div className="flex gap-2 flex-wrap">
-                      {/* START BUTTON — with pre-flight checks (#3) */}
-                      {isElectionScheduled && (() => {
-                        const noCandidates = (election._count?.candidates ?? 0) === 0;
-                        const noConstituencies = (election._count?.electionConstituencies ?? election.electionConstituencies?.length ?? 0) === 0;
-                        const cannotStart = noCandidates || noConstituencies;
-                        return (
-                          <div className="flex-1 flex flex-col gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => !cannotStart && requestElectionStatusChange(election, 'ACTIVE', 'start')}
-                              disabled={isUpdatingThis || cannotStart}
-                              title={cannotStart ? (noCandidates ? 'Cannot start: No candidates registered' : 'Cannot start: No constituencies linked') : undefined}
-                              className="w-full btn-primary justify-center bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-2.5 shadow-lg shadow-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {isUpdatingThis ? (
-                                <Spinner size={16} />
-                              ) : (
-                                <>
-                                  <Play size={16} className="fill-current" />
-                                  <span>Start Election</span>
-                                </>
-                              )}
-                            </button>
-                            {cannotStart && (
-                              <div className="flex items-center gap-1.5 text-[10px] text-amber-400 px-1">
-                                <AlertTriangle size={11} />
-                                <span>{noCandidates ? 'No candidates registered' : 'No constituencies linked'}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* ACTIVE STATE CONTROLS */}
-                      {isElectionActive && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => requestElectionStatusChange(election, 'PAUSED', 'pause')}
-                            disabled={isUpdatingThis}
-                            className="flex-1 py-2 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-400 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            {isUpdatingThis ? <Spinner size={14} /> : <Pause size={14} />}
-                            <span>Pause Voting</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => requestElectionStatusChange(election, 'CLOSED', 'stop')}
-                            disabled={isUpdatingThis}
-                            className="flex-1 py-2 px-3 rounded-xl bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 text-red-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-lg shadow-red-900/20"
-                          >
-                            {isUpdatingThis ? <Spinner size={14} /> : <Square size={14} className="fill-current" />}
-                            <span>Stop Election</span>
-                          </button>
-                        </>
-                      )}
-
-                      {/* PAUSED STATE CONTROLS */}
-                      {isElectionPaused && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => requestElectionStatusChange(election, 'ACTIVE', 'resume')}
-                            disabled={isUpdatingThis}
-                            className="flex-1 py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            {isUpdatingThis ? <Spinner size={14} /> : <Play size={14} className="fill-current" />}
-                            <span>Resume Voting</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => requestElectionStatusChange(election, 'CLOSED', 'stop')}
-                            disabled={isUpdatingThis}
-                            className="flex-1 py-2 px-3 rounded-xl bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 text-red-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            {isUpdatingThis ? <Spinner size={14} /> : <Square size={14} className="fill-current" />}
-                            <span>Stop Election</span>
-                          </button>
-                        </>
-                      )}
-
-                      {/* CLOSED STATE */}
-                      {isElectionClosed && (
-                        <div className="w-full p-2.5 rounded-xl bg-slate-700/40 border border-slate-600/40 text-center">
-                          <p className="text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5">
-                            <CheckCircle2 size={14} className="text-emerald-400" />
-                            <span>Election Concluded</span>
-                          </p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
-                            Awaiting Commissioner to publish official results.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* RESULTS PUBLISHED STATE */}
-                      {isResultPublished && (
-                        <div className="w-full p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-center">
-                          <p className="text-xs font-semibold text-blue-400 flex items-center justify-center gap-1.5">
-                            <CheckCircle2 size={14} className="text-blue-400" />
-                            <span>Results Published</span>
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                  {/* Election Status Information */}
+                  <div className="pt-1">
+                    {isElectionActive && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+                        <Activity size={14} className="flex-shrink-0 animate-pulse" />
+                        <span>Election is currently active. Operate and monitor your booth EVM machine below.</span>
+                      </div>
+                    )}
+                    {isElectionPaused && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+                        <Clock size={14} className="flex-shrink-0" />
+                        <span>Election is temporarily paused by the Commission.</span>
+                      </div>
+                    )}
+                    {isElectionScheduled && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs">
+                        <Clock size={14} className="flex-shrink-0" />
+                        <span>Scheduled for voting on {new Date(election.scheduledDate).toLocaleDateString('en-IN')}.</span>
+                      </div>
+                    )}
+                    {isElectionClosed && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-700/40 border border-slate-600/40 text-slate-300 text-xs">
+                        <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />
+                        <span>Election concluded. Awaiting official results publication.</span>
+                      </div>
+                    )}
+                    {isResultPublished && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs">
+                        <CheckCircle2 size={14} className="text-blue-400 flex-shrink-0" />
+                        <span>Results have been officially published.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -671,7 +520,7 @@ export const OfficerDashboard: React.FC = () => {
           <Building2 size={24} className="text-slate-500 flex-shrink-0" />
           <div className="text-xs text-slate-400">
             <span className="text-white font-semibold">No Specific Polling Booth Assigned: </span>
-            You are currently serving as a Supervising Election Officer. Use the controls above to start and stop the election(s).
+            You are currently serving as an Election Officer supervising the election above.
           </div>
         </div>
       )}
@@ -685,23 +534,6 @@ export const OfficerDashboard: React.FC = () => {
         message={confirmStationAction?.message ?? ''}
         confirmText="Yes, Proceed"
         loading={stationActionLoading}
-      />
-
-      {/* Confirmation Dialog for Election Start / Stop actions */}
-      <ConfirmDialog
-        open={!!confirmElectionAction}
-        onClose={() => setConfirmElectionAction(null)}
-        onConfirm={handleConfirmElectionAction}
-        title={confirmElectionAction?.title ?? ''}
-        message={confirmElectionAction?.message ?? ''}
-        confirmText={
-          confirmElectionAction?.actionType === 'stop'
-            ? 'Yes, Stop Election'
-            : confirmElectionAction?.actionType === 'start'
-            ? 'Yes, Start Election'
-            : 'Yes, Proceed'
-        }
-        loading={electionActionLoading !== null}
       />
     </div>
   );
