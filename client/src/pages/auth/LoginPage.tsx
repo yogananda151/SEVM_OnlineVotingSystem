@@ -40,6 +40,7 @@ const roleConfig = {
 export const LoginPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<Role>('COMMISSIONER');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const config = roleConfig[selectedRole];
@@ -51,7 +52,11 @@ export const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
     try {
-      const result = await authService.login(data as { email: string; password: string });
+      const result = await authService.login({
+        email: data.email,
+        password: data.password,
+        rememberMe,
+      });
       if (result.user.role !== selectedRole) {
         toast.error(`This account is not an ${config.label}.`, { id: 'login-toast' });
         authService.logout();
@@ -161,6 +166,18 @@ export const LoginPage: React.FC = () => {
                 </button>
               </div>
               {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              <label className="flex items-center gap-2 text-slate-400 hover:text-slate-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-blue-600"
+                />
+                <span>Keep me signed in on this device</span>
+              </label>
             </div>
 
             <button type="submit" disabled={loading}

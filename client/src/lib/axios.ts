@@ -9,7 +9,7 @@ const api = axios.create({
 
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -19,8 +19,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('user');
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
+      localStorage.removeItem('auth_remember_me');
       const isPublicRoute = ['/', '/voting-machine', '/vvpat'].some(
         (path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`),
       );
