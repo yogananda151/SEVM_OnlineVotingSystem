@@ -434,13 +434,33 @@ def get_polling_station_turnout(station_id: int, current_user: CurrentUser = Dep
     active_election = db.query(Election).filter(Election.status == ElectionStatus.ACTIVE).first()
     votes_cast = 0
     if active_election:
-        votes_cast = db.query(func.count(Vote.id)).filter(Vote.pollingStationId == station_id, Vote.electionId == active_election.id).scalar() or 0
+        votes_from_votes = db.query(func.count(Vote.id)).filter(
+            Vote.pollingStationId == station_id,
+            Vote.electionId == active_election.id
+        ).scalar() or 0
+        votes_from_status = db.query(func.count(ElectionVoterStatus.id)).join(Voter).filter(
+            Voter.pollingStationId == station_id,
+            ElectionVoterStatus.electionId == active_election.id,
+            ElectionVoterStatus.hasVoted == True
+        ).scalar() or 0
+        votes_cast = max(votes_from_votes, votes_from_status)
+    else:
+        votes_from_votes = db.query(func.count(Vote.id)).filter(Vote.pollingStationId == station_id).scalar() or 0
+        votes_from_status = db.query(func.count(ElectionVoterStatus.id)).join(Voter).filter(
+            Voter.pollingStationId == station_id,
+            ElectionVoterStatus.hasVoted == True
+        ).scalar() or 0
+        votes_cast = max(votes_from_votes, votes_from_status)
 
+    remaining = max(0, total_voters - votes_cast)
     turnout = f"{(votes_cast / total_voters) * 100:.2f}" if total_voters > 0 else "0.00"
     return success_response(data={
         "pollingStation": {"id": ps.id, "name": ps.name, "code": ps.code},
         "totalVoters": total_voters,
+        "votedCount": votes_cast,
         "votesCast": votes_cast,
+        "remaining": remaining,
+        "turnoutPercent": turnout,
         "turnoutPercentage": turnout,
     })
 

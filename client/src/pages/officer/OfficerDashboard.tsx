@@ -131,12 +131,30 @@ export const OfficerDashboard: React.FC = () => {
   const isStationPaused = machineStatus === 'PAUSED';
   const isStationIdle = machineStatus === 'IDLE';
 
-  const turnoutData = turnout as {
-    totalVoters: number;
-    votedCount: number;
-    remaining: number;
-    turnoutPercent: string;
-  } | null;
+  const rawTurnout = turnout as any;
+  const boothVotersCount = boothVoters.length;
+  const boothVotersVotedCount = boothVoters.filter((v: any) => v.hasVoted).length;
+
+  const totalVoters =
+    rawTurnout?.totalVoters ?? (boothVotersCount > 0 ? boothVotersCount : 0);
+  const votedCount =
+    rawTurnout?.votedCount ??
+    rawTurnout?.votesCast ??
+    (boothVotersCount > 0 ? boothVotersVotedCount : 0);
+  const remaining =
+    rawTurnout?.remaining ??
+    Math.max(0, totalVoters - votedCount);
+  const turnoutPercent =
+    rawTurnout?.turnoutPercent ??
+    rawTurnout?.turnoutPercentage ??
+    (totalVoters > 0 ? ((votedCount / totalVoters) * 100).toFixed(2) : '0.00');
+
+  const turnoutData = {
+    totalVoters,
+    votedCount,
+    remaining,
+    turnoutPercent,
+  };
 
   const elections = myElections || [];
 

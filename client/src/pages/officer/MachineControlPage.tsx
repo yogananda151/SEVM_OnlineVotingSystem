@@ -71,9 +71,21 @@ export const MachineControlPage: React.FC = () => {
   const isPaused = machineStatus === 'PAUSED';
   const isIdle = machineStatus === 'IDLE';
 
-  const turnoutData = turnout as {
-    totalVoters: number; votedCount: number; remaining: number; turnoutPercent: string;
-  } | null;
+  const rawTurnout = turnout as any;
+  const totalVoters = rawTurnout?.totalVoters ?? 0;
+  const votedCount = rawTurnout?.votedCount ?? rawTurnout?.votesCast ?? 0;
+  const remaining = rawTurnout?.remaining ?? Math.max(0, totalVoters - votedCount);
+  const turnoutPercent =
+    rawTurnout?.turnoutPercent ??
+    rawTurnout?.turnoutPercentage ??
+    (totalVoters > 0 ? ((votedCount / totalVoters) * 100).toFixed(2) : '0.00');
+
+  const turnoutData = rawTurnout ? {
+    totalVoters,
+    votedCount,
+    remaining,
+    turnoutPercent,
+  } : null;
 
   if (!stationId) {
     return (
