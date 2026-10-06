@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from fastapi import HTTPException, status
 from app.models.voter import Voter, ElectionVoterStatus, OTPVerification
 from app.models.election import Election, ElectionConstituency
+from app.models.location import PollingStation, Constituency
 from app.models.enums import ElectionStatus, VerificationMethod, VerificationStatus
 from app.utils.crypto import hash_aadhaar, generate_otp
 
@@ -54,6 +56,53 @@ class VerificationService:
             )
             .first()
         )
+        if not active_link:
+            # Fallback 1: check if polling station has an active election link
+            station = db.query(PollingStation).filter(PollingStation.id == polling_station_id).first()
+            if station and station.constituencyId:
+                station_link = (
+                    db.query(ElectionConstituency)
+                    .join(Election, ElectionConstituency.electionId == Election.id)
+                    .filter(
+                        ElectionConstituency.constituencyId == station.constituencyId,
+                        Election.status == ElectionStatus.ACTIVE,
+                        Election.deletedAt.is_(None),
+                    )
+                    .first()
+                )
+                if station_link:
+                    active_link = station_link
+                    voter.constituencyId = station.constituencyId
+                    db.commit()
+
+        if not active_link:
+            # Fallback 2: check if any active election exists that has a constituency with the same name
+            voter_con = db.query(Constituency).filter(Constituency.id == voter.constituencyId).first()
+            if voter_con:
+                same_name_con = (
+                    db.query(Constituency)
+                    .filter(
+                        func.lower(Constituency.name) == func.lower(voter_con.name),
+                        Constituency.deletedAt.is_(None),
+                    )
+                    .first()
+                )
+                if same_name_con and same_name_con.id != voter.constituencyId:
+                    name_link = (
+                        db.query(ElectionConstituency)
+                        .join(Election, ElectionConstituency.electionId == Election.id)
+                        .filter(
+                            ElectionConstituency.constituencyId == same_name_con.id,
+                            Election.status == ElectionStatus.ACTIVE,
+                            Election.deletedAt.is_(None),
+                        )
+                        .first()
+                    )
+                    if name_link:
+                        active_link = name_link
+                        voter.constituencyId = same_name_con.id
+                        db.commit()
+
         if not active_link:
             raise HTTPException(status_code=400, detail="No active election found for your constituency.")
 
