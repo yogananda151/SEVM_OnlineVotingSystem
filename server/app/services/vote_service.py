@@ -65,7 +65,13 @@ class VoteService:
             if not station:
                 raise HTTPException(status_code=404, detail="Polling station not found.")
             if station.machineStatus != MachineStatus.ACTIVE:
-                raise HTTPException(status_code=400, detail="Voting machine is not active.")
+                if election.status == ElectionStatus.ACTIVE and station.machineStatus == MachineStatus.IDLE:
+                    station.machineStatus = MachineStatus.ACTIVE
+                    station.isPollingActive = True
+                    db.commit()
+                else:
+                    status_name = station.machineStatus.value.lower() if hasattr(station.machineStatus, 'value') else str(station.machineStatus).lower()
+                    raise HTTPException(status_code=400, detail=f"Voting machine is currently {status_name}. Please contact the booth officer.")
 
             # 5. Verify candidate
             candidate = (
