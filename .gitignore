@@ -41,4 +41,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 server_node_backup/node_modules/
+# Office lock files
+~$*.xlsx
+~$*.xls
+
+
 
