@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   AlertTriangle,
   X,
+  Lock,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useForm } from 'react-hook-form';
@@ -25,6 +26,7 @@ import {
   constituencyService,
   pollingStationService,
 } from '../../services/api.service';
+import { authService } from '../../services/auth.service';
 import {
   Modal,
   ConfirmDialog,
@@ -164,7 +166,14 @@ export const VotersPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<Voter | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [filterStation, setFilterStation] = useState('');
+
+  const isOfficer = authService.hasRole('OFFICER');
+  const user = authService.getCurrentUser();
+  const officerStationId = user?.profile?.pollingStationId ?? user?.stationId;
+
+  const [filterStation, setFilterStation] = useState<string>(
+    isOfficer && officerStationId ? String(officerStationId) : ''
+  );
   const [hasVotedFilter, setHasVotedFilter] = useState('');
   const limit = 20;
 
@@ -471,10 +480,10 @@ export const VotersPage: React.FC = () => {
         page,
         limit,
         search: search || undefined,
-        pollingStationId: filterStation || undefined,
+        pollingStationId: isOfficer && officerStationId ? String(officerStationId) : (filterStation || undefined),
         hasVoted: hasVotedFilter !== '' ? hasVotedFilter : undefined,
       }),
-    [page, limit, search, filterStation, hasVotedFilter],
+    [page, limit, search, filterStation, hasVotedFilter, isOfficer, officerStationId],
   );
   const { data: votersRes, loading, execute: refetch } = useAsync(fetchVoters, true, [fetchVoters]);
   const voters: Voter[] = votersRes?.data ?? [];
@@ -652,37 +661,48 @@ export const VotersPage: React.FC = () => {
       {/* ── Page header ── */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Voters</h1>
-          <p className="page-subtitle">{total.toLocaleString()} registered voters</p>
+          <h1 className="page-title flex items-center gap-2">
+            <span>{isOfficer ? 'Booth Voters' : 'Voters'}</span>
+            {isOfficer && officerStationId && (
+              <span className="badge badge-purple text-xs font-mono">Booth #{officerStationId}</span>
+            )}
+          </h1>
+          <p className="page-subtitle">
+            {isOfficer
+              ? `${total.toLocaleString()} registered voters assigned to this polling booth`
+              : `${total.toLocaleString()} registered voters`}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setSpreadsheetFile(null);
-              setParsedVoters([]);
-              setPreviewRows([]);
-              setSkippedDuplicates([]);
-              setParsingError(null);
-              setFileStats({ total: 0, valid: 0, duplicates: 0, errors: 0 });
-              setBulkModalOpen(true);
-            }}
-            className="btn-secondary flex items-center gap-2"
-            id="bulk-import-btn"
-          >
-            <FileSpreadsheet size={16} className="text-emerald-400" />
-            <span>Bulk Import (Excel / CSV)</span>
-          </button>
-          <button
-            onClick={() => {
-              reset();
-              setModalOpen(true);
-            }}
-            className="btn-primary"
-            id="register-voter-btn"
-          >
-            <Plus size={16} /> Register Voter
-          </button>
-        </div>
+        {!isOfficer && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setSpreadsheetFile(null);
+                setParsedVoters([]);
+                setPreviewRows([]);
+                setSkippedDuplicates([]);
+                setParsingError(null);
+                setFileStats({ total: 0, valid: 0, duplicates: 0, errors: 0 });
+                setBulkModalOpen(true);
+              }}
+              className="btn-secondary flex items-center gap-2"
+              id="bulk-import-btn"
+            >
+              <FileSpreadsheet size={16} className="text-emerald-400" />
+              <span>Bulk Import (Excel / CSV)</span>
+            </button>
+            <button
+              onClick={() => {
+                reset();
+                setModalOpen(true);
+              }}
+              className="btn-primary"
+              id="register-voter-btn"
+            >
+              <Plus size={16} /> Register Voter
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Filters ── */}
@@ -697,18 +717,30 @@ export const VotersPage: React.FC = () => {
             onKeyDown={(e) => e.key === 'Enter' && refetch()}
           />
         </div>
-        <select
-          className="input w-48"
-          value={filterStation}
-          onChange={(e) => setFilterStation(e.target.value)}
-        >
-          <option value="">All Stations</option>
-          {allStations.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        {isOfficer ? (
+          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs">
+            <Lock size={13} className="text-emerald-400 shrink-0" />
+            <span className="text-slate-400">Assigned Booth:</span>
+            <span className="text-emerald-400 font-medium">
+              {allStations.find((s) => s.id === Number(officerStationId))?.name ??
+                user?.profile?.pollingStation?.name ??
+                `Station #${officerStationId}`}
+            </span>
+          </div>
+        ) : (
+          <select
+            className="input w-48"
+            value={filterStation}
+            onChange={(e) => setFilterStation(e.target.value)}
+          >
+            <option value="">All Stations</option>
+            {allStations.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           className="input w-40"
           value={hasVotedFilter}
@@ -725,7 +757,7 @@ export const VotersPage: React.FC = () => {
 
       {/* ── Voter table ── */}
       {loading ? (
-        <TableSkeleton rows={10} cols={7} />
+        <TableSkeleton rows={10} cols={isOfficer ? 6 : 7} />
       ) : (
         <>
           <div className="card overflow-hidden">
@@ -739,7 +771,7 @@ export const VotersPage: React.FC = () => {
                     <th>Gender</th>
                     <th>Station</th>
                     <th>Voted</th>
-                    <th>Actions</th>
+                    {!isOfficer && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -767,18 +799,20 @@ export const VotersPage: React.FC = () => {
                           {v.hasVoted ? 'Voted' : 'Pending'}
                         </span>
                       </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setDeleteTarget(v)}
-                            className="p-1.5 text-slate-400 hover:text-red-400"
-                            disabled={v.hasVoted}
-                            aria-label={`Remove ${v.fullName}`}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
+                      {!isOfficer && (
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setDeleteTarget(v)}
+                              className="p-1.5 text-slate-400 hover:text-red-400"
+                              disabled={v.hasVoted}
+                              aria-label={`Remove ${v.fullName}`}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

@@ -29,6 +29,7 @@ import { SettingsPage } from './pages/admin/SettingsPage';           // #1 / #11
 // Officer pages
 import { OfficerDashboard } from './pages/officer/OfficerDashboard';
 import { MachineControlPage } from './pages/officer/MachineControlPage'; // #1 / #4
+import { OfficerProfilePage } from './pages/officer/OfficerProfilePage';
 
 // Voting Machine & Public VVPAT
 import { VotingMachinePage } from './pages/voting/VotingMachinePage';
@@ -85,6 +86,7 @@ function App() {
         {/* Officer */}
         <Route path="/officer" element={<RequireAuth role="OFFICER"><OfficerLayout><OfficerDashboard /></OfficerLayout></RequireAuth>} />
         <Route path="/officer/voters" element={<RequireAuth role="OFFICER"><OfficerLayout><VotersPage /></OfficerLayout></RequireAuth>} />
+        <Route path="/officer/profile" element={<RequireAuth role="OFFICER"><OfficerLayout><OfficerProfilePage /></OfficerLayout></RequireAuth>} />
         {/* #1 / #4: Real MachineControlPage instead of PlaceholderPage */}
         <Route path="/officer/machine" element={<RequireAuth role="OFFICER"><OfficerLayout><MachineControlPage /></OfficerLayout></RequireAuth>} />
         <Route path="/officer/vvpat" element={<Navigate to="/officer" replace />} />

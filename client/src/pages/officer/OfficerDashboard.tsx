@@ -1,12 +1,15 @@
 import React, { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Building2, Users, CheckCircle, Clock, Lock, Unlock, Pause, Play,
   Square, Activity, Vote, RefreshCw, ExternalLink, CheckCircle2,
+  UserCheck, Search, ShieldCheck, Mail, Phone, BadgeCheck, ArrowRight,
+  Filter, AlertCircle, Eye,
 } from 'lucide-react';
 import { useAsync } from '../../hooks/useAsync';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
-import { pollingStationService, electionService } from '../../services/api.service';
+import { pollingStationService, electionService, voterService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
 import { StatCard, Spinner, ConfirmDialog, StatusBadge } from '../../components/ui';
 import { toast } from 'react-hot-toast';
@@ -57,7 +60,41 @@ export const OfficerDashboard: React.FC = () => {
   } = useAutoRefresh(fetchTurnout, 30_000);
   const refetchTurnout = refreshTurnout;
 
-  // ── 3. Station Machine Action Confirmation ─────────────────────────
+  // ── 3. Booth Registered Voters — Scoped strictly to officer's booth ─
+  const fetchBoothVoters = useCallback(
+    () =>
+      stationId
+        ? voterService.getAll({ pollingStationId: stationId, limit: 100 })
+        : Promise.resolve({ data: [] }),
+    [stationId],
+  );
+  const {
+    data: boothVotersRes,
+    loading: loadingBoothVoters,
+    execute: refetchBoothVoters,
+  } = useAsync(fetchBoothVoters);
+
+  const [voterSearch, setVoterSearch] = useState('');
+  const [voterStatusFilter, setVoterStatusFilter] = useState<'ALL' | 'VOTED' | 'PENDING'>('ALL');
+
+  const boothVoters: any[] = (boothVotersRes as any)?.data ?? [];
+  const filteredBoothVoters = boothVoters.filter((v: any) => {
+    const term = voterSearch.trim().toLowerCase();
+    const matchesSearch =
+      !term ||
+      v.fullName?.toLowerCase().includes(term) ||
+      v.voterId?.toLowerCase().includes(term) ||
+      v.phone?.toLowerCase().includes(term);
+    const matchesStatus =
+      voterStatusFilter === 'ALL'
+        ? true
+        : voterStatusFilter === 'VOTED'
+        ? v.hasVoted
+        : !v.hasVoted;
+    return matchesSearch && matchesStatus;
+  });
+
+  // ── 4. Station Machine Action Confirmation ─────────────────────────
   const [stationActionLoading, setStationActionLoading] = useState(false);
   const [confirmStationAction, setConfirmStationAction] = useState<{
     status: string;
@@ -116,6 +153,14 @@ export const OfficerDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            to="/officer/profile"
+            className="btn-secondary text-xs flex items-center gap-2 py-2 px-3 shadow-md hover:border-emerald-500/50 hover:text-emerald-300 transition-all"
+            title="View Election Officer Profile"
+          >
+            <UserCheck size={15} className="text-emerald-400" />
+            <span>Officer Profile</span>
+          </Link>
           <a
             href={`/voting-machine${stationId ? `?stationId=${stationId}` : ''}`}
             target="_blank"
@@ -512,6 +557,250 @@ export const OfficerDashboard: React.FC = () => {
                   <p className="text-slate-300">{(station as { address: string }).address}</p>
                 </div>
               </div>
+            </div>
+
+            {/* Officer Profile & Credentials Summary */}
+            <div className="card p-6 bg-gradient-to-br from-slate-800/90 via-slate-800/60 to-emerald-950/20 border border-slate-700/70 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/50">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-900/30">
+                    <UserCheck size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-white text-base">
+                        {user?.profile?.fullName ?? user?.name ?? 'Election Officer'}
+                      </h3>
+                      <span className="badge badge-emerald text-[11px]">
+                        ECI Commissioned
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                      <span>Badge: <span className="font-mono text-emerald-300 font-semibold">{user?.profile?.employeeId ?? 'DL-EO-001'}</span></span>
+                      <span>•</span>
+                      <span>{user?.email}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  to="/officer/profile"
+                  className="btn-secondary text-xs flex items-center gap-2 py-2 px-3 self-start sm:self-auto hover:border-emerald-500/50 hover:text-emerald-300 transition-all"
+                >
+                  <UserCheck size={14} className="text-emerald-400" />
+                  <span>View Full Officer Profile</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 text-xs">
+                <div>
+                  <p className="text-slate-500 mb-1">Official Role</p>
+                  <p className="text-white font-medium flex items-center gap-1.5">
+                    <BadgeCheck size={13} className="text-emerald-400" />
+                    Presiding Officer
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-1">Official Contact</p>
+                  <p className="text-slate-300 font-mono">
+                    {user?.profile?.phone || '+91 98765 00001'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-1">Station Code</p>
+                  <p className="font-mono text-emerald-400 font-semibold">
+                    {(station as { code: string }).code}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-1">Live EVM Status</p>
+                  <p className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    {machineStatus || 'READY'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Registered Booth Voters Section (Strictly Scoped to this Booth) ── */}
+            <div className="card p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/50">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Users size={18} className="text-emerald-400" />
+                    <h3 className="text-base font-bold text-white">Registered Booth Voters</h3>
+                    <span className="badge badge-emerald text-xs">
+                      {boothVoters.length} Registered at Booth
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Strict Booth Roster: Showing only voters enrolled at Polling Station{' '}
+                    <span className="font-mono text-emerald-400 font-semibold">{(station as { code: string }).code}</span> ({station ? (station as { name: string }).name : ''})
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => refetchBoothVoters()}
+                    disabled={loadingBoothVoters}
+                    className="p-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-slate-600/50"
+                    title="Refresh booth voter roster"
+                  >
+                    <RefreshCw size={13} className={loadingBoothVoters ? 'animate-spin' : ''} />
+                    <span className="hidden sm:inline">Refresh</span>
+                  </button>
+
+                  <Link
+                    to="/officer/voters"
+                    className="btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 hover:border-emerald-500/50 hover:text-emerald-300 transition-all"
+                  >
+                    <span>Full Voter Roster</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Search & Status Filters */}
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={voterSearch}
+                    onChange={(e) => setVoterSearch(e.target.value)}
+                    placeholder="Search booth voters by name, EPIC ID, or phone..."
+                    className="input-field pl-9 py-2 text-xs w-full"
+                  />
+                  {voterSearch && (
+                    <button
+                      onClick={() => setVoterSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setVoterStatusFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                      voterStatusFilter === 'ALL'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    All ({boothVoters.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVoterStatusFilter('VOTED')}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                      voterStatusFilter === 'VOTED'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Voted ({boothVoters.filter((v: any) => v.hasVoted).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVoterStatusFilter('PENDING')}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                      voterStatusFilter === 'PENDING'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Pending ({boothVoters.filter((v: any) => !v.hasVoted).length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Voters Table */}
+              {loadingBoothVoters ? (
+                <div className="flex items-center justify-center py-12">
+                  <Spinner size={28} />
+                </div>
+              ) : filteredBoothVoters.length === 0 ? (
+                <div className="text-center py-10 border border-dashed border-slate-700/60 rounded-xl bg-slate-800/20">
+                  <Users size={28} className="mx-auto text-slate-500 mb-2 opacity-50" />
+                  <p className="text-sm font-semibold text-slate-300">No voters found</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    {voterSearch
+                      ? `No registered voters at this booth match "${voterSearch}".`
+                      : 'No voters are currently registered to this polling booth.'}
+                  </p>
+                  {voterSearch && (
+                    <button
+                      onClick={() => setVoterSearch('')}
+                      className="mt-3 text-xs text-emerald-400 hover:underline"
+                    >
+                      Clear search filter
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-700/50">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-slate-800/90 text-slate-400 text-[11px] font-semibold uppercase tracking-wider border-b border-slate-700/60">
+                      <tr>
+                        <th className="py-3 px-3.5">#</th>
+                        <th className="py-3 px-3.5">EPIC / Voter ID</th>
+                        <th className="py-3 px-3.5">Full Name</th>
+                        <th className="py-3 px-3.5">Gender / Age</th>
+                        <th className="py-3 px-3.5">Phone</th>
+                        <th className="py-3 px-3.5">Turnout Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/40 bg-slate-800/30">
+                      {filteredBoothVoters.map((v: any, idx: number) => {
+                        const age = v.dateOfBirth
+                          ? Math.floor(
+                              (new Date().getTime() - new Date(v.dateOfBirth).getTime()) /
+                                (365.25 * 24 * 60 * 60 * 1000),
+                            )
+                          : null;
+                        return (
+                          <tr key={v.id} className="hover:bg-slate-700/30 transition-colors">
+                            <td className="py-3 px-3.5 font-mono text-slate-500">
+                              {v.serialNumber ?? idx + 1}
+                            </td>
+                            <td className="py-3 px-3.5 font-mono font-medium text-emerald-400">
+                              {v.voterId}
+                            </td>
+                            <td className="py-3 px-3.5 font-medium text-white">
+                              {v.fullName}
+                            </td>
+                            <td className="py-3 px-3.5 text-slate-400">
+                              {v.gender || '–'} {age ? `• ${age} yrs` : ''}
+                            </td>
+                            <td className="py-3 px-3.5 font-mono text-slate-400">
+                              {v.phone || '–'}
+                            </td>
+                            <td className="py-3 px-3.5">
+                              {v.hasVoted ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                  <CheckCircle2 size={11} />
+                                  Voted
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                  <Clock size={11} />
+                                  Pending
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </>

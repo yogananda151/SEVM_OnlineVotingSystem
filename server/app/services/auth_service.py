@@ -73,12 +73,29 @@ class AuthService:
             }
         elif user.role == UserRole.OFFICER and user.officer:
             station_id = user.officer.pollingStationId
+            ps = user.officer.pollingStation
+            station_info = {
+                "id": ps.id,
+                "name": ps.name,
+                "code": ps.code,
+                "address": ps.address,
+                "totalBooths": ps.totalBooths,
+                "machineStatus": str(ps.machineStatus.value if hasattr(ps.machineStatus, "value") else ps.machineStatus),
+                "isPollingActive": ps.isPollingActive,
+                "constituency": {
+                    "id": ps.constituency.id,
+                    "name": ps.constituency.name,
+                    "code": ps.constituency.code,
+                } if ps.constituency else None,
+            } if ps else None
+
             profile_data = {
                 "id": user.officer.id,
                 "fullName": user.officer.fullName,
                 "employeeId": user.officer.employeeId,
                 "phone": user.officer.phone,
                 "pollingStationId": station_id,
+                "pollingStation": station_info,
             }
 
         payload = {
@@ -138,17 +155,36 @@ class AuthService:
         profile_data = None
         if user.role == UserRole.COMMISSIONER and user.commissioner:
             profile_data = {
+                "id": user.commissioner.id,
                 "fullName": user.commissioner.fullName,
                 "employeeId": user.commissioner.employeeId,
                 "phone": user.commissioner.phone,
                 "designation": user.commissioner.designation,
             }
         elif user.role == UserRole.OFFICER and user.officer:
+            ps = user.officer.pollingStation
+            station_info = {
+                "id": ps.id,
+                "name": ps.name,
+                "code": ps.code,
+                "address": ps.address,
+                "totalBooths": ps.totalBooths,
+                "machineStatus": str(ps.machineStatus.value if hasattr(ps.machineStatus, "value") else ps.machineStatus),
+                "isPollingActive": ps.isPollingActive,
+                "constituency": {
+                    "id": ps.constituency.id,
+                    "name": ps.constituency.name,
+                    "code": ps.constituency.code,
+                } if ps.constituency else None,
+            } if ps else None
+
             profile_data = {
+                "id": user.officer.id,
                 "fullName": user.officer.fullName,
                 "employeeId": user.officer.employeeId,
                 "phone": user.officer.phone,
                 "pollingStationId": user.officer.pollingStationId,
+                "pollingStation": station_info,
             }
 
         return {
@@ -156,6 +192,7 @@ class AuthService:
             "email": user.email,
             "role": str(user.role.value if hasattr(user.role, "value") else user.role),
             "isActive": user.isActive,
+            "createdAt": user.createdAt.isoformat() if user.createdAt else None,
             "lastLoginAt": user.lastLoginAt.isoformat() if user.lastLoginAt else None,
             "commissioner": profile_data if user.role == UserRole.COMMISSIONER else None,
             "officer": profile_data if user.role == UserRole.OFFICER else None,

@@ -20,7 +20,13 @@ from app.utils.response import success_response, paginated_response
 
 router = APIRouter(prefix="/api/voters", tags=["Voters"])
 
-def format_voter(v: Voter):
+def format_voter(v: Voter, election_id: Optional[int] = None):
+    has_voted = False
+    if v.electionStatuses:
+        if election_id:
+            has_voted = any(es.hasVoted for es in v.electionStatuses if es.electionId == election_id)
+        else:
+            has_voted = any(es.hasVoted for es in v.electionStatuses)
     return {
         "id": v.id,
         "constituencyId": v.constituencyId,
@@ -34,6 +40,7 @@ def format_voter(v: Voter):
         "photoUrl": v.photoUrl,
         "serialNumber": v.serialNumber,
         "isActive": v.isActive,
+        "hasVoted": has_voted,
         "createdAt": v.createdAt.isoformat() if v.createdAt else None,
         "constituency": {"id": v.constituency.id, "name": v.constituency.name} if v.constituency else None,
         "pollingStation": {"id": v.pollingStation.id, "name": v.pollingStation.name, "code": v.pollingStation.code} if v.pollingStation else None,
@@ -47,14 +54,33 @@ def get_voters(
     search: Optional[str] = None,
     constituencyId: Optional[int] = None,
     pollingStationId: Optional[int] = None,
+    hasVoted: Optional[str] = None,
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     q = db.query(Voter).filter(Voter.deletedAt.is_(None))
-    if constituencyId:
-        q = q.filter(Voter.constituencyId == constituencyId)
-    if pollingStationId:
-        q = q.filter(Voter.pollingStationId == pollingStationId)
+
+    # Strict role-based scoping: An Election Officer can ONLY see voters registered to their assigned polling booth!
+    if current_user.role == UserRole.OFFICER:
+        station_id = current_user.stationId
+        if not station_id and current_user.userModel and current_user.userModel.officer:
+            station_id = current_user.userModel.officer.pollingStationId
+        if not station_id:
+            return paginated_response(data=[], total=0, page=page, limit=limit)
+        q = q.filter(Voter.pollingStationId == station_id)
+    else:
+        if constituencyId:
+            q = q.filter(Voter.constituencyId == constituencyId)
+        if pollingStationId:
+            q = q.filter(Voter.pollingStationId == pollingStationId)
+
+    if hasVoted is not None and hasVoted.strip():
+        hv_bool = hasVoted.strip().lower() == "true"
+        if hv_bool:
+            q = q.filter(Voter.electionStatuses.any(ElectionVoterStatus.hasVoted == True))
+        else:
+            q = q.filter(~Voter.electionStatuses.any(ElectionVoterStatus.hasVoted == True))
+
     if search and search.strip():
         term = f"%{search.strip()}%"
         q = q.filter(or_(Voter.fullName.ilike(term), Voter.voterId.ilike(term), Voter.phone.ilike(term)))
@@ -158,7 +184,13 @@ def bulk_create_voters(payload: BulkVotersRequest, request: Request, current_use
 
 @router.get("/{voter_id}")
 def get_voter_by_id(voter_id: int, current_user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
-    v = db.query(Voter).filter(Voter.id == voter_id, Voter.deletedAt.is_(None)).first()
+    q = db.query(Voter).filter(Voter.id == voter_id, Voter.deletedAt.is_(None))
+    if current_user.role == UserRole.OFFICER:
+        station_id = current_user.stationId or (current_user.userModel.officer.pollingStationId if current_user.userModel and current_user.userModel.officer else None)
+        if not station_id:
+            raise HTTPException(status_code=403, detail="Officer has no assigned polling station.")
+        q = q.filter(Voter.pollingStationId == station_id)
+    v = q.first()
     if not v:
         raise HTTPException(status_code=404, detail="Voter not found")
     return success_response(data=format_voter(v))
