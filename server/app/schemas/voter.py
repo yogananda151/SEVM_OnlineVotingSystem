@@ -1,4 +1,4 @@
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 
@@ -8,7 +8,7 @@ class CreateVoterRequest(BaseModel):
     fullName: str = Field(..., min_length=2, max_length=150)
     voterId: str = Field(..., min_length=5, max_length=50)
     aadhaarNumber: Optional[str] = None
-    dateOfBirth: str | datetime
+    dateOfBirth: Union[str, datetime]
     gender: str = Field(..., pattern="^(Male|Female|Other)$")
     address: str = Field(..., min_length=5)
     phone: Optional[str] = None
@@ -19,7 +19,7 @@ class UpdateVoterRequest(BaseModel):
     pollingStationId: Optional[int] = None
     fullName: Optional[str] = Field(None, min_length=2, max_length=150)
     voterId: Optional[str] = Field(None, min_length=5, max_length=50)
-    dateOfBirth: Optional[str | datetime] = None
+    dateOfBirth: Optional[Union[str, datetime]] = None
     gender: Optional[str] = Field(None, pattern="^(Male|Female|Other)$")
     address: Optional[str] = Field(None, min_length=5)
     phone: Optional[str] = None

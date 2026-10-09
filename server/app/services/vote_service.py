@@ -134,17 +134,20 @@ class VoteService:
                     votedAt=datetime.utcnow(),
                 ))
 
-            # 10. Audit log
-            audit_service.log(
-                db,
-                action=AuditAction.VOTE_CAST,
-                module="Voting",
-                description=f'Vote cast at station {polling_station_id} for election "{election.name}" - Ref: {reference_number}',
-                election_id=election.id,
-                metadata={"referenceNumber": reference_number, "voteHash": vote_hash},
-            )
+            db.commit()  # commit vote, vvpat, and voter status atomically
 
-            db.commit()
+            # 10. Audit log — done AFTER the main commit so it has its own clean transaction
+            try:
+                audit_service.log(
+                    db,
+                    action=AuditAction.VOTE_CAST,
+                    module="Voting",
+                    description=f'Vote cast at station {polling_station_id} for election "{election.name}" - Ref: {reference_number}',
+                    election_id=election.id,
+                    metadata={"referenceNumber": reference_number, "voteHash": vote_hash},
+                )
+            except Exception:
+                pass  # Audit failure must never roll back a successfully cast vote
 
             return {
                 "vote": {

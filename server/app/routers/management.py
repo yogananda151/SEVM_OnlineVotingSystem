@@ -771,7 +771,7 @@ async def upload_candidate_excel(
         db.add(c)
     db.commit()
 
-    audit_service.log(db, action=AuditAction.CREATE, module="Candidate", description=f"Bulk imported {len(result['validCandidates'])} candidates for election {electionId}", user_id=current_user.userId, ip_address=request.client.host if request and request and request.client else None)
+    audit_service.log(db, action=AuditAction.CREATE, module="Candidate", description=f"Bulk imported {len(result['validCandidates'])} candidates for election {electionId}", user_id=current_user.userId, ip_address=request.client.host if request and request.client else None)
     return success_response(data=result, message="Excel file processed successfully")
 
 @router.post("/candidates/bulk")
