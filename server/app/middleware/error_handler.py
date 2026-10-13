@@ -47,6 +47,17 @@ async def integrity_exception_handler(request: Request, exc: Exception):
             status_code=status.HTTP_409_CONFLICT,
             content={"success": False, "message": clean_msg},
         )
+    # Check for foreign key constraint violation messages (e.g. MySQL 1452)
+    if "1452" in msg or "foreign key constraint fails" in msg.lower():
+        clean_msg = "Database foreign key constraint violation: A referenced record does not exist. Please ensure Electoral Hierarchy is imported first."
+        if "voters_constituencyId_fkey" in msg:
+            clean_msg = "The specified Constituency ID does not exist in the database. Please ensure Electoral Hierarchy is imported first."
+        elif "voters_pollingStationId_fkey" in msg:
+            clean_msg = "The specified Polling Station ID does not exist in the database. Please ensure Electoral Hierarchy is imported first."
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"success": False, "message": clean_msg},
+        )
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"success": False, "message": "Database constraint violation occurred."},

@@ -294,6 +294,24 @@ class VoteService:
                 if active_voters > 0:
                     turnout_percent = f"{(active_votes / active_voters) * 100:.2f}"
 
+        active_stations = db.query(func.count(PollingStation.id)).filter(
+            PollingStation.deletedAt.is_(None),
+            (PollingStation.machineStatus == MachineStatus.ACTIVE) | (PollingStation.isPollingActive == True)
+        ).scalar() or 0
+        completed_stations = db.query(func.count(PollingStation.id)).filter(
+            PollingStation.deletedAt.is_(None),
+            PollingStation.machineStatus == MachineStatus.CLOSED
+        ).scalar() or 0
+        paused_stations = db.query(func.count(PollingStation.id)).filter(
+            PollingStation.deletedAt.is_(None),
+            PollingStation.machineStatus.in_([MachineStatus.PAUSED, MachineStatus.LOCKED])
+        ).scalar() or 0
+        idle_stations = db.query(func.count(PollingStation.id)).filter(
+            PollingStation.deletedAt.is_(None),
+            PollingStation.machineStatus == MachineStatus.IDLE,
+            PollingStation.isPollingActive == False
+        ).scalar() or 0
+
         return {
             "totalElections": total_elections,
             "activeElection": {
@@ -303,6 +321,17 @@ class VoteService:
                 "scheduledDate": active_election.scheduledDate.isoformat(),
             } if active_election else None,
             "totalStations": total_stations,
+            "activeStations": active_stations,
+            "completedStations": completed_stations,
+            "pausedStations": paused_stations,
+            "idleStations": idle_stations,
+            "stationStats": {
+                "total": total_stations,
+                "active": active_stations,
+                "completed": completed_stations,
+                "paused": paused_stations,
+                "idle": idle_stations,
+            },
             "totalVoters": total_voters,
             "totalCandidates": total_candidates,
             "totalParties": total_parties,

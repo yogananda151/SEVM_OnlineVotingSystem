@@ -1,5 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Building2, ArrowRight, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import {
+  Plus, Pencil, Trash2, Building2, ArrowRight, AlertCircle, FileSpreadsheet,
+  Activity, CheckCircle2, Clock, Pause, Play, Square, Search, Radio,
+  RotateCcw, Eye, ShieldCheck
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
 import { pollingStationService, constituencyService, regionService } from '../../services/api.service';
@@ -11,7 +15,8 @@ import { normaliseValidationErrors } from '../../lib/validationErrors';
 
 interface Station {
   id: number; name: string; code: string; address: string;
-  totalBooths: number; machineStatus?: string; isPollingActive?: boolean;
+  totalBooths: number; capacity?: number; machineStatus?: string; isPollingActive?: boolean;
+  turnoutPercent?: number; votesCast?: number; totalVoters?: number;
   constituency: { name: string; code?: string; region?: { name: string } | null };
   officers: { id: number; fullName: string; phone?: string; user?: { email: string } | null }[];
   _count: { voters: number; votes: number };
@@ -28,6 +33,17 @@ export const PollingStationsPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<Station | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState('');
   const [filteredConstituencies, setFilteredConstituencies] = useState<Constituency[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED' | 'PAUSED' | 'IDLE'>('ALL');
+  const [stationSearch, setStationSearch] = useState('');
+  const [statusControlStation, setStatusControlStation] = useState<Station | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [confirmStatusAction, setConfirmStatusAction] = useState<{
+    status: string;
+    isPollingActive?: boolean;
+    title: string;
+    message: string;
+    variant?: 'danger' | 'warning' | 'info';
+  } | null>(null);
   const navigate = useNavigate();
 
   const fetchData = useCallback(() => pollingStationService.getAll(), []);
@@ -118,6 +134,67 @@ export const PollingStationsPage: React.FC = () => {
     }
   };
 
+  const getStationStatusCategory = (s: Station): 'ACTIVE' | 'COMPLETED' | 'PAUSED' | 'IDLE' => {
+    const rawStatus = (s.machineStatus || 'IDLE').toUpperCase();
+    if (s.isPollingActive || rawStatus === 'ACTIVE') return 'ACTIVE';
+    if (rawStatus === 'CLOSED') return 'COMPLETED';
+    if (rawStatus === 'PAUSED' || rawStatus === 'LOCKED') return 'PAUSED';
+    return 'IDLE';
+  };
+
+  const handleUpdateStationStatus = async (status: string, isPollingActive?: boolean) => {
+    if (!statusControlStation) return;
+    setStatusUpdating(true);
+    try {
+      await pollingStationService.updateMachineStatus(statusControlStation.id, status, isPollingActive);
+      toast.success(`Station ${statusControlStation.code} status updated to ${status}`);
+      refetch();
+      setStatusControlStation(null);
+      setConfirmStatusAction(null);
+    } catch {
+      toast.error('Failed to update station machine status');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const stationMetrics = useMemo(() => {
+    let active = 0;
+    let completed = 0;
+    let paused = 0;
+    let idle = 0;
+    (stations || []).forEach((s) => {
+      const cat = getStationStatusCategory(s);
+      if (cat === 'ACTIVE') active++;
+      else if (cat === 'COMPLETED') completed++;
+      else if (cat === 'PAUSED') paused++;
+      else idle++;
+    });
+    return {
+      total: (stations || []).length,
+      active,
+      completed,
+      paused,
+      idle,
+    };
+  }, [stations]);
+
+  const filteredStationList = useMemo(() => {
+    return (stations || []).filter((s) => {
+      const cat = getStationStatusCategory(s);
+      if (statusFilter !== 'ALL' && cat !== statusFilter) return false;
+      if (stationSearch.trim()) {
+        const term = stationSearch.toLowerCase();
+        const matchesName = s.name.toLowerCase().includes(term);
+        const matchesCode = s.code.toLowerCase().includes(term);
+        const matchesConstituency = s.constituency?.name?.toLowerCase().includes(term);
+        const matchesOfficer = s.officers?.some((o) => o.fullName.toLowerCase().includes(term));
+        if (!matchesName && !matchesCode && !matchesConstituency && !matchesOfficer) return false;
+      }
+      return true;
+    });
+  }, [stations, statusFilter, stationSearch]);
+
   const hasNoConstituencies = allConstituencies && allConstituencies.length === 0;
 
   return (
@@ -161,53 +238,379 @@ export const PollingStationsPage: React.FC = () => {
 
       {!hasNoConstituencies && (
         <>
-          {loading ? <TableSkeleton rows={5} cols={8} /> : (
+          {/* Station Status Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div
+              onClick={() => setStatusFilter(statusFilter === 'ACTIVE' ? 'ALL' : 'ACTIVE')}
+              className={`card p-3.5 border cursor-pointer transition-all ${
+                statusFilter === 'ACTIVE'
+                  ? 'border-emerald-500 bg-emerald-500/10'
+                  : 'border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500/40'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-emerald-400 mb-1">
+                <span>Active Voting</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              </div>
+              <p className="text-2xl font-bold text-white">{stationMetrics.active}</p>
+              <p className="text-[10px] text-slate-400 mt-1">Casting ballots now</p>
+            </div>
+
+            <div
+              onClick={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+              className={`card p-3.5 border cursor-pointer transition-all ${
+                statusFilter === 'COMPLETED'
+                  ? 'border-cyan-500 bg-cyan-500/10'
+                  : 'border-cyan-500/20 bg-cyan-950/10 hover:border-cyan-500/40'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-cyan-400 mb-1">
+                <span>Completed</span>
+                <CheckCircle2 size={13} />
+              </div>
+              <p className="text-2xl font-bold text-white">{stationMetrics.completed}</p>
+              <p className="text-[10px] text-slate-400 mt-1">Voting concluded</p>
+            </div>
+
+            <div
+              onClick={() => setStatusFilter(statusFilter === 'PAUSED' ? 'ALL' : 'PAUSED')}
+              className={`card p-3.5 border cursor-pointer transition-all ${
+                statusFilter === 'PAUSED'
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'border-amber-500/20 bg-amber-950/10 hover:border-amber-500/40'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-amber-400 mb-1">
+                <span>Paused / Locked</span>
+                <Pause size={13} />
+              </div>
+              <p className="text-2xl font-bold text-white">{stationMetrics.paused}</p>
+              <p className="text-[10px] text-slate-400 mt-1">Temporarily stopped</p>
+            </div>
+
+            <div
+              onClick={() => setStatusFilter(statusFilter === 'IDLE' ? 'ALL' : 'IDLE')}
+              className={`card p-3.5 border cursor-pointer transition-all ${
+                statusFilter === 'IDLE'
+                  ? 'border-slate-500 bg-slate-500/10'
+                  : 'border-slate-700 bg-slate-800/40 hover:border-slate-600'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 mb-1">
+                <span>Standby / Ready</span>
+                <Clock size={13} />
+              </div>
+              <p className="text-2xl font-bold text-white">{stationMetrics.idle}</p>
+              <p className="text-[10px] text-slate-400 mt-1">Awaiting start</p>
+            </div>
+          </div>
+
+          {/* Filter Bar & Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('ALL')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                  statusFilter === 'ALL'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                }`}
+              >
+                All ({stationMetrics.total})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('ACTIVE')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  statusFilter === 'ACTIVE'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-emerald-300 border border-slate-700/60'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Active ({stationMetrics.active})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('COMPLETED')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  statusFilter === 'COMPLETED'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-700/60'
+                }`}
+              >
+                <CheckCircle2 size={11} />
+                Completed ({stationMetrics.completed})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('PAUSED')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  statusFilter === 'PAUSED'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-amber-300 border border-slate-700/60'
+                }`}
+              >
+                <Pause size={11} />
+                Paused ({stationMetrics.paused})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('IDLE')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  statusFilter === 'IDLE'
+                    ? 'bg-slate-700 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                }`}
+              >
+                <Clock size={11} />
+                Standby ({stationMetrics.idle})
+              </button>
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search station or code…"
+                value={stationSearch}
+                onChange={(e) => setStationSearch(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary-500"
+              />
+            </div>
+          </div>
+
+          {loading ? <TableSkeleton rows={5} cols={9} /> : (
             <div className="card overflow-hidden">
               <div className="table-wrapper">
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>#</th><th>Name</th><th>Code</th><th>Region / Constituency</th>
-                      <th>Officer</th><th>Voters</th><th>Votes Cast</th><th>Actions</th>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Code</th>
+                      <th>Region / Constituency</th>
+                      <th>Election Status</th>
+                      <th>Officer</th>
+                      <th>Turnout %</th>
+                      <th>Votes / Voters</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {stations?.map((s, i) => (
-                      <tr key={s.id}>
-                        <td className="text-slate-500">{i + 1}</td>
-                        <td className="font-medium text-white">{s.name}</td>
-                        <td><span className="badge badge-blue font-mono text-xs">{s.code}</span></td>
-                        <td>
-                          <div className="text-xs">
-                            <p className="text-slate-400">{s.constituency.region?.name}</p>
-                            <p className="text-white">{s.constituency.name}</p>
-                          </div>
-                        </td>
-                        <td>
-                          {s.officers.length > 0
-                            ? <span className="badge badge-green text-xs">{s.officers[0].user?.email ?? s.officers[0].fullName}</span>
-                            : <span className="badge badge-red text-xs">⚠ No Officer</span>}
-                        </td>
-                        <td>{s._count.voters}</td>
-                        <td>{s._count.votes}</td>
-                        <td>
-                          <div className="flex items-center gap-1.5">
-                            <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400" title="Edit"><Pencil size={13} /></button>
-                            <button onClick={() => setDeleteTarget(s)} className="p-1.5 text-slate-400 hover:text-red-400" title="Delete"><Trash2 size={13} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredStationList.map((s, i) => {
+                      const cat = getStationStatusCategory(s);
+                      const voters = s.totalVoters ?? s._count.voters;
+                      const votes = s.votesCast ?? s._count.votes;
+                      const turnoutPct =
+                        s.turnoutPercent !== undefined
+                          ? s.turnoutPercent
+                          : voters > 0
+                          ? Number(((votes / voters) * 100).toFixed(1))
+                          : 0;
+
+                      return (
+                        <tr key={s.id}>
+                          <td className="text-slate-500">{i + 1}</td>
+                          <td className="font-medium text-white">{s.name}</td>
+                          <td><span className="badge badge-blue font-mono text-xs">{s.code}</span></td>
+                          <td>
+                            <div className="text-xs">
+                              <p className="text-slate-400">{s.constituency.region?.name}</p>
+                              <p className="text-white">{s.constituency.name}</p>
+                            </div>
+                          </td>
+                          <td>
+                            {cat === 'ACTIVE' && (
+                              <span className="badge badge-green text-xs flex items-center gap-1 w-max">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Active Voting
+                              </span>
+                            )}
+                            {cat === 'COMPLETED' && (
+                              <span className="badge badge-blue text-xs flex items-center gap-1 w-max">
+                                <CheckCircle2 size={12} />
+                                Completed
+                              </span>
+                            )}
+                            {cat === 'PAUSED' && (
+                              <span className="badge badge-yellow text-xs flex items-center gap-1 w-max">
+                                <Pause size={12} />
+                                {s.machineStatus === 'LOCKED' ? 'Locked' : 'Paused'}
+                              </span>
+                            )}
+                            {cat === 'IDLE' && (
+                              <span className="badge badge-gray text-xs flex items-center gap-1 w-max">
+                                <Clock size={12} />
+                                Standby
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {s.officers.length > 0
+                              ? <span className="badge badge-green text-xs">{s.officers[0].user?.email ?? s.officers[0].fullName}</span>
+                              : <span className="badge badge-red text-xs">⚠ No Officer</span>}
+                          </td>
+                          <td>
+                            <div className="w-24 space-y-1">
+                              <span className="text-xs font-semibold text-white">{turnoutPct}%</span>
+                              <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    cat === 'ACTIVE'
+                                      ? 'bg-emerald-400'
+                                      : cat === 'COMPLETED'
+                                      ? 'bg-cyan-400'
+                                      : 'bg-slate-500'
+                                  }`}
+                                  style={{ width: `${Math.min(turnoutPct, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="text-xs font-mono text-slate-300">{votes} / {voters}</span>
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => setStatusControlStation(s)}
+                                className="p-1.5 text-slate-400 hover:text-emerald-400"
+                                title="Control EVM Status"
+                              >
+                                <Radio size={14} />
+                              </button>
+                              <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400" title="Edit"><Pencil size={13} /></button>
+                              <button onClick={() => setDeleteTarget(s)} className="p-1.5 text-slate-400 hover:text-red-400" title="Delete"><Trash2 size={13} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-              {(!stations || stations.length === 0) && (
-                <EmptyState icon={<Building2 size={28} />} title="No polling stations" description="Add polling stations to your constituencies" />
+              {filteredStationList.length === 0 && (
+                <EmptyState icon={<Building2 size={28} />} title="No matching polling stations" description="Try resetting filters or adding new polling stations" />
               )}
             </div>
           )}
         </>
       )}
+
+      {/* EVM Status Control Modal */}
+      <Modal
+        open={!!statusControlStation}
+        onClose={() => setStatusControlStation(null)}
+        title={`EVM Control: ${statusControlStation?.name ?? ''}`}
+        size="md"
+      >
+        {statusControlStation && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">Booth Code</p>
+                <p className="font-mono text-xs font-bold text-primary-400">{statusControlStation.code}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">Current State</p>
+                <p className="text-xs font-bold text-white uppercase">{statusControlStation.machineStatus ?? 'IDLE'}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              As Chief Commissioner, you can control the polling state of this machine directly:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                disabled={statusUpdating || getStationStatusCategory(statusControlStation) === 'ACTIVE'}
+                onClick={() =>
+                  setConfirmStatusAction({
+                    status: 'ACTIVE',
+                    isPollingActive: true,
+                    title: 'Start / Resume Voting?',
+                    message: `Activate polling station "${statusControlStation.name}" for live voting?`,
+                    variant: 'info',
+                  })
+                }
+                className="btn-success text-xs py-2 justify-center"
+              >
+                <Play size={14} /> Start / Resume
+              </button>
+
+              <button
+                type="button"
+                disabled={statusUpdating || getStationStatusCategory(statusControlStation) !== 'ACTIVE'}
+                onClick={() =>
+                  setConfirmStatusAction({
+                    status: 'PAUSED',
+                    isPollingActive: false,
+                    title: 'Pause Voting?',
+                    message: `Pause polling at "${statusControlStation.name}"?`,
+                    variant: 'warning',
+                  })
+                }
+                className="btn-secondary text-xs py-2 justify-center text-amber-300 hover:text-amber-200"
+              >
+                <Pause size={14} /> Pause Voting
+              </button>
+
+              <button
+                type="button"
+                disabled={statusUpdating || getStationStatusCategory(statusControlStation) === 'COMPLETED'}
+                onClick={() =>
+                  setConfirmStatusAction({
+                    status: 'CLOSED',
+                    isPollingActive: false,
+                    title: 'Conclude / Close Station?',
+                    message: `Close station "${statusControlStation.name}" and seal EVM machine?`,
+                    variant: 'danger',
+                  })
+                }
+                className="btn-secondary text-xs py-2 justify-center text-cyan-300 hover:text-cyan-200"
+              >
+                <Square size={14} /> Conclude Station
+              </button>
+
+              <button
+                type="button"
+                disabled={statusUpdating || getStationStatusCategory(statusControlStation) === 'IDLE'}
+                onClick={() =>
+                  setConfirmStatusAction({
+                    status: 'IDLE',
+                    isPollingActive: false,
+                    title: 'Reset to Standby?',
+                    message: `Reset "${statusControlStation.name}" to standby mode?`,
+                    variant: 'info',
+                  })
+                }
+                className="btn-secondary text-xs py-2 justify-center text-slate-300"
+              >
+                <RotateCcw size={14} /> Reset Standby
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Confirmation Dialog for EVM Status Change */}
+      <ConfirmDialog
+        open={!!confirmStatusAction}
+        onClose={() => setConfirmStatusAction(null)}
+        onConfirm={() => {
+          if (confirmStatusAction) {
+            handleUpdateStationStatus(confirmStatusAction.status, confirmStatusAction.isPollingActive);
+          }
+        }}
+        title={confirmStatusAction?.title ?? 'Confirm Action'}
+        message={confirmStatusAction?.message ?? ''}
+        confirmText="Confirm"
+        variant={confirmStatusAction?.variant ?? 'warning'}
+        loading={statusUpdating}
+      />
 
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); reset(); setEditTarget(null); setSelectedRegionId(''); }} title={editTarget ? 'Edit Station' : 'Add Polling Station'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

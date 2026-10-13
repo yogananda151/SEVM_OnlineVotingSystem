@@ -7,8 +7,9 @@ import {
 } from 'lucide-react';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useAsync } from '../../hooks/useAsync';
-import { electionService } from '../../services/api.service';
+import { electionService, pollingStationService } from '../../services/api.service';
 import { StatCard, Skeleton, StatusBadge } from '../../components/ui';
+import { PollingStationMonitor, type StationData } from '../../components/admin/PollingStationMonitor';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
@@ -19,10 +20,27 @@ const COLORS = ['#1a73e8', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899'
 export const AdminDashboard: React.FC = () => {
   // Auto-refresh stats every 30 seconds (#2)
   const fetchStats = useCallback(() => electionService.getDashboardStats(), []);
-  const { data: stats, loading, secondsSince, refresh } = useAutoRefresh(fetchStats, 30_000);
+  const { data: stats, loading: loadingStats, secondsSince: statsSecondsSince, refresh: refreshStats } = useAutoRefresh(fetchStats, 30_000);
+
+  // Auto-refresh polling stations every 30 seconds for live election monitoring
+  const fetchStations = useCallback(() => pollingStationService.getAll(), []);
+  const {
+    data: stations,
+    loading: loadingStations,
+    secondsSince: stationsSecondsSince,
+    refresh: refreshStations,
+  } = useAutoRefresh<StationData[]>(fetchStations, 30_000);
 
   const fetchElections = useCallback(() => electionService.getAll(), []);
   const { data: elections } = useAsync(fetchElections);
+
+  const handleRefreshAll = () => {
+    refreshStats();
+    refreshStations();
+  };
+
+  const loading = loadingStats || loadingStations;
+  const secondsSince = Math.min(statsSecondsSince ?? 0, stationsSecondsSince ?? 0);
 
   if (loading && !stats) {
     return (
@@ -67,7 +85,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex items-center gap-3">
           {/* Live refresh indicator (#2) */}
           <button
-            onClick={refresh}
+            onClick={handleRefreshAll}
             title="Refresh now"
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/60 hover:bg-slate-700/60 transition-colors text-xs text-slate-400 hover:text-slate-200"
           >
@@ -114,6 +132,20 @@ export const AdminDashboard: React.FC = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Live Polling Station Election Surveillance */}
+      <motion.section
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <PollingStationMonitor
+          stations={stations || []}
+          loading={loadingStations}
+          onRefresh={handleRefreshAll}
+          secondsSince={stationsSecondsSince}
+        />
+      </motion.section>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

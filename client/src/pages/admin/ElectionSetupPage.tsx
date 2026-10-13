@@ -16,6 +16,7 @@ import {
   MapPin, Users, Award, CheckCircle, ChevronRight, ChevronLeft,
   AlertCircle, Loader2, Globe, RefreshCw, Plus, Trash2, UserCog, Search,
   ShieldCheck, BarChart3, Lock, Upload, FileSpreadsheet, X,
+  Play, Pause, Square,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';

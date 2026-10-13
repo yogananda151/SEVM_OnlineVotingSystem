@@ -148,6 +148,9 @@ def bulk_create_voters(payload: BulkVotersRequest, request: Request, current_use
 
     imported = 0
     skipped = 0
+    valid_cids = {c[0] for c in db.query(Constituency.id).filter(Constituency.deletedAt.is_(None)).all()}
+    valid_sids = {s[0] for s in db.query(PollingStation.id).filter(PollingStation.deletedAt.is_(None)).all()}
+
     for v_data in payload.voters:
         voter_id = str(v_data.get("voterId") or "").strip().upper()
         if not voter_id:
@@ -157,6 +160,13 @@ def bulk_create_voters(payload: BulkVotersRequest, request: Request, current_use
             skipped += 1
             continue
 
+        cid = int(v_data.get("constituencyId") or 1)
+        sid = int(v_data.get("pollingStationId") or 1)
+        if cid not in valid_cids:
+            raise HTTPException(status_code=400, detail=f"Constituency ID {cid} does not exist in database. Please ensure Electoral Hierarchy is imported first.")
+        if sid not in valid_sids:
+            raise HTTPException(status_code=400, detail=f"Polling Station ID {sid} does not exist in database. Please ensure Electoral Hierarchy is imported first.")
+
         raw_dob = v_data.get("dateOfBirth")
         dob = datetime.fromisoformat(str(raw_dob).replace("Z", "+00:00")) if raw_dob else datetime(1990, 1, 1)
 
@@ -164,8 +174,8 @@ def bulk_create_voters(payload: BulkVotersRequest, request: Request, current_use
         ahash = hash_aadhaar(aadhaar) if len(aadhaar) == 12 else None
 
         v = Voter(
-            constituencyId=int(v_data.get("constituencyId") or 1),
-            pollingStationId=int(v_data.get("pollingStationId") or 1),
+            constituencyId=cid,
+            pollingStationId=sid,
             fullName=str(v_data.get("fullName") or "").strip(),
             voterId=voter_id,
             dateOfBirth=dob,

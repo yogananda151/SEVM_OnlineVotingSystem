@@ -132,6 +132,15 @@ class VoterExcelService:
         if "fullName" not in col_map or "voterId" not in col_map:
             raise HTTPException(status_code=400, detail='Could not find required columns. Please ensure columns include "Full Name" and "Voter ID".')
 
+        constituencies = db.query(Constituency).filter(Constituency.deletedAt.is_(None)).all()
+        con_by_id = {c.id: c for c in constituencies}
+        con_by_code = {c.code.strip().lower(): c for c in constituencies}
+        con_by_name = {c.name.strip().lower(): c for c in constituencies}
+
+        stations = db.query(PollingStation).filter(PollingStation.deletedAt.is_(None)).all()
+        ps_by_id = {s.id: s for s in stations}
+        ps_by_code = {s.code.strip().lower(): s for s in stations}
+
         errors = []
         duplicate_voter_ids = []
         seen_voter_ids = set()
@@ -157,17 +166,36 @@ class VoterExcelService:
             seen_voter_ids.add(voter_id)
 
             raw_cid = row[col_map.get("constituencyId")] if "constituencyId" in col_map else None
-            constituency_id = int(raw_cid) if raw_cid is not None and str(raw_cid).isdigit() else default_constituency_id
+            con = None
+            if raw_cid is not None and str(raw_cid).strip():
+                cid_str = str(raw_cid).strip()
+                if cid_str.isdigit():
+                    con = con_by_id.get(int(cid_str))
+                if not con:
+                    con = con_by_code.get(cid_str.lower()) or con_by_name.get(cid_str.lower())
+            if not con and default_constituency_id:
+                con = con_by_id.get(default_constituency_id)
+
+            if not con:
+                errors.append(f"Row {r_idx}: Constituency '{raw_cid}' does not exist in database. Please ensure Electoral Hierarchy is imported.")
+                continue
+            constituency_id = con.id
 
             raw_sid = row[col_map.get("pollingStationId")] if "pollingStationId" in col_map else None
-            station_id = int(raw_sid) if raw_sid is not None and str(raw_sid).isdigit() else default_polling_station_id
+            ps = None
+            if raw_sid is not None and str(raw_sid).strip():
+                sid_str = str(raw_sid).strip()
+                if sid_str.isdigit():
+                    ps = ps_by_id.get(int(sid_str))
+                if not ps:
+                    ps = ps_by_code.get(sid_str.lower())
+            if not ps and default_polling_station_id:
+                ps = ps_by_id.get(default_polling_station_id)
 
-            if not constituency_id:
-                errors.append(f"Row {r_idx}: Constituency ID is missing.")
+            if not ps:
+                errors.append(f"Row {r_idx}: Polling Station '{raw_sid}' does not exist in database. Please ensure Electoral Hierarchy is imported.")
                 continue
-            if not station_id:
-                errors.append(f"Row {r_idx}: Polling Station ID is missing.")
-                continue
+            station_id = ps.id
 
             # Parse DOB
             raw_dob = row[col_map.get("dateOfBirth")] if "dateOfBirth" in col_map else None

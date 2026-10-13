@@ -91,8 +91,8 @@ export const constituencyService = {
 };
 
 export const pollingStationService = {
-  getAll: async (constituencyId?: number) =>
-    (await api.get('/polling-stations', { params: { constituencyId } })).data.data,
+  getAll: async (constituencyId?: number, status?: string) =>
+    (await api.get('/polling-stations', { params: { constituencyId, status } })).data.data,
   getById: async (id: number) => (await api.get(`/polling-stations/${id}`)).data.data,
   getTurnout: async (id: number) => (await api.get(`/polling-stations/${id}/turnout`)).data.data,
   create: async (data: object) => (await api.post('/polling-stations', data)).data.data,

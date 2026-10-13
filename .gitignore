@@ -45,5 +45,8 @@ server_node_backup/node_modules/
 ~$*.xlsx
 ~$*.xls
 
+# Local DB Backups
+server/backups/
+
 
 

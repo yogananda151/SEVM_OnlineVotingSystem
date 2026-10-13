@@ -341,40 +341,72 @@ def delete_constituency(constituency_id: int, current_user: CurrentUser = Depend
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.get("/polling-stations")
-def get_all_polling_stations(constituencyId: Optional[int] = None, current_user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_all_polling_stations(
+    constituencyId: Optional[int] = None,
+    status: Optional[str] = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     q = db.query(PollingStation).filter(PollingStation.deletedAt.is_(None))
     if constituencyId:
         q = q.filter(PollingStation.constituencyId == constituencyId)
+    if status:
+        st_upper = status.upper()
+        if st_upper in ["ACTIVE", "ACTIVE_VOTING"]:
+            q = q.filter((PollingStation.machineStatus == MachineStatus.ACTIVE) | (PollingStation.isPollingActive == True))
+        elif st_upper in ["CLOSED", "COMPLETED"]:
+            q = q.filter(PollingStation.machineStatus == MachineStatus.CLOSED)
+        elif st_upper in ["PAUSED", "LOCKED"]:
+            q = q.filter(PollingStation.machineStatus.in_([MachineStatus.PAUSED, MachineStatus.LOCKED]))
+        elif st_upper in ["IDLE", "STANDBY"]:
+            q = q.filter(PollingStation.machineStatus == MachineStatus.IDLE)
+
     stations = q.order_by(PollingStation.name.asc()).all()
-    data = [{
-        "id": ps.id,
-        "constituencyId": ps.constituencyId,
-        "name": ps.name,
-        "code": ps.code,
-        "address": ps.address,
-        "capacity": ps.capacity,
-        "totalBooths": ps.totalBooths,
-        "machineStatus": str(ps.machineStatus.value if hasattr(ps.machineStatus, "value") else ps.machineStatus),
-        "isPollingActive": ps.isPollingActive,
-        "isActive": ps.isActive,
-        "constituency": {
-            "id": ps.constituency.id,
-            "name": ps.constituency.name,
-            "code": ps.constituency.code if ps.constituency else None,
-            "region": {"id": ps.constituency.region.id, "name": ps.constituency.region.name} if ps.constituency and ps.constituency.region else None,
-        } if ps.constituency else None,
-        "officers": [{
-            "id": o.id,
-            "fullName": o.fullName,
-            "employeeId": o.employeeId,
-            "phone": o.phone,
-            "user": {"email": o.user.email} if o.user else None,
-        } for o in ps.officers if not o.deletedAt],
-        "_count": {
-            "voters": len([v for v in ps.voters if not v.deletedAt]),
-            "votes": len(ps.votes),
-        },
-    } for ps in stations]
+    active_election = db.query(Election).filter(Election.status == ElectionStatus.ACTIVE, Election.deletedAt.is_(None)).first()
+
+    data = []
+    for ps in stations:
+        voters_count = len([v for v in ps.voters if not v.deletedAt])
+        if active_election:
+            election_votes = [v for v in ps.votes if v.electionId == active_election.id]
+            votes_count = len(election_votes) if len(election_votes) > 0 else len(ps.votes)
+        else:
+            votes_count = len(ps.votes)
+
+        turnout_pct = round((votes_count / voters_count * 100), 2) if voters_count > 0 else 0.0
+
+        data.append({
+            "id": ps.id,
+            "constituencyId": ps.constituencyId,
+            "name": ps.name,
+            "code": ps.code,
+            "address": ps.address,
+            "capacity": ps.capacity,
+            "totalBooths": ps.totalBooths,
+            "machineStatus": str(ps.machineStatus.value if hasattr(ps.machineStatus, "value") else ps.machineStatus),
+            "isPollingActive": ps.isPollingActive,
+            "isActive": ps.isActive,
+            "turnoutPercent": turnout_pct,
+            "votesCast": votes_count,
+            "totalVoters": voters_count,
+            "constituency": {
+                "id": ps.constituency.id,
+                "name": ps.constituency.name,
+                "code": ps.constituency.code if ps.constituency else None,
+                "region": {"id": ps.constituency.region.id, "name": ps.constituency.region.name} if ps.constituency and ps.constituency.region else None,
+            } if ps.constituency else None,
+            "officers": [{
+                "id": o.id,
+                "fullName": o.fullName,
+                "employeeId": o.employeeId,
+                "phone": o.phone,
+                "user": {"email": o.user.email} if o.user else None,
+            } for o in ps.officers if not o.deletedAt],
+            "_count": {
+                "voters": voters_count,
+                "votes": votes_count,
+            },
+        })
     return success_response(data=data)
 
 @router.get("/polling-stations/template/excel")
@@ -532,7 +564,7 @@ def update_machine_status(station_id: int, payload: UpdateMachineStatusRequest, 
         ps.isPollingActive = payload.isPollingActive
     elif payload.status == MachineStatus.ACTIVE:
         ps.isPollingActive = True
-    elif payload.status in [MachineStatus.CLOSED, MachineStatus.LOCKED, MachineStatus.PAUSED]:
+    elif payload.status in [MachineStatus.CLOSED, MachineStatus.LOCKED, MachineStatus.PAUSED, MachineStatus.IDLE]:
         ps.isPollingActive = False
 
     db.commit()
