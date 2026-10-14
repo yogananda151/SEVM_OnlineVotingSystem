@@ -47,6 +47,7 @@ interface PollingStationMonitorProps {
   loading?: boolean;
   onRefresh?: () => void;
   secondsSince?: number;
+  activeElection?: { id: number; name: string; status: string } | null;
 }
 
 type FilterStatus = 'ALL' | 'ACTIVE' | 'COMPLETED' | 'PAUSED' | 'IDLE';
@@ -56,7 +57,10 @@ export const PollingStationMonitor: React.FC<PollingStationMonitorProps> = ({
   loading = false,
   onRefresh,
   secondsSince,
+  activeElection,
 }) => {
+  const hasActiveElection = Boolean(activeElection && activeElection.status === 'ACTIVE');
+
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedConstituency, setSelectedConstituency] = useState<string>('ALL');
@@ -77,11 +81,12 @@ export const PollingStationMonitor: React.FC<PollingStationMonitorProps> = ({
   // Status computation helper
   const getStationStatusCategory = (s: StationData): 'ACTIVE' | 'COMPLETED' | 'PAUSED' | 'IDLE' => {
     const rawStatus = (s.machineStatus || 'IDLE').toUpperCase();
+    if (!hasActiveElection || rawStatus === 'CLOSED') return 'COMPLETED';
     if (s.isPollingActive || rawStatus === 'ACTIVE') return 'ACTIVE';
-    if (rawStatus === 'CLOSED') return 'COMPLETED';
     if (rawStatus === 'PAUSED' || rawStatus === 'LOCKED') return 'PAUSED';
     return 'IDLE';
   };
+
 
   // Metrics summary
   const metrics = useMemo(() => {
@@ -927,11 +932,36 @@ export const PollingStationMonitor: React.FC<PollingStationMonitorProps> = ({
                 Directly supervise and transition this polling station's machine state during the election.
               </p>
 
+              {/* Concluded / Locked Warning Banner */}
+              {!hasActiveElection ? (
+                <div className="p-3 mb-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs flex items-center gap-2.5 font-medium">
+                  <Lock size={16} className="shrink-0 text-cyan-400" />
+                  <span>Election has been stopped / concluded. All polling stations are permanently locked and complete. Voting cannot be started.</span>
+                </div>
+              ) : getStationStatusCategory(selectedStation) === 'COMPLETED' ? (
+                <div className="p-3 mb-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs flex items-center gap-2.5 font-medium">
+                  <Lock size={16} className="shrink-0 text-cyan-400" />
+                  <span>This polling station is closed and completed. Voting has concluded for this booth.</span>
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-2 gap-2">
                 {/* Start / Resume */}
                 <button
                   type="button"
-                  disabled={actionLoading || getStationStatusCategory(selectedStation) === 'ACTIVE'}
+                  disabled={
+                    actionLoading ||
+                    !hasActiveElection ||
+                    getStationStatusCategory(selectedStation) === 'COMPLETED' ||
+                    getStationStatusCategory(selectedStation) === 'ACTIVE'
+                  }
+                  title={
+                    !hasActiveElection
+                      ? "Cannot start: Election has concluded or is not active"
+                      : getStationStatusCategory(selectedStation) === 'COMPLETED'
+                      ? "Station is sealed and completed"
+                      : "Start or resume voting"
+                  }
                   onClick={() =>
                     setConfirmDialog({
                       status: 'ACTIVE',
@@ -950,7 +980,12 @@ export const PollingStationMonitor: React.FC<PollingStationMonitorProps> = ({
                 {/* Pause */}
                 <button
                   type="button"
-                  disabled={actionLoading || getStationStatusCategory(selectedStation) !== 'ACTIVE'}
+                  disabled={
+                    actionLoading ||
+                    !hasActiveElection ||
+                    getStationStatusCategory(selectedStation) !== 'ACTIVE'
+                  }
+                  title={!hasActiveElection ? "Election not active" : "Pause voting"}
                   onClick={() =>
                     setConfirmDialog({
                       status: 'PAUSED',
@@ -969,7 +1004,12 @@ export const PollingStationMonitor: React.FC<PollingStationMonitorProps> = ({
                 {/* Complete / Close */}
                 <button
                   type="button"
-                  disabled={actionLoading || getStationStatusCategory(selectedStation) === 'COMPLETED'}
+                  disabled={
+                    actionLoading ||
+                    getStationStatusCategory(selectedStation) === 'COMPLETED' ||
+                    (selectedStation.machineStatus || '').toUpperCase() === 'CLOSED'
+                  }
+                  title="Seal and complete polling station"
                   onClick={() =>
                     setConfirmDialog({
                       status: 'CLOSED',
@@ -988,7 +1028,13 @@ export const PollingStationMonitor: React.FC<PollingStationMonitorProps> = ({
                 {/* Reset to Standby */}
                 <button
                   type="button"
-                  disabled={actionLoading || getStationStatusCategory(selectedStation) === 'IDLE'}
+                  disabled={
+                    actionLoading ||
+                    !hasActiveElection ||
+                    getStationStatusCategory(selectedStation) === 'COMPLETED' ||
+                    getStationStatusCategory(selectedStation) === 'IDLE'
+                  }
+                  title={!hasActiveElection ? "Cannot reset: Election concluded" : "Reset to standby"}
                   onClick={() =>
                     setConfirmDialog({
                       status: 'IDLE',
@@ -1008,6 +1054,7 @@ export const PollingStationMonitor: React.FC<PollingStationMonitorProps> = ({
           </div>
         )}
       </Modal>
+
 
       {/* Confirmation Dialog */}
       <ConfirmDialog

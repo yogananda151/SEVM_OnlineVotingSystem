@@ -46,8 +46,15 @@ def cast_vote(payload: CastVoteRequest, db: Session = Depends(get_db)):
         voter_id=payload.voterId,
         candidate_id=payload.candidateId,
         polling_station_id=payload.pollingStationId,
+        ballot_token=payload.ballotToken,
     )
     return success_response(data=result, message="Vote cast successfully", status_code=201)
+
+@router.get("/ledger-audit/{election_id}")
+def get_ledger_audit(election_id: int, db: Session = Depends(get_db)):
+    result = vote_service.verify_ledger_chain(db, election_id=election_id)
+    return success_response(data=result, message="Cryptographic ledger audit completed")
+
 
 @router.get("/vvpat")
 def get_vvpat_query(

@@ -703,12 +703,12 @@ class BulkExcelService:
         col_map = {}
         for idx, h in enumerate(header_row):
             h_clean = "".join(ch for ch in h if ch.isalnum())
-            if any(k in h_clean for k in ["partyname", "name"]):
+            if any(k in h_clean for k in ["symbol", "symbolname"]):
+                col_map["symbol"] = idx
+            elif any(k in h_clean for k in ["partyname", "name"]) and "symbol" not in h_clean:
                 col_map["name"] = idx
             elif any(k in h_clean for k in ["abbreviation", "abbr", "code"]):
                 col_map["abbr"] = idx
-            elif any(k in h_clean for k in ["symbol", "symbolname"]):
-                col_map["symbol"] = idx
             elif "color" in h_clean:
                 col_map["color"] = idx
             elif "founded" in h_clean or "year" in h_clean:

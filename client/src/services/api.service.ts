@@ -212,7 +212,11 @@ export const votingService = {
   /** Lookup VVPAT by reference number or Voter ID. Pass pollingStationId to restrict to officer's booth. */
   getVVPAT: async (referenceNumber: string, pollingStationId?: number) =>
     (await api.get('/voting/vvpat', { params: { referenceNumber: referenceNumber.trim(), pollingStationId } })).data.data,
+  /** Audit cryptographic Merkle/hash-chain integrity for an election */
+  getLedgerAudit: async (electionId: number) =>
+    (await api.get(`/voting/ledger-audit/${electionId}`)).data.data,
 };
+
 
 export const auditService = {
   getAll: async (params?: object) => (await api.get('/audit-logs', { params })).data,

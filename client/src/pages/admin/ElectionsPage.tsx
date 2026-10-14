@@ -126,6 +126,24 @@ export const ElectionsPage: React.FC = () => {
                               <Eye size={14} />
                             </button>
                           )}
+                          {(e.status === 'ACTIVE' || e.status === 'PAUSED') && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to stop and close "${e.name}"? Voting will be stopped immediately.`)) {
+                                  electionService.updateStatus(e.id, 'CLOSED').then(() => {
+                                    toast.success('Election closed successfully');
+                                    refetch();
+                                  }).catch((err: any) => {
+                                    toast.error(err?.response?.data?.message || 'Failed to close election');
+                                  });
+                                }
+                              }}
+                              className="p-1.5 text-red-400 hover:text-red-300"
+                              title="Stop & Close Election"
+                            >
+                              <Square size={14} />
+                            </button>
+                          )}
                           {e.status === 'CLOSED' && !e.isResultPublished && (
                             <button onClick={() => { electionService.publishResults(e.id).then(() => { toast.success('Results published!'); refetch(); }); }}
                               className="p-1.5 text-emerald-400 hover:text-emerald-300" title="Publish Results">

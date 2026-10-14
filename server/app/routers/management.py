@@ -559,6 +559,33 @@ def update_machine_status(station_id: int, payload: UpdateMachineStatusRequest, 
     if not ps:
         raise HTTPException(status_code=404, detail="Station not found")
 
+    # Guard: check if an active election exists for this station's constituency
+    active_election_link = (
+        db.query(ElectionConstituency)
+        .join(Election, ElectionConstituency.electionId == Election.id)
+        .filter(
+            ElectionConstituency.constituencyId == ps.constituencyId,
+            Election.status == ElectionStatus.ACTIVE,
+            Election.deletedAt.is_(None),
+        )
+        .first()
+    )
+
+    # Prevent starting or resuming voting if no active election exists
+    if payload.status == MachineStatus.ACTIVE or payload.isPollingActive is True:
+        if not active_election_link:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot start or activate voting on this machine: The election is currently stopped, closed, or not active. All polling stations are permanently locked.",
+            )
+
+    # If station was already closed/completed and election is not active, block resetting to Standby or Active
+    if ps.machineStatus == MachineStatus.CLOSED and not active_election_link and payload.status != MachineStatus.CLOSED:
+        raise HTTPException(
+            status_code=400,
+            detail="This polling booth has already been concluded and locked. The election is closed and machines cannot be restarted.",
+        )
+
     ps.machineStatus = payload.status
     if payload.isPollingActive is not None:
         ps.isPollingActive = payload.isPollingActive
@@ -573,6 +600,7 @@ def update_machine_status(station_id: int, payload: UpdateMachineStatusRequest, 
     action_enum = AuditAction.LOCK_MACHINE if payload.status == MachineStatus.LOCKED else (AuditAction.PAUSE_POLLING if payload.status == MachineStatus.PAUSED else AuditAction.UNLOCK_MACHINE)
     audit_service.log(db, action=action_enum, module="PollingStation", description=f"Machine status changed to {payload.status} at station {station_id}", user_id=current_user.userId, ip_address=request.client.host if request and request.client else None)
     return success_response(data={"id": ps.id, "machineStatus": str(ps.machineStatus.value if hasattr(ps.machineStatus, "value") else ps.machineStatus), "isPollingActive": ps.isPollingActive}, message=f"Machine status updated to {payload.status}")
+
 
 @router.delete("/polling-stations/{station_id}")
 def delete_polling_station(station_id: int, current_user: CurrentUser = Depends(require_roles(UserRole.COMMISSIONER)), db: Session = Depends(get_db)):

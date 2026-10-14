@@ -1304,6 +1304,7 @@ export const ElectionSetupPage: React.FC = () => {
   const [electionConstituencies, setElectionConstituencies] = useState<Constituency[]>([]);
   const [assignedOfficer, setAssignedOfficer] = useState<Officer | null>(null);
   const [stepErrors, setStepErrors] = useState<Record<number, string>>({});
+  const hasAutoJumpedRef = useRef(false);
 
   const fetchElection = useCallback(() => electionService.getById(electionId), [electionId]);
   const { data: election, loading: electionLoading, error: electionError } = useAsync<Election & { electionConstituencies: ElectionLink[]; officer: Officer | null }>(fetchElection);
@@ -1324,6 +1325,12 @@ export const ElectionSetupPage: React.FC = () => {
     }
     if (election?.officer !== undefined) {
       setAssignedOfficer(election.officer);
+    }
+    if (election && !hasAutoJumpedRef.current) {
+      if (election.status !== 'DRAFT' && election.status !== 'SCHEDULED') {
+        setStep(4);
+      }
+      hasAutoJumpedRef.current = true;
     }
   }, [election]);
 

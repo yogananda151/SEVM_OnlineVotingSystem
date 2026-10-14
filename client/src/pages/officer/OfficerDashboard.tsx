@@ -42,6 +42,9 @@ export const OfficerDashboard: React.FC = () => {
     execute: refetchElections,
   } = useAsync<AssignedElection[]>(fetchElections);
 
+  const fetchDashboardStats = useCallback(() => electionService.getDashboardStats(), []);
+  const { data: dashboardStats } = useAutoRefresh(fetchDashboardStats, 30_000);
+
   // ── 2. Polling Station Data — auto-refresh every 30s (#2) ─────────────────
   const fetchStation = useCallback(
     () => (stationId ? pollingStationService.getById(stationId) : Promise.resolve(null)),
@@ -125,11 +128,17 @@ export const OfficerDashboard: React.FC = () => {
     }
   };
 
+  const elections = myElections || [];
+  const hasActiveElection = Boolean(
+    (dashboardStats?.activeElection && dashboardStats.activeElection.status === 'ACTIVE') ||
+    elections.some((e: any) => e.status === 'ACTIVE')
+  );
   const machineStatus = (station as { machineStatus: string } | null)?.machineStatus;
-  const isStationActive = machineStatus === 'ACTIVE';
-  const isStationLocked = machineStatus === 'LOCKED';
-  const isStationPaused = machineStatus === 'PAUSED';
-  const isStationIdle = machineStatus === 'IDLE';
+  const isStationClosed = machineStatus === 'CLOSED' || (!loadingElections && !hasActiveElection);
+  const isStationActive = !isStationClosed && machineStatus === 'ACTIVE';
+  const isStationLocked = !isStationClosed && machineStatus === 'LOCKED';
+  const isStationPaused = !isStationClosed && machineStatus === 'PAUSED';
+  const isStationIdle = !isStationClosed && machineStatus === 'IDLE';
 
   const rawTurnout = turnout as any;
   const boothVotersCount = boothVoters.length;
@@ -155,8 +164,6 @@ export const OfficerDashboard: React.FC = () => {
     remaining,
     turnoutPercent,
   };
-
-  const elections = myElections || [];
 
   return (
     <div className="space-y-6">
@@ -196,7 +203,9 @@ export const OfficerDashboard: React.FC = () => {
           {station && (
             <div
               className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${
-                isStationActive
+                isStationClosed
+                  ? 'bg-slate-700/20 border-slate-600/30'
+                  : isStationActive
                   ? 'bg-emerald-500/10 border-emerald-500/20'
                   : isStationPaused
                   ? 'bg-amber-500/10 border-amber-500/20'
@@ -207,7 +216,9 @@ export const OfficerDashboard: React.FC = () => {
             >
               <div
                 className={`w-2 h-2 rounded-full ${
-                  isStationActive
+                  isStationClosed
+                    ? 'bg-slate-400'
+                    : isStationActive
                     ? 'bg-emerald-400 animate-pulse'
                     : isStationPaused
                     ? 'bg-amber-400'
@@ -218,7 +229,9 @@ export const OfficerDashboard: React.FC = () => {
               />
               <span
                 className={`text-xs font-medium ${
-                  isStationActive
+                  isStationClosed
+                    ? 'text-slate-300'
+                    : isStationActive
                     ? 'text-emerald-400'
                     : isStationPaused
                     ? 'text-amber-400'
@@ -227,7 +240,7 @@ export const OfficerDashboard: React.FC = () => {
                     : 'text-slate-400'
                 }`}
               >
-                Station: {machineStatus ?? 'IDLE'}
+                Station: {isStationClosed ? 'LOCKED / CONCLUDED' : machineStatus ?? 'IDLE'}
               </span>
             </div>
           )}
@@ -473,89 +486,108 @@ export const OfficerDashboard: React.FC = () => {
               <p className="text-xs text-slate-400 mb-5">
                 Control the physical voting machine console at this polling station
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {isStationIdle && (
-                  <button
-                    onClick={() => updateMachineStatus('ACTIVE', true)}
-                    disabled={stationActionLoading}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-emerald-400 disabled:opacity-50"
-                  >
-                    <Play size={24} />
-                    <span className="text-xs font-medium">Start Voting</span>
-                  </button>
-                )}
-                {isStationActive && (
-                  <>
+              {isStationClosed ? (
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-800/80 to-slate-900/90 border border-slate-700/80 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                  <div className="w-12 h-12 rounded-xl bg-slate-700/50 border border-slate-600/50 flex items-center justify-center shrink-0 text-slate-400">
+                    <Lock size={22} className="text-slate-300" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-white flex items-center gap-2 justify-center sm:justify-start">
+                      <span>EVM Terminal Locked & Concluded</span>
+                      <span className="badge badge-slate text-[10px] tracking-wide uppercase">Sealed</span>
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {machineStatus === 'CLOSED'
+                        ? 'Voting has concluded for this booth. The EVM terminal is permanently sealed and no further voting actions can be initiated.'
+                        : 'The election is currently stopped or not active. Booth voting machines are locked and cannot be started.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {isStationIdle && (
+                    <button
+                      onClick={() => updateMachineStatus('ACTIVE', true)}
+                      disabled={stationActionLoading}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-emerald-400 disabled:opacity-50"
+                    >
+                      <Play size={24} />
+                      <span className="text-xs font-medium">Start Voting</span>
+                    </button>
+                  )}
+                  {isStationActive && (
+                    <>
+                      <button
+                        onClick={() =>
+                          setConfirmStationAction({
+                            status: 'LOCKED',
+                            isPollingActive: false,
+                            title: 'Lock Machine?',
+                            message:
+                              'Locking the machine will temporarily stop voters from casting ballots. You can unlock it again when ready. Are you sure?',
+                          })
+                        }
+                        disabled={stationActionLoading}
+                        className="flex flex-col items-center gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all text-red-400 disabled:opacity-50"
+                      >
+                        <Lock size={24} />
+                        <span className="text-xs font-medium">Lock Machine</span>
+                      </button>
+                      <button
+                        onClick={() => updateMachineStatus('PAUSED', false)}
+                        disabled={stationActionLoading}
+                        className="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all text-amber-400 disabled:opacity-50"
+                      >
+                        <Pause size={24} />
+                        <span className="text-xs font-medium">Pause Voting</span>
+                      </button>
+                    </>
+                  )}
+                  {isStationLocked && (
+                    <button
+                      onClick={() => updateMachineStatus('ACTIVE', true)}
+                      disabled={stationActionLoading}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-emerald-400 disabled:opacity-50"
+                    >
+                      <Unlock size={24} />
+                      <span className="text-xs font-medium">Unlock Machine</span>
+                    </button>
+                  )}
+                  {isStationPaused && (
+                    <button
+                      onClick={() => updateMachineStatus('ACTIVE', true)}
+                      disabled={stationActionLoading}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-emerald-400 disabled:opacity-50"
+                    >
+                      <Play size={24} />
+                      <span className="text-xs font-medium">Resume Voting</span>
+                    </button>
+                  )}
+                  {(isStationActive || isStationPaused) && (
                     <button
                       onClick={() =>
                         setConfirmStationAction({
-                          status: 'LOCKED',
+                          status: 'CLOSED',
                           isPollingActive: false,
-                          title: 'Lock Machine?',
+                          title: 'Close Polling Station?',
                           message:
-                            'Locking the machine will temporarily stop voters from casting ballots. You can unlock it again when ready. Are you sure?',
+                            'Closing the station is permanent and concludes booth voting. No further votes can be cast at this booth. Are you sure you want to close this station?',
                         })
                       }
                       disabled={stationActionLoading}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all text-red-400 disabled:opacity-50"
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 hover:bg-slate-700/50 transition-all text-slate-400 disabled:opacity-50"
                     >
-                      <Lock size={24} />
-                      <span className="text-xs font-medium">Lock Machine</span>
+                      <Square size={24} />
+                      <span className="text-xs font-medium">Close Polling</span>
                     </button>
-                    <button
-                      onClick={() => updateMachineStatus('PAUSED', false)}
-                      disabled={stationActionLoading}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all text-amber-400 disabled:opacity-50"
-                    >
-                      <Pause size={24} />
-                      <span className="text-xs font-medium">Pause Voting</span>
-                    </button>
-                  </>
-                )}
-                {isStationLocked && (
-                  <button
-                    onClick={() => updateMachineStatus('ACTIVE', true)}
-                    disabled={stationActionLoading}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-emerald-400 disabled:opacity-50"
-                  >
-                    <Unlock size={24} />
-                    <span className="text-xs font-medium">Unlock Machine</span>
-                  </button>
-                )}
-                {isStationPaused && (
-                  <button
-                    onClick={() => updateMachineStatus('ACTIVE', true)}
-                    disabled={stationActionLoading}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-emerald-400 disabled:opacity-50"
-                  >
-                    <Play size={24} />
-                    <span className="text-xs font-medium">Resume Voting</span>
-                  </button>
-                )}
-                {(isStationActive || isStationPaused) && (
-                  <button
-                    onClick={() =>
-                      setConfirmStationAction({
-                        status: 'CLOSED',
-                        isPollingActive: false,
-                        title: 'Close Polling Station?',
-                        message:
-                          'Closing the station is permanent and concludes booth voting. No further votes can be cast at this booth. Are you sure you want to close this station?',
-                      })
-                    }
-                    disabled={stationActionLoading}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 hover:bg-slate-700/50 transition-all text-slate-400 disabled:opacity-50"
-                  >
-                    <Square size={24} />
-                    <span className="text-xs font-medium">Close Polling</span>
-                  </button>
-                )}
-                {stationActionLoading && (
-                  <div className="flex items-center justify-center p-4">
-                    <Spinner />
-                  </div>
-                )}
-              </div>
+                  )}
+                  {stationActionLoading && (
+                    <div className="flex items-center justify-center p-4">
+                      <Spinner />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Station Information details */}

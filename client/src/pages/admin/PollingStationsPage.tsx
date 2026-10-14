@@ -1,12 +1,12 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Plus, Pencil, Trash2, Building2, ArrowRight, AlertCircle, FileSpreadsheet,
   Activity, CheckCircle2, Clock, Pause, Play, Square, Search, Radio,
-  RotateCcw, Eye, ShieldCheck
+  RotateCcw, Eye, ShieldCheck, Lock
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAsync, useMutation } from '../../hooks/useAsync';
-import { pollingStationService, constituencyService, regionService } from '../../services/api.service';
+import { pollingStationService, constituencyService, regionService, electionService } from '../../services/api.service';
+
 import { Modal, ConfirmDialog, TableSkeleton, EmptyState, Spinner } from '../../components/ui';
 import { BulkExcelModal } from '../../components/common/BulkExcelModal';
 import { toast } from 'react-hot-toast';
@@ -54,6 +54,11 @@ export const PollingStationsPage: React.FC = () => {
 
   const fetchConstituencies = useCallback(() => constituencyService.getAll(), []);
   const { data: allConstituencies } = useAsync<Constituency[]>(fetchConstituencies);
+
+  const fetchDashboardStats = useCallback(() => electionService.getDashboardStats(), []);
+  const { data: dashboardStats } = useAsync(fetchDashboardStats);
+  const hasActiveElection = Boolean(dashboardStats?.activeElection && dashboardStats.activeElection.status === 'ACTIVE');
+
 
   // When region changes in the form, filter constituencies
   useEffect(() => {
@@ -136,11 +141,12 @@ export const PollingStationsPage: React.FC = () => {
 
   const getStationStatusCategory = (s: Station): 'ACTIVE' | 'COMPLETED' | 'PAUSED' | 'IDLE' => {
     const rawStatus = (s.machineStatus || 'IDLE').toUpperCase();
+    if (!hasActiveElection || rawStatus === 'CLOSED') return 'COMPLETED';
     if (s.isPollingActive || rawStatus === 'ACTIVE') return 'ACTIVE';
-    if (rawStatus === 'CLOSED') return 'COMPLETED';
     if (rawStatus === 'PAUSED' || rawStatus === 'LOCKED') return 'PAUSED';
     return 'IDLE';
   };
+
 
   const handleUpdateStationStatus = async (status: string, isPollingActive?: boolean) => {
     if (!statusControlStation) return;
@@ -523,10 +529,34 @@ export const PollingStationsPage: React.FC = () => {
               As Chief Commissioner, you can control the polling state of this machine directly:
             </p>
 
+            {!hasActiveElection ? (
+              <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs flex items-center gap-2 font-medium">
+                <Lock size={15} className="shrink-0 text-cyan-400" />
+                <span>Election is stopped or concluded. Polling stations are permanently locked. Voting cannot be started.</span>
+              </div>
+            ) : getStationStatusCategory(statusControlStation) === 'COMPLETED' ? (
+              <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs flex items-center gap-2 font-medium">
+                <Lock size={15} className="shrink-0 text-cyan-400" />
+                <span>This polling station is completed and closed. Voting has concluded for this booth.</span>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-2 gap-2 pt-2">
               <button
                 type="button"
-                disabled={statusUpdating || getStationStatusCategory(statusControlStation) === 'ACTIVE'}
+                disabled={
+                  statusUpdating ||
+                  !hasActiveElection ||
+                  getStationStatusCategory(statusControlStation) === 'COMPLETED' ||
+                  getStationStatusCategory(statusControlStation) === 'ACTIVE'
+                }
+                title={
+                  !hasActiveElection
+                    ? "Cannot start: Election is stopped or not active"
+                    : getStationStatusCategory(statusControlStation) === 'COMPLETED'
+                    ? "Station is sealed and completed"
+                    : "Start or resume voting"
+                }
                 onClick={() =>
                   setConfirmStatusAction({
                     status: 'ACTIVE',
@@ -536,14 +566,19 @@ export const PollingStationsPage: React.FC = () => {
                     variant: 'info',
                   })
                 }
-                className="btn-success text-xs py-2 justify-center"
+                className="btn-success text-xs py-2 justify-center disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Play size={14} /> Start / Resume
               </button>
 
               <button
                 type="button"
-                disabled={statusUpdating || getStationStatusCategory(statusControlStation) !== 'ACTIVE'}
+                disabled={
+                  statusUpdating ||
+                  !hasActiveElection ||
+                  getStationStatusCategory(statusControlStation) !== 'ACTIVE'
+                }
+                title={!hasActiveElection ? "Election not active" : "Pause voting"}
                 onClick={() =>
                   setConfirmStatusAction({
                     status: 'PAUSED',
@@ -553,10 +588,11 @@ export const PollingStationsPage: React.FC = () => {
                     variant: 'warning',
                   })
                 }
-                className="btn-secondary text-xs py-2 justify-center text-amber-300 hover:text-amber-200"
+                className="btn-secondary text-xs py-2 justify-center text-amber-300 hover:text-amber-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Pause size={14} /> Pause Voting
               </button>
+
 
               <button
                 type="button"

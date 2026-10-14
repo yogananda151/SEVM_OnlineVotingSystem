@@ -20,7 +20,7 @@ export const ResultsPage: React.FC = () => {
   const fetchElections = useCallback(() => electionService.getAll(), []);
   const { data: elections, loading: electionsLoading } = useAsync(fetchElections);
 
-  const publishedElections = (elections as { id: number; name: string; status: string; isResultPublished: boolean }[] | null)?.filter((e) => e.isResultPublished) ?? [];
+  const publishedElections = (elections as { id: number; name: string; status: string; isResultPublished: boolean }[] | null)?.filter((e) => e.isResultPublished || e.status === 'RESULTS_PUBLISHED') ?? [];
   const [selectedElection, setSelectedElection] = useState<number | null>(null);
 
   useEffect(() => {

@@ -14,9 +14,14 @@ class VerifyOTPRequest(BaseModel):
 
 class SimulateBiometricRequest(BaseModel):
     voterId: int
-    type: str = "FINGERPRINT"
+    type: str = "FINGERPRINT"  # "FINGERPRINT" or "FACE"
+    livenessScore: Optional[float] = None
+    livenessPassed: Optional[bool] = None
 
 class CastVoteRequest(BaseModel):
     voterId: int
     candidateId: int
     pollingStationId: int
+    ballotToken: Optional[str] = None
+    livenessVerified: Optional[bool] = None
+

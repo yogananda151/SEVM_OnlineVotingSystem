@@ -7,7 +7,7 @@ from app.models.voter import Voter, ElectionVoterStatus, OTPVerification
 from app.models.election import Election, ElectionConstituency
 from app.models.location import PollingStation, Constituency
 from app.models.enums import ElectionStatus, VerificationMethod, VerificationStatus
-from app.utils.crypto import hash_aadhaar, generate_otp
+from app.utils.crypto import hash_aadhaar, generate_otp, generate_ballot_token
 
 class VerificationService:
     @staticmethod
@@ -166,8 +166,23 @@ class VerificationService:
         if not voter:
             raise HTTPException(status_code=404, detail="Voter not found.")
 
+        # Find active election for ballot token generation
+        active_link = (
+            db.query(ElectionConstituency)
+            .join(Election, ElectionConstituency.electionId == Election.id)
+            .filter(
+                ElectionConstituency.constituencyId == voter.constituencyId,
+                Election.status == ElectionStatus.ACTIVE,
+                Election.deletedAt.is_(None),
+            )
+            .first()
+        )
+        election_id = active_link.electionId if active_link else 1
+        ballot_token = generate_ballot_token(voter.id, election_id, voter.pollingStationId)
+
         return {
             "verified": True,
+            "ballotToken": ballot_token,
             "voter": {
                 "id": voter.id,
                 "fullName": voter.fullName,
@@ -196,7 +211,9 @@ class VerificationService:
             )
             .first()
         )
+        election_id = 1
         if active_link:
+            election_id = active_link.electionId
             voter_status = (
                 db.query(ElectionVoterStatus)
                 .filter(
@@ -208,8 +225,11 @@ class VerificationService:
             if voter_status and voter_status.hasVoted:
                 raise HTTPException(status_code=409, detail="Voter has already voted in the current election.")
 
+        ballot_token = generate_ballot_token(voter.id, election_id, voter.pollingStationId)
+
         return {
             "verified": True,
+            "ballotToken": ballot_token,
             "voter": {
                 "id": voter.id,
                 "fullName": voter.fullName,
@@ -220,7 +240,7 @@ class VerificationService:
                 "gender": voter.gender,
                 "address": voter.address,
             },
-            "message": f"{bio_type} verification successful (SIMULATION).",
+            "message": f"{bio_type} verification successful. Ballot token generated.",
         }
 
 verification_service = VerificationService()

@@ -9,7 +9,7 @@ from app.models.party_candidate import Candidate
 from app.models.voter import Voter
 from app.models.user import ElectionOfficer
 from app.models.vote import Vote
-from app.models.enums import ElectionStatus, UserRole
+from app.models.enums import ElectionStatus, UserRole, MachineStatus
 from app.middleware.auth import CurrentUser
 
 VALID_TRANSITIONS = {
@@ -188,10 +188,50 @@ class ElectionService:
             election.startTime = datetime.utcnow()
         if status_val == "CLOSED" and not election.endTime:
             election.endTime = datetime.utcnow()
+        if status_val == "RESULTS_PUBLISHED":
+            election.isResultPublished = True
+
+        # Synchronize all polling stations in the election's constituencies
+        links = db.query(ElectionConstituency).filter(ElectionConstituency.electionId == election_id).all()
+        con_ids = [l.constituencyId for l in links]
+
+        if status_val in ["CLOSED", "RESULTS_PUBLISHED"]:
+            # Permanently lock, seal, and complete all polling stations
+            stations_query = db.query(PollingStation).filter(PollingStation.deletedAt.is_(None))
+            if con_ids:
+                stations_query = stations_query.filter(PollingStation.constituencyId.in_(con_ids))
+            for ps in stations_query.all():
+                ps.machineStatus = MachineStatus.CLOSED
+                ps.isPollingActive = False
+
+        elif status_val == "PAUSED":
+            # Pause all active polling stations
+            stations_query = db.query(PollingStation).filter(
+                PollingStation.deletedAt.is_(None),
+                PollingStation.machineStatus == MachineStatus.ACTIVE,
+            )
+            if con_ids:
+                stations_query = stations_query.filter(PollingStation.constituencyId.in_(con_ids))
+            for ps in stations_query.all():
+                ps.machineStatus = MachineStatus.PAUSED
+                ps.isPollingActive = False
+
+        elif status_val == "ACTIVE":
+            # Activate polling stations from Standby/Paused
+            stations_query = db.query(PollingStation).filter(
+                PollingStation.deletedAt.is_(None),
+                PollingStation.machineStatus.in_([MachineStatus.IDLE, MachineStatus.PAUSED]),
+            )
+            if con_ids:
+                stations_query = stations_query.filter(PollingStation.constituencyId.in_(con_ids))
+            for ps in stations_query.all():
+                ps.machineStatus = MachineStatus.ACTIVE
+                ps.isPollingActive = True
 
         db.commit()
         db.refresh(election)
         return election
+
 
     @staticmethod
     def auto_assign_officers(db: Session, election_id: int) -> Dict[str, Any]:

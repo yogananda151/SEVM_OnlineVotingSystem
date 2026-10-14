@@ -144,7 +144,9 @@ export const AdminDashboard: React.FC = () => {
           loading={loadingStations}
           onRefresh={handleRefreshAll}
           secondsSince={stationsSecondsSince}
+          activeElection={stats?.activeElection}
         />
+
       </motion.section>
 
       {/* Charts */}
