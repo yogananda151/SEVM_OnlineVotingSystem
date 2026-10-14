@@ -206,8 +206,10 @@ export const votingService = {
   initiateVerification: async (data: object) => (await api.post('/voting/verify/initiate', data)).data.data,
   verifyOTP: async (voterId: number, otp: string) =>
     (await api.post('/voting/verify/otp', { voterId, otp })).data.data,
-  simulateBiometric: async (voterId: number, type: string) =>
-    (await api.post('/voting/verify/biometric', { voterId, type })).data.data,
+  simulateBiometric: async (voterId: number, type: string, faceImage?: string) =>
+    (await api.post('/voting/verify/biometric', { voterId, type, faceImage })).data.data,
+  verifyFace: async (voterId: number, faceImage: string) =>
+    (await api.post('/voting/verify/face', { voterId, faceImage })).data.data,
   castVote: async (data: object) => (await api.post('/voting/cast', data)).data.data,
   /** Lookup VVPAT by reference number or Voter ID. Pass pollingStationId to restrict to officer's booth. */
   getVVPAT: async (referenceNumber: string, pollingStationId?: number) =>

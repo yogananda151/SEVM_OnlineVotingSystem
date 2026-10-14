@@ -38,6 +38,8 @@ def format_voter(v: Voter, election_id: Optional[int] = None):
         "address": v.address,
         "phone": v.phone,
         "photoUrl": v.photoUrl,
+        "faceData": v.faceData,
+        "hasFaceRegistered": bool(v.faceData),
         "serialNumber": v.serialNumber,
         "isActive": v.isActive,
         "hasVoted": has_voted,
@@ -184,6 +186,7 @@ def bulk_create_voters(payload: BulkVotersRequest, request: Request, current_use
             phone=str(v_data.get("phone") or "") or None,
             serialNumber=int(v_data.get("serialNumber") or (imported + 1)),
             aadhaarHash=ahash,
+            faceData=v_data.get("faceData"),
         )
         db.add(v)
         imported += 1
@@ -224,6 +227,8 @@ def create_voter(payload: CreateVoterRequest, request: Request, current_user: Cu
         gender=payload.gender,
         address=payload.address.strip(),
         phone=payload.phone.strip() if payload.phone else None,
+        photoUrl=payload.photoUrl,
+        faceData=payload.faceData,
         serialNumber=payload.serialNumber,
         aadhaarHash=ahash,
     )
@@ -249,6 +254,7 @@ def update_voter(voter_id: int, payload: UpdateVoterRequest, current_user: Curre
     if payload.gender is not None: v.gender = payload.gender
     if payload.serialNumber is not None: v.serialNumber = payload.serialNumber
     if payload.photoUrl is not None: v.photoUrl = payload.photoUrl
+    if payload.faceData is not None: v.faceData = payload.faceData
     if payload.isActive is not None: v.isActive = payload.isActive
     if payload.dateOfBirth is not None:
         v.dateOfBirth = datetime.fromisoformat(str(payload.dateOfBirth).replace("Z", "+00:00")) if isinstance(payload.dateOfBirth, str) else payload.dateOfBirth

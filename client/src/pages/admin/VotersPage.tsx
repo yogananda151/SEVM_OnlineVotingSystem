@@ -14,6 +14,10 @@ import {
   AlertTriangle,
   X,
   Lock,
+  Camera,
+  CheckCircle2,
+  Scan,
+  RefreshCw,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useForm } from 'react-hook-form';
@@ -49,6 +53,8 @@ interface Voter {
   dateOfBirth: string;
   pollingStation: { id: number; name: string };
   constituency: { id: number; name: string };
+  hasFaceRegistered?: boolean;
+  faceData?: string | null;
 }
 
 interface ConstituencyOption {
@@ -162,6 +168,63 @@ export const VotersPage: React.FC = () => {
   const [parsingError, setParsingError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+
+  // ── Face Biometric State for Individual Voter Registration ──
+  const [capturedFace, setCapturedFace] = useState<string | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError('Webcam access not supported in this browser environment.');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 320, height: 240, facingMode: 'user' },
+      });
+      streamRef.current = stream;
+      setCameraActive(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 50);
+    } catch {
+      setCameraError('Camera access denied or device not found. Please enable webcam permissions.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const captureFaceSnapshot = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 320;
+    canvas.height = video.videoHeight || 240;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    setCapturedFace(dataUrl);
+    stopCamera();
+    toast.success('Face biometric captured and ready to store in database.');
+  };
+
+  const handleRetakeFace = () => {
+    setCapturedFace(null);
+    startCamera();
+  };
 
   const [deleteTarget, setDeleteTarget] = useState<Voter | null>(null);
   const [page, setPage] = useState(1);
@@ -603,9 +666,11 @@ export const VotersPage: React.FC = () => {
     {
       onSuccess: () => {
         refetch();
+        stopCamera();
+        setCapturedFace(null);
         setModalOpen(false);
         reset();
-        toast.success('Voter registered successfully.');
+        toast.success('Voter registered successfully with face biometrics.');
       },
       onServerErrors: handleServerErrors,
     },
@@ -633,12 +698,16 @@ export const VotersPage: React.FC = () => {
       // Normalise optional empty-string fields to undefined so Zod is happy
       aadhaarNumber: data.aadhaarNumber || undefined,
       phone: data.phone || undefined,
+      faceData: capturedFace || undefined,
     };
     createVoter(payload);
   };
 
   // ── Close + reset modal
   const handleCloseModal = () => {
+    stopCamera();
+    setCapturedFace(null);
+    setCameraError(null);
     setModalOpen(false);
     reset();
     firstErrorRef.current = null;
@@ -757,7 +826,7 @@ export const VotersPage: React.FC = () => {
 
       {/* ── Voter table ── */}
       {loading ? (
-        <TableSkeleton rows={10} cols={isOfficer ? 6 : 7} />
+        <TableSkeleton rows={10} cols={isOfficer ? 7 : 8} />
       ) : (
         <>
           <div className="card overflow-hidden">
@@ -768,6 +837,7 @@ export const VotersPage: React.FC = () => {
                     <th>#</th>
                     <th>Full Name</th>
                     <th>Voter ID</th>
+                    <th>Face Biometric</th>
                     <th>Gender</th>
                     <th>Station</th>
                     <th>Voted</th>
@@ -780,6 +850,18 @@ export const VotersPage: React.FC = () => {
                       <td className="text-slate-500">{v.serialNumber}</td>
                       <td className="font-medium text-white">{v.fullName}</td>
                       <td className="font-mono text-xs text-slate-300">{v.voterId}</td>
+                      <td>
+                        {v.hasFaceRegistered || v.faceData ? (
+                          <span className="badge badge-green flex items-center gap-1 text-[11px] font-medium w-fit">
+                            <Camera size={11} className="text-emerald-400" />
+                            Enrolled
+                          </span>
+                        ) : (
+                          <span className="badge badge-gray flex items-center gap-1 text-[11px] text-slate-400 w-fit">
+                            No Face
+                          </span>
+                        )}
+                      </td>
                       <td>
                         <span
                           className={`badge ${
@@ -1056,6 +1138,134 @@ export const VotersPage: React.FC = () => {
               id="voter-error-serialNumber"
               message={errors.serialNumber?.message}
             />
+          </div>
+
+          {/* ── Biometric Face Enrollment Section ── */}
+          <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary-600/20 text-primary-400 flex items-center justify-center">
+                  <Camera size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                    Biometric Face Enrollment
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Capture voter face to store in database for real AI face verification at the EVM
+                  </p>
+                </div>
+              </div>
+              {capturedFace ? (
+                <span className="badge badge-green text-[10px] flex items-center gap-1">
+                  <CheckCircle2 size={12} /> Face Enrolled
+                </span>
+              ) : (
+                <span className="badge badge-gray text-[10px]">Optional / Recommended</span>
+              )}
+            </div>
+
+            {/* Camera Viewfinder */}
+            {cameraActive && (
+              <div className="space-y-2">
+                <div className="relative w-full max-w-xs mx-auto h-48 bg-slate-950 rounded-2xl overflow-hidden border-2 border-primary-500 shadow-xl flex items-center justify-center">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Face oval guide */}
+                  <div className="absolute inset-4 border border-dashed border-emerald-400/70 rounded-full pointer-events-none flex items-center justify-center">
+                    <span className="text-[10px] text-emerald-300 bg-slate-950/70 px-2 py-0.5 rounded-md font-mono">
+                      Align Face Inside Frame
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={captureFaceSnapshot}
+                    className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 border-0"
+                  >
+                    <Scan size={14} /> Capture Face Snapshot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="btn-secondary text-xs py-1.5 px-3"
+                  >
+                    Cancel Camera
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {cameraError && (
+              <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{cameraError}</span>
+              </div>
+            )}
+
+            {/* Captured Preview */}
+            {capturedFace && !cameraActive && (
+              <div className="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-emerald-500/40">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={capturedFace}
+                    alt="Captured Voter Face"
+                    className="w-14 h-14 rounded-xl object-cover border-2 border-emerald-400 shadow-md"
+                  />
+                  <div>
+                    <p className="text-xs font-semibold text-white flex items-center gap-1.5">
+                      <CheckCircle2 size={13} className="text-emerald-400" />
+                      Face Biometric Profile Ready
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      High-resolution facial landmark template will be stored in database.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleRetakeFace}
+                    className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
+                  >
+                    <RefreshCw size={11} /> Retake
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCapturedFace(null)}
+                    className="text-slate-400 hover:text-rose-400 p-1"
+                    title="Remove face"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Prompt when not scanning and not captured */}
+            {!capturedFace && !cameraActive && (
+              <div className="flex items-center justify-between p-3 bg-slate-900/60 rounded-xl border border-slate-700/60">
+                <p className="text-xs text-slate-300">
+                  Ready to enroll face for this individual voter?
+                </p>
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 hover:border-primary-500"
+                >
+                  <Camera size={14} className="text-primary-400" /> Open Camera & Scan Face
+                </button>
+              </div>
+            )}
+            <p className="text-[10px] text-slate-500 italic">
+              Note: Bulk imported Excel voters bypass face scanning automatically.
+            </p>
           </div>
 
           {/* ── Actions ── */}

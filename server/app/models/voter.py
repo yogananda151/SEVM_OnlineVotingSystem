@@ -18,6 +18,7 @@ class Voter(Base):
     address = Column(Text, nullable=False)
     phone = Column(String(20), nullable=True)
     photoUrl = Column(String(500), nullable=True)
+    faceData = Column(Text, nullable=True)
     serialNumber = Column(Integer, nullable=False)
     isActive = Column(Boolean, default=True, nullable=False)
     createdAt = Column(DateTime, default=datetime.utcnow, nullable=False)

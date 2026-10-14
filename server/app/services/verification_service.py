@@ -8,6 +8,7 @@ from app.models.election import Election, ElectionConstituency
 from app.models.location import PollingStation, Constituency
 from app.models.enums import ElectionStatus, VerificationMethod, VerificationStatus
 from app.utils.crypto import hash_aadhaar, generate_otp, generate_ballot_token
+from app.utils.face_matcher import compare_faces
 
 class VerificationService:
     @staticmethod
@@ -139,6 +140,7 @@ class VerificationService:
             "voterName": voter.fullName,
             "maskedPhone": masked_phone,
             "simulatedOtp": otp,
+            "hasFaceRegistered": bool(voter.faceData),
             "message": "OTP sent to registered mobile number (SIMULATION).",
         }
 
@@ -192,11 +194,101 @@ class VerificationService:
                 "serialNumber": voter.serialNumber,
                 "gender": voter.gender,
                 "address": voter.address,
+                "hasFaceRegistered": bool(voter.faceData),
             },
         }
 
     @staticmethod
-    def simulate_biometric(db: Session, voter_id: int, bio_type: str = "FINGERPRINT") -> Dict[str, Any]:
+    def verify_face(db: Session, voter_id: int, face_image: str) -> Dict[str, Any]:
+        """
+        Performs REAL facial recognition matching between the live camera capture
+        and the registered voter face enrolled in the database.
+        """
+        voter = db.query(Voter).filter(Voter.id == voter_id, Voter.deletedAt.is_(None)).first()
+        if not voter:
+            raise HTTPException(status_code=404, detail="Voter not found.")
+
+        if not voter.faceData:
+            raise HTTPException(
+                status_code=400,
+                detail=f'Voter "{voter.fullName}" does not have face biometrics registered in the database. Please use Fingerprint or Mobile OTP authentication.',
+            )
+
+        if not face_image or not face_image.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Live camera face snapshot is required. Please align your face inside the frame.",
+            )
+
+        active_link = (
+            db.query(ElectionConstituency)
+            .join(Election, ElectionConstituency.electionId == Election.id)
+            .filter(
+                ElectionConstituency.constituencyId == voter.constituencyId,
+                Election.status == ElectionStatus.ACTIVE,
+                Election.deletedAt.is_(None),
+            )
+            .first()
+        )
+        election_id = 1
+        if active_link:
+            election_id = active_link.electionId
+            voter_status = (
+                db.query(ElectionVoterStatus)
+                .filter(
+                    ElectionVoterStatus.voterId == voter.id,
+                    ElectionVoterStatus.electionId == active_link.electionId,
+                )
+                .first()
+            )
+            if voter_status and voter_status.hasVoted:
+                raise HTTPException(status_code=409, detail="This voter has already cast their vote in the current election.")
+
+        # Real computer-vision biometric comparison
+        try:
+            match_res = compare_faces(voter.faceData, face_image, threshold=65.0)
+        except ValueError as ve:
+            raise HTTPException(status_code=400, detail=str(ve))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Facial verification engine error: {str(e)}")
+
+        if not match_res["verified"]:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Face Verification Failed: The live camera face does not match registered voter {voter.fullName} ({match_res['score']}% match, required >= {match_res['threshold']}%). Access Denied.",
+            )
+
+        ballot_token = generate_ballot_token(voter.id, election_id, voter.pollingStationId)
+
+        return {
+            "verified": True,
+            "confidence": match_res["score"],
+            "ballotToken": ballot_token,
+            "voter": {
+                "id": voter.id,
+                "fullName": voter.fullName,
+                "voterId": voter.voterId,
+                "constituencyId": voter.constituencyId,
+                "pollingStationId": voter.pollingStationId,
+                "serialNumber": voter.serialNumber,
+                "gender": voter.gender,
+                "address": voter.address,
+                "hasFaceRegistered": True,
+            },
+            "message": f"Face Recognition Verified ({match_res['score']}% match). Ballot Unlocked.",
+        }
+
+    @staticmethod
+    def simulate_biometric(db: Session, voter_id: int, bio_type: str = "FINGERPRINT", face_image: Optional[str] = None) -> Dict[str, Any]:
+        if bio_type.upper() == "FACE":
+            if not face_image:
+                voter = db.query(Voter).filter(Voter.id == voter_id, Voter.deletedAt.is_(None)).first()
+                if voter and voter.faceData:
+                    raise HTTPException(status_code=400, detail="Live camera face snapshot is required for face verification.")
+                raise HTTPException(status_code=400, detail="No registered face biometric found for this voter. Please use Fingerprint or OTP.")
+            return VerificationService.verify_face(db, voter_id=voter_id, face_image=face_image)
+
+        # FINGERPRINT Biometric
         voter = db.query(Voter).filter(Voter.id == voter_id, Voter.deletedAt.is_(None)).first()
         if not voter:
             raise HTTPException(status_code=404, detail="Voter not found.")
@@ -239,8 +331,9 @@ class VerificationService:
                 "serialNumber": voter.serialNumber,
                 "gender": voter.gender,
                 "address": voter.address,
+                "hasFaceRegistered": bool(voter.faceData),
             },
-            "message": f"{bio_type} verification successful. Ballot token generated.",
+            "message": "Fingerprint verification successful. Ballot token generated.",
         }
 
 verification_service = VerificationService()

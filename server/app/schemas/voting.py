@@ -17,6 +17,11 @@ class SimulateBiometricRequest(BaseModel):
     type: str = "FINGERPRINT"  # "FINGERPRINT" or "FACE"
     livenessScore: Optional[float] = None
     livenessPassed: Optional[bool] = None
+    faceImage: Optional[str] = None
+
+class VerifyFaceRequest(BaseModel):
+    voterId: int
+    faceImage: str  # Base64 captured face image from camera
 
 class CastVoteRequest(BaseModel):
     voterId: int

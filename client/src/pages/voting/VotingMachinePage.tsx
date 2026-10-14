@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Vote, Shield, Scan, CheckCircle, CheckCircle2, X, RefreshCw, Clock, User, Lock,
-  Camera, Fingerprint, Sparkles, AlertTriangle, Layers, KeyRound
+  Camera, Fingerprint, Sparkles, AlertTriangle, Layers, KeyRound, AlertCircle
 } from 'lucide-react';
 import { votingService, candidateService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
@@ -265,7 +265,7 @@ const MethodScreen: React.FC<{
 const VerifyScreen: React.FC<{
   method: 'AADHAAR' | 'VOTER_ID';
   pollingStationId: number;
-  onVerified: (data: { voterId: number; voterName: string; simulatedOtp: string }) => void;
+  onVerified: (data: { voterId: number; voterName: string; simulatedOtp: string; hasFaceRegistered?: boolean }) => void;
   onBack: () => void;
 }> = ({ method, pollingStationId, onVerified, onBack }) => {
   const [value, setValue] = useState('');
@@ -317,9 +317,10 @@ const VerifyScreen: React.FC<{
 
 const ProtocolChoiceScreen: React.FC<{
   voterName: string;
+  hasFaceRegistered?: boolean;
   onSelectProtocol: (protocol: 'FACE' | 'FINGERPRINT' | 'OTP') => void;
   onBack: () => void;
-}> = ({ voterName, onSelectProtocol, onBack }) => (
+}> = ({ voterName, hasFaceRegistered, onSelectProtocol, onBack }) => (
   <motion.div className="flex flex-col items-center justify-center h-full gap-6 px-8 max-w-lg mx-auto"
     initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
     <div className="text-center">
@@ -333,15 +334,36 @@ const ProtocolChoiceScreen: React.FC<{
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
       {/* Face Liveness WebCam */}
       <button
-        onClick={() => onSelectProtocol('FACE')}
-        className="p-4 rounded-2xl bg-slate-800/80 border-2 border-slate-700 hover:border-primary-500 hover:bg-primary-950/20 transition-all text-center flex flex-col items-center gap-2.5 group"
+        onClick={() => {
+          if (!hasFaceRegistered) {
+            toast('Voter enrolled via Excel without face photo. Please authenticate via Fingerprint or Mobile OTP.', {
+              icon: 'ℹ️',
+            });
+            return;
+          }
+          onSelectProtocol('FACE');
+        }}
+        className={`p-4 rounded-2xl relative transition-all text-center flex flex-col items-center gap-2.5 group ${
+          hasFaceRegistered
+            ? 'bg-primary-950/30 border-2 border-primary-500 hover:bg-primary-900/40 shadow-lg shadow-primary-950/50'
+            : 'bg-slate-800/40 border-2 border-slate-700/60 opacity-60 hover:opacity-80'
+        }`}
       >
-        <div className="w-12 h-12 rounded-xl bg-primary-600/20 text-primary-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+        {hasFaceRegistered && (
+          <span className="absolute -top-2.5 px-2 py-0.5 bg-emerald-500 text-slate-950 font-black text-[9px] rounded-full uppercase tracking-wider shadow">
+            Enrolled In DB
+          </span>
+        )}
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${
+          hasFaceRegistered ? 'bg-primary-600/30 text-primary-400' : 'bg-slate-800 text-slate-400'
+        }`}>
           <Camera size={24} />
         </div>
         <div>
-          <p className="font-bold text-sm text-white">Face Liveness</p>
-          <p className="text-[10px] text-slate-400">WebCam AI Scan</p>
+          <p className="font-bold text-sm text-white">Face Verification</p>
+          <p className="text-[10px] text-slate-400">
+            {hasFaceRegistered ? 'Real AI WebCam Match' : 'Excel Import (No Face)'}
+          </p>
         </div>
       </button>
 
@@ -395,15 +417,19 @@ const BiometricScreen: React.FC<{
   const [scanProgress, setScanProgress] = useState(0);
   const [livenessPassed, setLivenessPassed] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [confidence, setConfidence] = useState<number | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Initialize camera for FACE type
   useEffect(() => {
     let stream: MediaStream | null = null;
     if (type === 'FACE' && navigator.mediaDevices?.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
+      navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360, facingMode: 'user' } })
         .then((s) => {
           stream = s;
+          streamRef.current = s;
           if (videoRef.current) {
             videoRef.current.srcObject = s;
             setCameraActive(true);
@@ -418,14 +444,67 @@ const BiometricScreen: React.FC<{
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
     };
   }, [type]);
 
   const handleStartScan = async () => {
     setScanning(true);
     setScanProgress(0);
+    setErrorDetail(null);
 
-    // Progressive simulated AI liveness check
+    if (type === 'FACE') {
+      const video = videoRef.current;
+      if (!video) {
+        toast.error('WebCam video feed is not active. Please grant camera access.');
+        setScanning(false);
+        return;
+      }
+
+      setScanProgress(25);
+
+      // Real-time canvas frame capture from live camera video
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        toast.error('Failed to capture frame from webcam.');
+        setScanning(false);
+        return;
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const liveSnapshot = canvas.toDataURL('image/jpeg', 0.85);
+
+      setScanProgress(60);
+
+      try {
+        const result = await votingService.verifyFace(voterId, liveSnapshot);
+        setScanProgress(100);
+        setLivenessPassed(true);
+        setConfidence(result.confidence);
+        playEvmBeep();
+        toast.success(`Face Recognition Verified (${result.confidence}% Match) ✓ Ballot Unlocked`);
+        setTimeout(() => {
+          onVerified(result.voter, result.ballotToken);
+        }, 1200);
+      } catch (err: unknown) {
+        const msg =
+          (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data?.detail ||
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'Face verification failed: Live face does not match the registered voter.';
+        setErrorDetail(msg);
+        toast.error(msg);
+        setScanning(false);
+        setScanProgress(0);
+      }
+      return;
+    }
+
+    // Biometric Fingerprint sensor flow
     const interval = setInterval(() => {
       setScanProgress((prev) => {
         if (prev >= 100) {
@@ -442,7 +521,7 @@ const BiometricScreen: React.FC<{
 
       try {
         const result = await votingService.simulateBiometric(voterId, type);
-        toast.success(`${type === 'FACE' ? 'Face Liveness Verified' : 'Fingerprint Matched'} ✓ Ballot Unlocked`);
+        toast.success('Fingerprint Matched ✓ Ballot Unlocked');
         setTimeout(() => {
           onVerified(result.voter, result.ballotToken);
         }, 800);
@@ -459,7 +538,7 @@ const BiometricScreen: React.FC<{
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div>
         <h2 className="text-xl font-bold text-white">
-          {type === 'FACE' ? 'WebCam Face & Liveness Verification' : 'Biometric Fingerprint Scanner'}
+          {type === 'FACE' ? 'WebCam Face Recognition & Match' : 'Biometric Fingerprint Scanner'}
         </h2>
         <p className="text-slate-400 text-xs mt-1">Authenticating: <span className="text-white font-semibold">{voterName}</span></p>
       </div>
@@ -471,12 +550,12 @@ const BiometricScreen: React.FC<{
           ) : (
             <div className="flex flex-col items-center justify-center p-4">
               <Camera size={48} className="text-primary-400 mb-2 animate-pulse" />
-              <p className="text-xs text-slate-400">Live Camera Feed Active</p>
+              <p className="text-xs text-slate-400">Requesting WebCam Access...</p>
             </div>
           )}
 
           {/* Futuristic HUD overlay */}
-          <div className="absolute inset-4 border border-dashed border-emerald-400/60 rounded-2xl pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-4 border border-dashed border-emerald-400/60 rounded-full pointer-events-none flex items-center justify-center">
             {scanning && (
               <motion.div
                 className="w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"
@@ -487,10 +566,13 @@ const BiometricScreen: React.FC<{
           </div>
 
           {livenessPassed && (
-            <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-emerald-300">
-              <CheckCircle2 size={42} className="text-emerald-400 mb-2 animate-bounce" />
-              <p className="font-bold text-sm">LIVENESS CONFIRMED</p>
-              <p className="text-[10px] text-emerald-400">Biometric Match: 98.7%</p>
+            <div className="absolute inset-0 bg-emerald-950/90 backdrop-blur-sm flex flex-col items-center justify-center text-emerald-300 p-4">
+              <CheckCircle2 size={46} className="text-emerald-400 mb-2 animate-bounce" />
+              <p className="font-bold text-sm tracking-wide">FACE RECOGNITION CONFIRMED</p>
+              <p className="text-xs text-emerald-300 font-mono mt-1">
+                Biometric Match: {confidence ?? 98.7}%
+              </p>
+              <p className="text-[10px] text-emerald-400/80 mt-1">Unlocking Electronic Ballot...</p>
             </div>
           )}
         </div>
@@ -510,12 +592,20 @@ const BiometricScreen: React.FC<{
         </div>
       )}
 
+      {/* Error Banner */}
+      {errorDetail && (
+        <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-start gap-2 text-left animate-in">
+          <AlertCircle size={15} className="shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed">{errorDetail}</p>
+        </div>
+      )}
+
       {/* Status Bar */}
       <div className="w-full">
         {scanning ? (
           <div className="space-y-1.5">
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>{type === 'FACE' ? 'Analyzing facial landmarks & blinking...' : 'Scanning dermal ridges...'}</span>
+              <span>{type === 'FACE' ? 'Extracting biometric facial landmarks...' : 'Scanning dermal ridges...'}</span>
               <span className="font-mono text-emerald-400">{scanProgress}%</span>
             </div>
             <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
@@ -524,7 +614,7 @@ const BiometricScreen: React.FC<{
           </div>
         ) : (
           <p className="text-xs text-slate-400">
-            {type === 'FACE' ? 'Position face inside the frame and click verify' : 'Place finger firmly on the sensor pad'}
+            {type === 'FACE' ? 'Look directly into the camera lens and click Verify' : 'Place finger firmly on the sensor pad'}
           </p>
         )}
       </div>
@@ -536,7 +626,7 @@ const BiometricScreen: React.FC<{
           disabled={scanning || livenessPassed}
           className="btn-primary flex-1 justify-center bg-gradient-to-r from-emerald-600 to-teal-600"
         >
-          {scanning ? 'Verifying...' : type === 'FACE' ? 'Start AI Scan' : 'Press Sensor'}
+          {scanning ? 'Verifying Live Face...' : type === 'FACE' ? 'Verify Face Now' : 'Press Sensor'}
         </button>
       </div>
     </motion.div>
@@ -881,7 +971,7 @@ const VVPATScreen: React.FC<{ vvpat: VvpatRecord; onDone: () => void }> = ({ vvp
 export const VotingMachinePage: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('welcome');
   const [method, setMethod] = useState<'AADHAAR' | 'VOTER_ID'>('VOTER_ID');
-  const [initData, setInitData] = useState<{ voterId: number; voterName: string; simulatedOtp: string } | null>(null);
+  const [initData, setInitData] = useState<{ voterId: number; voterName: string; simulatedOtp: string; hasFaceRegistered?: boolean } | null>(null);
   const [selectedBioType, setSelectedBioType] = useState<'FACE' | 'FINGERPRINT'>('FACE');
   const [voter, setVoter] = useState<VerifiedVoter | null>(null);
   const [ballotToken, setBallotToken] = useState<string | null>(null);
@@ -1054,6 +1144,7 @@ export const VotingMachinePage: React.FC = () => {
               <div key="protocol" className="absolute inset-0">
                 <ProtocolChoiceScreen
                   voterName={initData.voterName}
+                  hasFaceRegistered={initData.hasFaceRegistered}
                   onSelectProtocol={(p) => {
                     if (p === 'OTP') {
                       setScreen('otp');

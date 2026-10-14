@@ -13,6 +13,8 @@ class CreateVoterRequest(BaseModel):
     address: str = Field(..., min_length=5)
     phone: Optional[str] = None
     serialNumber: int = Field(..., gt=0)
+    photoUrl: Optional[str] = None
+    faceData: Optional[str] = None
 
 class UpdateVoterRequest(BaseModel):
     constituencyId: Optional[int] = None
@@ -25,6 +27,7 @@ class UpdateVoterRequest(BaseModel):
     phone: Optional[str] = None
     serialNumber: Optional[int] = Field(None, gt=0)
     photoUrl: Optional[str] = None
+    faceData: Optional[str] = None
     isActive: Optional[bool] = None
 
 class BulkVotersRequest(BaseModel):

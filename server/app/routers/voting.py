@@ -10,6 +10,7 @@ from app.schemas.voting import (
     InitiateVerificationRequest,
     VerifyOTPRequest,
     SimulateBiometricRequest,
+    VerifyFaceRequest,
     CastVoteRequest,
 )
 from app.services.verification_service import verification_service
@@ -36,8 +37,13 @@ def verify_otp(payload: VerifyOTPRequest, db: Session = Depends(get_db)):
 
 @router.post("/verify/biometric")
 def simulate_biometric(payload: SimulateBiometricRequest, db: Session = Depends(get_db)):
-    result = verification_service.simulate_biometric(db, voter_id=payload.voterId, bio_type=payload.type)
+    result = verification_service.simulate_biometric(db, voter_id=payload.voterId, bio_type=payload.type, face_image=payload.faceImage)
     return success_response(data=result, message=result.get("message", "Biometric verified"))
+
+@router.post("/verify/face")
+def verify_face(payload: VerifyFaceRequest, db: Session = Depends(get_db)):
+    result = verification_service.verify_face(db, voter_id=payload.voterId, face_image=payload.faceImage)
+    return success_response(data=result, message=result.get("message", "Face verified successfully"))
 
 @router.post("/cast")
 def cast_vote(payload: CastVoteRequest, db: Session = Depends(get_db)):
