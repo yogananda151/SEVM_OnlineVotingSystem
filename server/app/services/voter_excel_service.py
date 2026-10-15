@@ -238,20 +238,40 @@ class VoterExcelService:
                 "aadhaarHash": aadhaar_hash,
             })
 
-        # Check existing in DB
+        # Check existing Voter IDs and Aadhaar hashes in DB
         voter_ids = [v["voterId"] for v in raw_voters]
         existing_voters = db.query(Voter.voterId).filter(Voter.voterId.in_(voter_ids), Voter.deletedAt.is_(None)).all()
-        existing_set = {v[0].upper() for v in existing_voters}
+        existing_voter_set = {v[0].upper() for v in existing_voters}
 
-        valid_voters = [v for v in raw_voters if v["voterId"] not in existing_set]
-        skipped_count = len(duplicate_voter_ids) + len(existing_set)
+        aadhaar_hashes = [v["aadhaarHash"] for v in raw_voters if v["aadhaarHash"]]
+        existing_aadhaar_hashes = set()
+        if aadhaar_hashes:
+            existing_aadhaars = db.query(Voter.aadhaarHash).filter(Voter.aadhaarHash.in_(aadhaar_hashes), Voter.deletedAt.is_(None)).all()
+            existing_aadhaar_hashes = {a[0] for a in existing_aadhaars}
+
+        valid_voters = []
+        duplicate_records = list(duplicate_voter_ids)
+        seen_batch_aadhaar = set()
+
+        for v in raw_voters:
+            if v["voterId"] in existing_voter_set:
+                duplicate_records.append(f"Voter ID {v['voterId']}")
+                continue
+            if v["aadhaarHash"] and (v["aadhaarHash"] in existing_aadhaar_hashes or v["aadhaarHash"] in seen_batch_aadhaar):
+                duplicate_records.append(f"Duplicate Aadhaar ({v['fullName']})")
+                continue
+            if v["aadhaarHash"]:
+                seen_batch_aadhaar.add(v["aadhaarHash"])
+            valid_voters.append(v)
+
+        skipped_count = len(raw_voters) - len(valid_voters) + len(duplicate_voter_ids)
 
         return {
             "totalRows": len(rows) - 1,
             "validRowsCount": len(raw_voters),
             "importedCount": len(valid_voters),
             "skippedDuplicatesCount": skipped_count,
-            "duplicateVoterIds": duplicate_voter_ids + list(existing_set),
+            "duplicateVoterIds": duplicate_records,
             "errors": errors,
             "validVoters": valid_voters,
         }

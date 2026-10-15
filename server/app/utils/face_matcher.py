@@ -1,120 +1,150 @@
+import os
 import io
 import base64
 import math
-from typing import Dict, Any, Tuple
-from PIL import Image, ImageOps
+from typing import Dict, Any, Optional, Tuple
+import cv2
+import numpy as np
+from PIL import Image
 
-def decode_base64_image(b64_str: str) -> Image.Image:
-    """Decodes a base64 or Data URI string into a PIL Image."""
+# Path to deep neural network ONNX models
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, "models_cv")
+YUNET_PATH = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
+SFACE_PATH = os.path.join(MODELS_DIR, "face_recognition_sface_2021dec.onnx")
+
+_detector: Optional[cv2.FaceDetectorYN] = None
+_recognizer: Optional[cv2.FaceRecognizerSF] = None
+
+def get_models() -> Tuple[cv2.FaceDetectorYN, cv2.FaceRecognizerSF]:
+    """Lazy-loads and returns the singleton FaceDetectorYN and FaceRecognizerSF instances."""
+    global _detector, _recognizer
+    if _detector is None or _recognizer is None:
+        if not os.path.exists(YUNET_PATH) or not os.path.exists(SFACE_PATH):
+            raise FileNotFoundError(
+                f"Face recognition models missing. Expected at {YUNET_PATH} and {SFACE_PATH}"
+            )
+        # Initialize detector with default resolution; input size is set dynamically per image
+        _detector = cv2.FaceDetectorYN.create(
+            YUNET_PATH,
+            "",
+            (320, 320),
+            score_threshold=0.55,
+            nms_threshold=0.3,
+            top_k=5000,
+        )
+        _recognizer = cv2.FaceRecognizerSF.create(SFACE_PATH, "")
+    return _detector, _recognizer
+
+def decode_base64_to_cv2(b64_str: str) -> np.ndarray:
+    """Decodes a base64 or Data URI string into a BGR OpenCV NumPy array."""
     if not b64_str or not isinstance(b64_str, str):
         raise ValueError("Invalid image data provided.")
     if "," in b64_str:
         b64_str = b64_str.split(",", 1)[1]
     try:
         raw_bytes = base64.b64decode(b64_str)
-        return Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+        pil_img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+        rgb = np.array(pil_img)
+        return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     except Exception as e:
         raise ValueError(f"Could not decode image: {str(e)}")
 
-def validate_face_quality(img: Image.Image) -> None:
-    """Ensures image is not blank, pitch black, or solid white."""
-    w, h = img.size
-    if w < 40 or h < 40:
-        raise ValueError("Captured image resolution is too low. Please reposition closer to the camera.")
-    
-    gray = img.convert("L")
-    pixels = list(gray.getdata())
-    mean_val = sum(pixels) / len(pixels)
-    var = sum((p - mean_val) ** 2 for p in pixels) / len(pixels)
-    std = math.sqrt(var)
-
-    if mean_val < 15:
-        raise ValueError("Image is too dark or camera is obstructed. Please ensure proper lighting.")
-    if mean_val > 245 and std < 10:
-        raise ValueError("Image is overexposed / blank. Please point camera at your face.")
-    if std < 10.0:
-        raise ValueError("No facial features or texture detected. Please face the camera directly.")
-
-def extract_face_descriptor(img: Image.Image) -> list:
+def detect_face_and_extract_feature(bgr_img: np.ndarray, is_live: bool = False) -> Optional[np.ndarray]:
     """
-    Extracts a normalized multi-scale feature vector representing
-    facial landmarks, luminance distribution, and gradient geometry.
+    Detects the primary human face in the image using YuNet,
+    aligns it to canonical 112x112 facial geometry, and extracts
+    the 128-dimensional deep feature representation using SFace.
     """
-    # Resize to standard 64x64 resolution and auto-contrast
-    resized = img.resize((64, 64), Image.Resampling.LANCZOS)
-    gray = ImageOps.autocontrast(resized.convert("L"))
-    pixels = list(gray.getdata())
-    
-    features = []
+    detector, recognizer = get_models()
+    h, w = bgr_img.shape[:2]
+    if h < 30 or w < 30:
+        return None
 
-    # 1. Spatial 8x8 block grid (64 mean values + 64 variance values)
-    for gy in range(8):
-        for gx in range(8):
-            block = []
-            for y in range(gy * 8, (gy + 1) * 8):
-                row_offset = y * 64
-                for x in range(gx * 8, (gx + 1) * 8):
-                    block.append(pixels[row_offset + x])
-            b_mean = sum(block) / len(block)
-            b_var = sum((p - b_mean) ** 2 for p in block) / len(block)
-            features.append(b_mean / 255.0)
-            features.append(math.sqrt(b_var) / 128.0)
+    # Dynamically set input dimensions for YuNet
+    detector.setInputSize((w, h))
+    faces = detector.detect(bgr_img)
 
-    # 2. Horizontal edge gradients (32 values)
-    for y in range(0, 64, 4):
-        for x in range(0, 63, 8):
-            diff = abs(pixels[y * 64 + x + 1] - pixels[y * 64 + x])
-            features.append(diff / 255.0)
+    # If no face detected at 0.55 threshold, try slightly lower threshold for difficult lighting
+    if faces[1] is None or len(faces[1]) == 0:
+        detector.setScoreThreshold(0.40)
+        faces = detector.detect(bgr_img)
+        detector.setScoreThreshold(0.55)
 
-    # 3. Vertical edge gradients (32 values)
-    for y in range(0, 63, 8):
-        for x in range(0, 64, 4):
-            diff = abs(pixels[(y + 1) * 64 + x] - pixels[y * 64 + x])
-            features.append(diff / 255.0)
+    if faces[1] is None or len(faces[1]) == 0:
+        return None
 
-    # Unit vector normalization
-    norm = math.sqrt(sum(f * f for f in features)) or 1.0
-    return [f / norm for f in features]
+    # Pick the largest, most confident face (width * height)
+    face_list = faces[1]
+    best_face = max(face_list, key=lambda f: f[2] * f[3])
 
-def compute_similarity(vec1: list, vec2: list) -> float:
-    """Computes cosine similarity between two feature vectors scaled to 0-100%."""
-    if len(vec1) != len(vec2):
-        return 0.0
-    dot = sum(a * b for a, b in zip(vec1, vec2))
-    # Bound between 0.0 and 100.0
-    score = max(0.0, min(100.0, dot * 100.0))
-    return round(score, 1)
+    # Minimum size validation to prevent noise
+    if best_face[2] < 24 or best_face[3] < 24:
+        return None
 
-def compare_faces(stored_b64: str, live_b64: str, threshold: float = 70.0) -> Dict[str, Any]:
+    # Align face and extract 128-D SFace descriptor
+    aligned = recognizer.alignCrop(bgr_img, best_face)
+    feat = recognizer.feature(aligned)
+    return feat
+
+def compare_faces(stored_b64: str, live_b64: str, threshold: float = 0.38) -> Dict[str, Any]:
     """
-    Compares the stored registered voter face against the live webcam snapshot.
-    Returns whether the match is verified, similarity score, and descriptive message.
+    Performs real deep-learning facial recognition comparison using
+    OpenCV's official YuNet (face detection & 5-point alignment) and
+    SFace (128D deep feature representation).
+
+    Official SFace thresholds:
+    - Cosine similarity: >= 0.363 means SAME person.
+    - Here we use a safe strict threshold of 0.380 (where identical faces are 0.85-0.98,
+      and different people are 0.00-0.20).
     """
     if not stored_b64:
         raise ValueError("Voter has no registered facial biometrics on record.")
     if not live_b64:
-        raise ValueError("No live face snapshot provided for verification.")
+        raise ValueError("No live camera snapshot provided for face verification.")
 
-    stored_img = decode_base64_image(stored_b64)
-    live_img = decode_base64_image(live_b64)
+    stored_bgr = decode_base64_to_cv2(stored_b64)
+    live_bgr = decode_base64_to_cv2(live_b64)
 
-    validate_face_quality(stored_img)
-    validate_face_quality(live_img)
+    # 1. Detect & extract deep facial features from stored registered voter photo
+    stored_feat = detect_face_and_extract_feature(stored_bgr, is_live=False)
+    if stored_feat is None:
+        raise ValueError(
+            "Registered voter photo has no detectable human face. Please update voter biometric enrollment."
+        )
 
-    vec_stored = extract_face_descriptor(stored_img)
-    vec_live = extract_face_descriptor(live_img)
+    # 2. Detect & extract deep facial features from live camera snapshot
+    live_feat = detect_face_and_extract_feature(live_bgr, is_live=True)
+    if live_feat is None:
+        raise ValueError(
+            "No human face detected in the live camera frame. Please align your face directly inside the camera frame in good lighting."
+        )
 
-    similarity = compute_similarity(vec_stored, vec_live)
-    passed = similarity >= threshold
+    # 3. Compute cosine similarity & L2 distance with SFace
+    _, recognizer = get_models()
+    raw_cosine = float(recognizer.match(stored_feat, live_feat, cv2.FaceRecognizerSF_FR_COSINE))
+    raw_l2 = float(recognizer.match(stored_feat, live_feat, cv2.FaceRecognizerSF_FR_NORM_L2))
 
-    if passed:
-        message = f"Face Recognition Succeeded (Confidence: {similarity}%, Threshold: {threshold}%)."
+    # Match condition: cosine >= threshold AND L2 distance <= 1.128
+    is_verified = (raw_cosine >= threshold) and (raw_l2 <= 1.15)
+
+    # Calculate human-friendly confidence percentage (0% to 100%)
+    if is_verified:
+        # Scale range [0.38, 1.0] to [80.0%, 99.8%]
+        normalized = (raw_cosine - threshold) / (1.0 - threshold)
+        confidence_pct = round(80.0 + min(1.0, max(0.0, normalized)) * 19.8, 1)
+        message = f"Face Recognition Verified ({confidence_pct}% match). Identity confirmed."
     else:
-        message = f"Face Mismatch (Similarity: {similarity}%, Required >= {threshold}%). The person in front of the camera does not match the registered voter."
+        # Scale below threshold to [10.0%, 65.0%]
+        scaled = max(0.0, raw_cosine) / max(0.01, threshold)
+        confidence_pct = round(min(65.0, scaled * 65.0), 1)
+        message = f"Face Verification Failed: The live person does not match registered voter face ({confidence_pct}% match, required >= 80%). Access Denied."
 
     return {
-        "verified": passed,
-        "score": similarity,
+        "verified": is_verified,
+        "score": confidence_pct,
+        "raw_cosine": round(raw_cosine, 4),
+        "raw_l2": round(raw_l2, 4),
         "threshold": threshold,
         "message": message,
     }

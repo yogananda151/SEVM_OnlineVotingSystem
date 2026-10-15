@@ -26,6 +26,7 @@ class UpdateVoterRequest(BaseModel):
     address: Optional[str] = Field(None, min_length=5)
     phone: Optional[str] = None
     serialNumber: Optional[int] = Field(None, gt=0)
+    aadhaarNumber: Optional[str] = None
     photoUrl: Optional[str] = None
     faceData: Optional[str] = None
     isActive: Optional[bool] = None

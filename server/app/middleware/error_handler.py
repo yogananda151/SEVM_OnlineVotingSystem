@@ -41,8 +41,10 @@ async def integrity_exception_handler(request: Request, exc: Exception):
             clean_msg = "A constituency with this code already exists. Please use a different code."
         elif "polling_stations_code_key" in msg:
             clean_msg = "A polling station with this code already exists. Please use a different code."
-        elif "voters_voterId_key" in msg:
-            clean_msg = "A voter with this Voter ID already exists."
+        elif "voters_voterid_key" in msg.lower() or "voterid" in msg.lower():
+            clean_msg = "A voter with this Voter ID already exists in the system. Please use a unique Voter ID."
+        elif "voters_aadhaarhash_key" in msg.lower() or "aadhaar" in msg.lower():
+            clean_msg = "A voter with this Aadhaar Number already exists in the system. Each citizen must have a unique Aadhaar."
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"success": False, "message": clean_msg},
@@ -61,6 +63,25 @@ async def integrity_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"success": False, "message": "Database constraint violation occurred."},
+    )
+
+from sqlalchemy.exc import OperationalError
+
+async def operational_exception_handler(request: Request, exc: OperationalError):
+    logger.error(f"Database OperationalError on {request.url}: {exc}")
+    msg = str(exc)
+    if "Can't connect to MySQL server" in msg or "2003" in msg or "10061" in msg:
+        clean_msg = "Cannot connect to MySQL database server on localhost:3306. Please ensure the MySQL service ('MySQL97') is started."
+    elif "Access denied" in msg or "1045" in msg:
+        clean_msg = "MySQL authentication failed. Please verify the database user and password in server/.env."
+    elif "Unknown database" in msg or "1049" in msg:
+        clean_msg = "Database 'voting_system' does not exist in MySQL. Please run the database setup/seed script."
+    else:
+        clean_msg = f"Database connection error: {msg}"
+
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"success": False, "message": clean_msg},
     )
 
 async def generic_exception_handler(request: Request, exc: Exception):

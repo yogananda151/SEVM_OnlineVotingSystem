@@ -12,7 +12,7 @@ class Voter(Base):
     pollingStationId = Column(Integer, ForeignKey("polling_stations.id", ondelete="RESTRICT"), nullable=False, index=True)
     fullName = Column(String(150), nullable=False)
     voterId = Column(String(50), unique=True, nullable=False, index=True)
-    aadhaarHash = Column(String(64), nullable=True)
+    aadhaarHash = Column(String(64), unique=True, nullable=True, index=True)
     dateOfBirth = Column(DateTime, nullable=False)
     gender = Column(String(10), nullable=False)
     address = Column(Text, nullable=False)

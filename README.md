@@ -1,594 +1,668 @@
-# Smart EVM – Online Voting System
+# Smart EVM – Full-Stack Online Voting System
 
-> **A complete, production-quality Electronic Voting Machine (EVM) simulation** built as a full-stack web application. This system simulates a real EVM with a secure administrative portal, election officer interface, and a touchscreen voting machine UI.
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%200.110-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.10%2B%20%7C%203.14-3776AB.svg?logo=python&logoColor=white)](https://www.python.org)
+[![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20TypeScript-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Bundler-Vite%205-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev)
+[![MySQL](https://img.shields.io/badge/Database-MySQL%208.x%2F9.x-4479A1.svg?logo=mysql&logoColor=white)](https://www.mysql.com)
+[![OpenCV](https://img.shields.io/badge/AI%20Biometrics-OpenCV%20YuNet%20%2B%20SFace-5C3EE8.svg?logo=opencv&logoColor=white)](https://opencv.org)
+[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-06B6D4.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+
+> **A secure, end-to-end Electronic Voting Machine (EVM) simulation and Electoral Management System** built with **FastAPI**, **SQLAlchemy 2.0**, **MySQL**, **React 18**, and **OpenCV Deep Learning Face Recognition**.
+> 
+> Developed as a comprehensive Database Management Systems (DBMS) project simulating a government-grade digital election infrastructure with 3 isolated role-specific portals, tamper-evident cryptographic voting, digital VVPAT, and multi-factor biometric authentication.
 
 ---
 
 ## 📋 Table of Contents
 
-1. [Project Overview](#1-project-overview)
-2. [Technology Stack](#2-technology-stack)
-3. [Project Folder Structure](#3-project-folder-structure)
-4. [Prerequisites](#4-prerequisites)
-5. [Installation Guide](#5-installation-guide)
-6. [Environment Variables](#6-environment-variables)
-7. [Database Setup](#7-database-setup)
-8. [Running the Project](#8-running-the-project)
-9. [Opening the Web Application](#9-opening-the-web-application)
-10. [Build for Production](#10-build-for-production)
-11. [API Documentation](#11-api-documentation)
-12. [Database Documentation](#12-database-documentation)
-13. [User Manual](#13-user-manual)
-14. [Security Features](#14-security-features)
-15. [Troubleshooting](#15-troubleshooting)
-16. [Future Enhancements](#16-future-enhancements)
+1. [Project Overview & Key Capabilities](#1-project-overview--key-capabilities)
+2. [Architecture & Technology Stack](#2-architecture--technology-stack)
+3. [Deep Learning Face Biometrics](#3-deep-learning-face-biometrics)
+4. [Project Directory Structure](#4-project-directory-structure)
+5. [Prerequisites](#5-prerequisites)
+6. [Quick Start Guide](#6-quick-start-guide)
+7. [Step-by-Step Installation](#7-step-by-step-installation)
+8. [Configuration & Environment Variables](#8-configuration--environment-variables)
+9. [Database Setup & Seeding](#9-database-setup--seeding)
+10. [Default Credentials & Portals](#10-default-credentials--portals)
+11. [Core Workflows & User Guides](#11-core-workflows--user-guides)
+12. [Relational Database Schema (19 Tables)](#12-relational-database-schema-19-tables)
+13. [API Documentation (Interactive Swagger)](#13-api-documentation-interactive-swagger)
+14. [Security, Integrity & Auditing](#14-security-integrity--auditing)
+15. [Troubleshooting & FAQs](#15-troubleshooting--faqs)
+16. [Academic Disclaimer](#16-academic-disclaimer)
 
 ---
 
-## 1. Project Overview
+## 1. Project Overview & Key Capabilities
 
-**Smart EVM** is an educational simulation of an Electronic Voting Machine system. It demonstrates how a real-world government-grade voting platform could be architected and built.
+The **Smart EVM** project simulates an enterprise-scale electoral system designed to address voter identity verification, operational integrity, and real-time tabulation while preserving ballot secrecy.
 
-### Main Objectives
-- Simulate a complete election lifecycle from creation to result publication
-- Provide three independent, role-specific interfaces
-- Implement strong security practices (JWT, bcrypt, SHA-256 vote hashing)
-- Generate verifiable digital VVPAT (Voter Verified Paper Audit Trail)
-- Enable real-time monitoring and reporting
-
-### Key Features
-- ✅ Commissioner dashboard with 12 management modules
-- ✅ Election officer portal with machine controls
-- ✅ Full-screen touchscreen voting machine UI
-- ✅ Simulated Aadhaar + OTP + biometric verification
-- ✅ SHA-256 vote hashing for integrity
-- ✅ Digital VVPAT with 7-second auto-display
-- ✅ PDF and Excel report generation
-- ✅ Complete audit trail
-- ✅ Role-Based Access Control
-
-> **Disclaimer**: All Aadhaar verification, fingerprint verification, face recognition, and OTP verification are simulations only. No real government databases or services are accessed.
-
----
-
-## 2. Technology Stack
-
-### Frontend
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| React | ^18.3.1 | UI framework |
-| TypeScript | ^5.2.2 | Type safety |
-| Vite | ^5.3.1 | Build tool |
-| Tailwind CSS | ^3.4.4 | Styling |
-| React Router | ^6.24.0 | Client routing |
-| React Hook Form | ^7.52.0 | Form management |
-| Framer Motion | ^11.2.14 | Animations |
-| Axios | ^1.7.2 | HTTP client |
-| Recharts | ^2.12.7 | Charts |
-| Zod | ^3.23.8 | Validation |
-| Lucide React | ^0.395.0 | Icons |
-| React Hot Toast | ^2.4.1 | Notifications |
-
-### Backend
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| Node.js | ≥18 | Runtime |
-| Express.js | ^4.19.2 | HTTP framework |
-| TypeScript | ^5.5.2 | Type safety |
-| Prisma | ^5.14.0 | ORM |
-| MySQL | 8.x | Database |
-| JWT | jsonwebtoken ^9 | Authentication |
-| bcryptjs | ^2.4.3 | Password hashing |
-| PDFKit | ^0.15.0 | PDF generation |
-| ExcelJS | ^4.4.0 | Excel generation |
-| Multer | ^1.4.5 | File uploads |
-| Winston | ^3.13.0 | Logging |
-| Zod | ^3.23.8 | API validation |
-| Helmet | ^7.1.0 | Security headers |
+### 🌟 Core Capabilities
+- **Three Specialized Portals**:
+  1. **Chief Election Commissioner Portal (`/admin`)**: Complete electoral lifecycle governance, geographic hierarchy management, candidate and party registration, voter roll administration with photo enrollment, Excel bulk operations, and real-time turnout analytics.
+  2. **Polling Officer Console (`/officer`)**: Local polling station monitoring, biometric voter identity verification, and machine authorization (Lock, Activate, Pause, Close).
+  3. **Touchscreen EVM Kiosk (`/voting-machine`)**: An intuitive, high-contrast, distraction-free ballot interface with audio cues, confirmation popups, and automated digital VVPAT generation.
+- **Multi-Factor Biometric Voter Authentication**:
+  - **Step 1**: Voter ID / Aadhaar Number lookup with strict uniqueness validation.
+  - **Step 2**: Time-sensitive dynamic OTP verification.
+  - **Step 3**: Real-time facial biometric matching using OpenCV YuNet face detection and SFace deep neural network 128D embeddings.
+- **Strict Anti-Fraud & Uniqueness Rules**:
+  - Enforced unique database constraints on `voterId` and `aadhaarHash` across manual registration, updates, and Excel bulk uploads.
+  - Single-vote enforcement (`votes.voterId` unique constraint and `election_voter_statuses`).
+- **Cryptographic Vote Integrity**:
+  - Every cast ballot generates an irreversible SHA-256 digital signature computed from ballot reference, voter token, candidate ID, and timestamp.
+  - Generates a **Digital VVPAT (Voter Verified Paper Audit Trail)** slip displayed for 7 seconds before being committed into the immutable audit repository.
+- **Comprehensive Reporting & Export**:
+  - Automated PDF generation for Election Summaries and Audit Trails via **ReportLab**.
+  - Dynamic Excel spreadsheet import/export for Candidates, Polling Officers, and Voter Rosters via **OpenPyXL**.
 
 ---
 
-## 3. Project Folder Structure
+## 2. Architecture & Technology Stack
+
+```
+┌───────────────────────────────────────────────────────────┐
+│              Client Application (Port 5173)               │
+│    React 18 • TypeScript • Tailwind CSS • Framer Motion   │
+│       Vite Dev Proxy: /api/*  ──>  http://localhost:5000  │
+└─────────────────────────────┬─────────────────────────────┘
+                              │ HTTP / JSON REST
+                              ▼
+┌───────────────────────────────────────────────────────────┐
+│               FastAPI Backend (Port 5000)                 │
+│      Python 3.10+ / 3.14 • Uvicorn ASGI Server            │
+│  - Routers: Auth, Elections, Management, Voters, Voting   │
+│  - Security: PyJWT (HS256), Bcrypt, HMAC-SHA256           │
+│  - Services: Voter/Candidate Excel, PDF Reports           │
+└──────────────┬─────────────────────────────┬──────────────┘
+               │                             │
+               ▼                             ▼
+┌──────────────────────────────┐ ┌───────────────────────────┐
+│   OpenCV AI Biometrics       │ │ MySQL Database (Port 3306)│
+│  YuNet (Face Detection & 5pt)│ │ SQLAlchemy 2.0 + PyMySQL │
+│  SFace (128D Embedding NN)   │ │ 19 Relational Tables      │
+│  Cosine Distance Verification│ │ ACID Transaction Control  │
+└──────────────────────────────┘ └───────────────────────────┘
+```
+
+### Frontend Stack
+| Component | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Framework** | React | `^18.3.1` | Component-based UI with hooks & state management |
+| **Language** | TypeScript | `^5.2.2` | End-to-end static typing and interface contracts |
+| **Build Tool** | Vite | `^5.3.1` | Ultra-fast HMR and build bundling |
+| **Styling** | Tailwind CSS | `^3.4.4` | Utility-first responsive design and dark-mode styling |
+| **Animations** | Framer Motion | `^11.2.14`| Smooth page transitions, modals, and EVM interactions |
+| **Icons** | Lucide React | `^0.395.0`| Crisp SVG icons for dashboards and EVM controls |
+| **Forms & Validation** | React Hook Form + Zod | `^7.52` / `^3.23` | Schema validation for voter registration, elections, etc. |
+| **Data Visualization**| Recharts | `^2.12.7` | Dynamic turnout, candidate vote distribution charts |
+| **Notifications** | React Hot Toast | `^2.4.1` | Interactive toast notifications for errors & confirmations |
+| **HTTP Client** | Axios | `^1.7.2` | Intercepted client with automatic JWT token management |
+
+### Backend Stack
+| Component | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Framework** | FastAPI | `^0.110.0`| High-performance async Python web framework |
+| **ASGI Server** | Uvicorn | `^0.28.0` | Production-grade ASGI runner with auto-reload |
+| **ORM** | SQLAlchemy | `^2.0.25` | Modern 2.0-style relational mapping and transactions |
+| **DB Driver** | PyMySQL | `^1.1.0` | Pure-Python MySQL client (zero C-compiler requirements) |
+| **Data Validation** | Pydantic v2 | `^2.6.0` | Strict request/response parsing and serialization |
+| **Authentication** | PyJWT | `^2.8.0` | Cryptographic access (8h) & refresh (7d) JWT tokens |
+| **Password Hashing** | Bcrypt | `^4.1.0` | Salted SHA-512/blowfish password hashing |
+| **Data Processing** | OpenPyXL | `^3.1.2` | Excel bulk ingestion & structured export generation |
+| **PDF Generation** | ReportLab | `^4.1.0` | Vector-rendered electoral summary and audit certificates |
+| **Computer Vision** | OpenCV (`opencv-python`) | `^4.9.0` | Face detection, landmark alignment, and embedding extraction |
+| **Numerics** | NumPy | `^2.0.0` | Matrix math for 128-dimensional embedding comparisons |
+
+---
+
+## 3. Deep Learning Face Biometrics
+
+The system employs real, production-grade deep learning facial recognition rather than simplistic pixel comparisons:
+
+```
+[ Camera Stream / Upload ]
+           │
+           ▼
+┌──────────────────────────────────────┐
+│  OpenCV YuNet (FaceDetectorYN)       │
+│  - Scale-invariant face detection    │
+│  - 5-point landmark localization     │
+│    (Eyes, Nose, Mouth Corners)       │
+└──────────────────┬───────────────────┘
+                   │ Bounding Box + Landmarks
+                   ▼
+┌──────────────────────────────────────┐
+│  OpenCV SFace (FaceRecognizerSF)     │
+│  - Affine face alignment & crop      │
+│  - Deep Neural Network feature extractor│
+│  - Outputs 128-dimensional embedding │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│  Cosine Distance Metric              │
+│  Threshold: 0.363 (~63.7% Cosine Sim)│
+│  - Match < 0.363  ──> Authorized ✅  │
+│  - Match >= 0.363 ──> Blocked 401 ❌ │
+└──────────────────────────────────────┘
+```
+
+1. **Detection & Alignment (`YuNet`)**:
+   - Model: `face_detection_yunet_2023mar.onnx`
+   - Detects face coordinates, bounding box confidence, and 5 facial landmarks (right eye, left eye, nose tip, right mouth corner, left mouth corner).
+2. **Feature Extraction (`SFace`)**:
+   - Model: `face_recognition_sface_2021dec.onnx`
+   - Aligns face orientation based on eye coordinates and projects the facial characteristics into a 128-dimensional hyperspace embedding.
+3. **Cosine Distance Matcher**:
+   - Compares the live voting camera capture against the registered voter photo stored during enrollment.
+   - Genuine matches typically yield cosine similarity $\ge 95\%$. Impersonators or different individuals are strictly rejected with HTTP 401.
+4. **Auto-Downloader**:
+   - Both ONNX models are automatically downloaded into `server/app/models_cv/` using `server/scripts/download_models.py`.
+
+---
+
+## 4. Project Directory Structure
 
 ```
 DBMS_project/
-├── client/                     # React frontend
+├── client/                               # React 18 + Vite Frontend
+│   ├── public/                           # Static icons and assets
 │   ├── src/
-│   │   ├── components/
-│   │   │   └── ui/             # Shared UI components (Modal, StatCard, etc.)
-│   │   ├── hooks/              # Custom React hooks (useAsync, useMutation, etc.)
-│   │   ├── layouts/            # AdminLayout, OfficerLayout
-│   │   ├── lib/                # Axios instance
+│   │   ├── components/                   # Modals, Navbar, StatCards, ErrorBoundary
+│   │   ├── layouts/                      # AdminLayout, OfficerLayout
+│   │   ├── lib/                          # Axios instance, validation errors, face biometrics
 │   │   ├── pages/
-│   │   │   ├── admin/          # All admin management pages
-│   │   │   ├── auth/           # Login page
-│   │   │   ├── officer/        # Officer dashboard
-│   │   │   └── voting/         # Voting machine UI
-│   │   ├── services/           # API service layer (api.service.ts)
-│   │   ├── App.tsx             # Router configuration
-│   │   ├── main.tsx            # Entry point
-│   │   └── index.css           # Global styles + Tailwind
-│   ├── index.html
-│   ├── package.json
-│   ├── tailwind.config.js
-│   ├── vite.config.ts
-│   └── postcss.config.js
+│   │   │   ├── admin/                    # 12 Commissioner management modules
+│   │   │   ├── auth/                     # Unified role login page
+│   │   │   ├── officer/                  # Station officer console & machine controls
+│   │   │   └── voting/                   # Full-screen EVM ballot kiosk & VVPAT page
+│   │   ├── services/                     # Typed API client services
+│   │   ├── App.tsx                       # Client-side router configuration
+│   │   ├── main.tsx                      # Frontend application entry point
+│   │   └── index.css                     # Tailwind styling tokens
+│   ├── package.json                      # Frontend dependencies & scripts
+│   ├── tailwind.config.js                # Custom palette, animations, fonts
+│   └── vite.config.ts                    # Vite config with API proxy
 │
-├── server/                     # Express backend
-│   ├── src/
-│   │   ├── config/             # Config loader, Prisma client
-│   │   ├── controllers/        # Request handlers
-│   │   ├── middleware/         # Auth, error, upload, validation
-│   │   ├── repositories/       # Database access layer
-│   │   ├── routes/             # Express routers
-│   │   ├── services/           # Business logic
-│   │   ├── utils/              # JWT, crypto, logger, response
-│   │   ├── app.ts              # Express app configuration
-│   │   └── index.ts            # Server entry point
-│   ├── prisma/
-│   │   ├── schema.prisma       # Full database schema (17 tables)
-│   │   └── seed.ts             # Database seeder
-│   ├── uploads/                # Uploaded files (auto-created)
-│   ├── logs/                   # Application logs (auto-created)
-│   ├── .env                    # Environment variables
-│   ├── .env.example            # Template
-│   ├── package.json
-│   └── tsconfig.json
+├── server/                               # Python FastAPI Backend
+│   ├── app/
+│   │   ├── config.py                     # Pydantic environment settings
+│   │   ├── database.py                   # SQLAlchemy 2.0 engine & session maker
+│   │   ├── main.py                       # FastAPI application & error handlers
+│   │   ├── models/                       # 19 SQLAlchemy ORM models
+│   │   ├── models_cv/                    # OpenCV YuNet & SFace ONNX neural networks
+│   │   ├── schemas/                      # Pydantic v2 validation schemas
+│   │   ├── middleware/                   # JWT auth guard & exception handlers
+│   │   ├── routers/                      # REST endpoints (auth, elections, voters, etc.)
+│   │   ├── services/                     # Excel import/export, voting, verification
+│   │   └── utils/                        # Face matcher, crypto, JWT, logger
+│   ├── scripts/
+│   │   ├── download_models.py            # Automatic ONNX weights downloader
+│   │   ├── seed.py                       # Master database seeder
+│   │   ├── generate_candidates_excel.py  # Sample candidates generator
+│   │   ├── generate_officers_excel.py    # Sample officers generator
+│   │   └── reset_db.py                   # Clean database reset utility
+│   ├── uploads/                          # Stored photos (voters, candidates, party symbols)
+│   ├── logs/                             # System execution logs (app.log)
+│   ├── .env                              # Active environment configuration
+│   ├── .env.example                      # Configuration template
+│   ├── requirements.txt                  # Python package requirements
+│   ├── run.py                            # Uvicorn entry script
+│   └── package.json                      # Monorepo runner alias
 │
-└── README.md
+├── about/                                # Project documentation & presentation assets
+│   ├── CLIENT_FILE_GUIDE.md              # Detailed React architecture guide
+│   ├── Database.sql                      # Pure MySQL schema dump
+│   ├── ER_Complete.svg                   # Full Entity-Relationship diagram
+│   ├── ER_Presentation.svg               # Simplified ER diagram for slides
+│   ├── UML_UseCaseDiagram.svg            # System use-case diagram
+│   └── ppt_content.md                    # Project presentation outline
+│
+├── candidates.xlsx                       # Pre-formatted candidate spreadsheet
+├── political_parties.xlsx                # Pre-formatted political parties dataset
+├── polling_officers.xlsx                 # Pre-formatted polling officers roster
+├── voters.xlsx                           # Pre-formatted voter registry
+├── run_project.bat                       # One-click Windows runner (starts DB, server & client)
+├── run_backend.bat                       # Dedicated FastAPI backend launcher
+├── start_mysql.bat                       # Self-elevating Windows MySQL service starter
+├── package.json                          # Root monorepo script runner
+└── README.md                             # Complete project documentation (this file)
 ```
 
 ---
 
-## 4. Prerequisites
+## 5. Prerequisites
 
-Before running the project, ensure you have the following installed:
+Before setting up the project, make sure the following dependencies are installed:
 
-| Requirement | Minimum Version | Download |
-|------------|-----------------|---------|
-| Node.js | 18.x LTS | https://nodejs.org |
-| npm | 9.x | (bundled with Node) |
-| MySQL Server | 8.0+ | https://dev.mysql.com/downloads |
-| Git | Latest | https://git-scm.com |
-
-**Recommended Tools:**
-- VS Code: https://code.visualstudio.com
-- MySQL Workbench (optional): https://www.mysql.com/products/workbench
-- Postman (optional, for API testing): https://www.postman.com
+| Tool | Minimum Version | Download Link |
+| :--- | :--- | :--- |
+| **Python** | `3.10+` (Tested on `3.14`) | [python.org/downloads](https://www.python.org/downloads/) |
+| **Node.js & npm** | Node `18.x LTS` / npm `9.x` | [nodejs.org](https://nodejs.org/) |
+| **MySQL Server** | `8.0` or `9.x` | [dev.mysql.com/downloads](https://dev.mysql.com/downloads/installer/) |
+| **Webcam** | Built-in or USB webcam | *Required for live voter facial recognition* |
 
 ---
 
-## 5. Installation Guide
+## 6. Quick Start Guide
 
-### Step 1 – Clone the Repository
-```bash
-git clone <your-repo-url>
-cd DBMS_project
+### Option A: One-Click Startup (Recommended for Windows)
+
+1. **Start the MySQL Service**:
+   Double-click `start_mysql.bat` in the project root.
+   *(This script automatically prompts for administrator rights, starts the `MySQL97` or `MySQL` service, and reports readiness).*
+
+2. **Launch Full Stack Application**:
+   Double-click `run_project.bat` in the project root.
+   *(This launches the Python FastAPI backend and Vite React development server concurrently).*
+
+3. **Open the Application**:
+   Navigate to **`http://localhost:5173`** in your web browser.
+
+---
+
+### Option B: Monorepo npm Scripts
+
+From the root `DBMS_project/` folder:
+
+```powershell
+# 1. Run both Server and Client concurrently:
+npm run dev
+
+# 2. Or run them individually:
+npm run dev:server   # Starts Python FastAPI backend on port 5000
+npm run dev:client   # Starts Vite React frontend on port 5173
 ```
 
-### Step 2 – Install Server Dependencies
-```bash
+---
+
+## 7. Step-by-Step Installation
+
+If you are setting up the project for the first time or on a new computer:
+
+### Step 1: Clone or Open the Repository
+```powershell
+cd D:\Yoga\DBMS\DBMS_project
+```
+
+### Step 2: Install Root Dependencies
+```powershell
+npm install
+```
+
+### Step 3: Configure Backend Virtual Environment & Dependencies
+```powershell
 cd server
+
+# Create Python virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows PowerShell:
+.\venv\Scripts\Activate.ps1
+# Or Windows Command Prompt:
+.\venv\Scripts\activate.bat
+
+# Upgrade pip & install all required packages
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Download OpenCV YuNet and SFace neural network weights
+python scripts/download_models.py
+```
+
+### Step 4: Configure Frontend Dependencies
+```powershell
+cd ..\client
 npm install
 ```
 
-### Step 3 – Install Client Dependencies
-```bash
-cd ../client
-npm install
-```
+---
 
-### Step 4 – Configure Environment Variables
-```bash
-cd ../server
+## 8. Configuration & Environment Variables
+
+The backend loads its configuration from `server/.env`. If the file does not exist, copy it from `server/.env.example`:
+
+```powershell
+cd server
 copy .env.example .env
 ```
-Open `.env` and update the `DATABASE_URL` with your MySQL credentials.
 
-### Step 5 – Create MySQL Database
+### Key Environment Settings:
+```ini
+# Server Environment
+ENV=development
+PORT=5000
+HOST=0.0.0.0
+
+# MySQL Database Connection (URL-encoded if password contains '@')
+DATABASE_URL=mysql+pymysql://root:YourPassword@localhost:3306/voting_system
+
+# JWT Authentication
+JWT_SECRET=smart_evm_super_secret_jwt_key_2025_min_32_chars
+JWT_EXPIRES_IN=8h
+JWT_REFRESH_SECRET=smart_evm_refresh_secret_key_2025_min_32_chars
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Aadhaar Simulation HMAC Secret
+AADHAAR_HMAC_SECRET=smart_evm_aadhaar_hmac_secret_2025_change_in_production
+
+# Client Application URL (CORS origin)
+CLIENT_URL=http://localhost:5173
+
+# File Storage & Limits
+UPLOAD_PATH=./uploads
+MAX_FILE_SIZE=5242880
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=./logs/app.log
+```
+
+> [!NOTE]
+> If your MySQL password contains an `@` sign (e.g. `Yoga@1234`), the application configuration automatically encodes it to `Yoga%401234` so SQLAlchemy parses the URL safely.
+
+---
+
+## 9. Database Setup & Seeding
+
+### 1. Ensure MySQL is Running
+Make sure your MySQL service is active. You can run:
+```powershell
+.\start_mysql.bat
+```
+
+### 2. Create the Database
+Open MySQL command line or MySQL Workbench:
 ```sql
-CREATE DATABASE voting_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS voting_system 
+CHARACTER SET utf8mb4 
+COLLATE utf8mb4_unicode_ci;
 ```
 
-### Step 6 – Run Prisma Migrations
-```bash
+### 3. Seed Initial Master Data
+Run the database seeder to populate default settings, default commissioner & officer accounts, initial regions, constituencies, polling stations, parties, candidates, and sample voters:
+
+```powershell
 cd server
-npx prisma migrate dev --name init
+python scripts/seed.py
 ```
-
-### Step 7 – Generate Prisma Client
-```bash
-npx prisma generate
-```
-
-### Step 8 – Seed the Database
-```bash
-npm run db:seed
-```
+*(Or from root: `npm run seed`)*
 
 ---
 
-## 6. Environment Variables
+## 10. Default Credentials & Portals
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | `development` |
-| `PORT` | Server port | `5000` |
-| `DATABASE_URL` | MySQL connection string | `mysql://root:password@localhost:3306/voting_system` |
-| `JWT_SECRET` | JWT signing key (min 32 chars) | *(must change)* |
-| `JWT_EXPIRES_IN` | Access token expiry | `8h` |
-| `JWT_REFRESH_SECRET` | Refresh token key | *(must change)* |
-| `JWT_REFRESH_EXPIRES_IN` | Refresh expiry | `7d` |
-| `CLIENT_URL` | Frontend URL for CORS | `http://localhost:5173` |
-| `UPLOAD_PATH` | File upload directory | `./uploads` |
-| `MAX_FILE_SIZE` | Max upload size (bytes) | `5242880` (5 MB) |
-| `BCRYPT_ROUNDS` | Password hashing rounds | `12` |
-| `RATE_LIMIT_WINDOW_MS` | Rate limit window (ms) | `900000` (15 min) |
-| `RATE_LIMIT_MAX` | Max requests per window | `200` |
-| `LOG_LEVEL` | Winston log level | `info` |
-| `LOG_FILE` | Log file path | `./logs/app.log` |
+After seeding the database, access the web application at **`http://localhost:5173`**:
 
-> ⚠️ **Important**: Change `JWT_SECRET` and `JWT_REFRESH_SECRET` to secure random strings before production deployment.
+| Role | Username / Email | Password | Default Portal URL |
+| :--- | :--- | :--- | :--- |
+| **Chief Election Commissioner** | `commissioner@evm.gov.in` | `Admin@12345` | `http://localhost:5173/admin` |
+| **Polling Station Officer** | `officer1@evm.gov.in` | `Officer@12345` | `http://localhost:5173/officer` |
+| **Touchscreen Voting Kiosk** | *(Public EVM)* | *(No login required)* | `http://localhost:5173/voting-machine` |
+| **Public VVPAT Verification** | *(Public)* | *(No login required)* | `http://localhost:5173/vvpat` |
 
----
+### Sample Voter Credentials for EVM Simulation:
+| Voter Name | Voter ID | Simulated Aadhaar | Assigned Station |
+| :--- | :--- | :--- | :--- |
+| **Aarav Sharma** | `DL/01/001/0001` | `123456789001` | Polling Station 1 (New Delhi) |
+| **Diya Patel** | `DL/01/001/0002` | `123456789002` | Polling Station 1 (New Delhi) |
+| **Rohan Gupta** | `DL/01/001/0003` | `123456789003` | Polling Station 1 (New Delhi) |
+| **Priya Singh** | `DL/01/001/0004` | `123456789004` | Polling Station 1 (New Delhi) |
 
-## 7. Database Setup
-
-### Create Database
-```sql
--- Connect to MySQL and run:
-CREATE DATABASE voting_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'evm_user'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON voting_system.* TO 'evm_user'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### Run Migrations
-```bash
-cd server
-npx prisma migrate dev --name init
-```
-
-### Generate Prisma Client
-```bash
-npx prisma generate
-```
-
-### Seed Initial Data
-```bash
-npm run db:seed
-```
-
-This creates:
-- Default Commissioner account
-- Default Election Officer account
-- Sample election, constituency, polling station
-- 3 political parties + 4 candidates
-- 20 sample voters
-
-### Open Prisma Studio (Optional)
-```bash
-npm run db:studio
-# Opens browser UI at http://localhost:5555
-```
+*(Note: During voting kiosk verification, the dynamic OTP is generated and conveniently displayed on-screen for simulation testing).*
 
 ---
 
-## 8. Running the Project
+## 11. Core Workflows & User Guides
 
-### Start Backend Server
-```bash
-cd server
-npm run dev
-# Server starts at http://localhost:5000
+### Workflow 1: Chief Election Commissioner (`/admin`)
+1. **Log in** with Commissioner credentials (`commissioner@evm.gov.in`).
+2. **Review Dashboard**: View live turnout, total registered voters, active polling stations, and election statuses.
+3. **Configure Locations**:
+   - Create or inspect **Regions** (e.g. Northern Region).
+   - Create **Constituencies** and link them to Regions.
+   - Create **Polling Stations** and assign unique station codes.
+4. **Manage Parties & Candidates**:
+   - Register **Political Parties** with symbols.
+   - Register **Candidates** by assigning them to a Constituency and Party, or marking them as Independent.
+5. **Voter Registration & Biometric Enrollment**:
+   - Add new voters individually or via bulk Excel import (`voters.xlsx`).
+   - Use the live camera capture or file upload to enroll the voter's facial image.
+   - The system automatically validates and prevents duplicate Voter IDs or Aadhaar numbers.
+6. **Election Lifecycle**:
+   - Create a new election in `DRAFT` status.
+   - Link constituencies to the election.
+   - Transition state: `DRAFT` $\rightarrow$ `SCHEDULED` $\rightarrow$ `ACTIVE`.
+   - Once voting concludes: Transition to `CLOSED` $\rightarrow$ `PUBLISHED`.
+7. **Export Reports**: Generate downloadable PDF Summary certificates or Excel voter and result rosters.
+
+---
+
+### Workflow 2: Polling Station Officer (`/officer`)
+1. **Log in** with Polling Officer credentials (`officer1@evm.gov.in`).
+2. **Verify Assigned Station**: The console loads the officer's specific assigned polling station.
+3. **Machine Control**:
+   - Click **Start Voting / Activate Machine** to enable the EVM kiosk for voters.
+   - Click **Pause Voting** if polling needs temporary suspension.
+   - Click **Lock Machine** for emergency stoppage.
+   - Click **Close Polling** at the end of voting hours.
+4. **Monitor Station Turnout**: View live voter counts who have successfully cast ballots at this station.
+
+---
+
+### Workflow 3: Voter at the EVM Kiosk (`/voting-machine`)
+1. Open **`http://localhost:5173/voting-machine`**.
+2. **Authentication Step 1**: Enter registered Voter ID (e.g., `DL/01/001/0001`) or Aadhaar Number (e.g., `123456789001`).
+3. **Authentication Step 2**: Enter the OTP received (shown on screen in simulation mode).
+4. **Authentication Step 3 (Biometric Match)**:
+   - Click **Scan Face** or select your webcam.
+   - The browser captures your face and sends it to the OpenCV Deep Learning engine.
+   - If the face matches the registered voter's facial profile ($\ge 63.7\%$ cosine similarity / distance $< 0.363$), authentication is approved.
+   - If an impersonator or different face is presented, the system rejects verification with an authentication error.
+5. **Ballot Unit**:
+   - View candidates for your constituency with party symbols and names.
+   - Click the green **VOTE** button next to your chosen candidate.
+   - Review and confirm your choice in the modal dialog.
+6. **Digital VVPAT Slip**:
+   - A digital audit slip showing the candidate name, party symbol, timestamp, and unique ballot serial number appears for **7 seconds** with an audio tone.
+   - The vote is hashed with SHA-256 and committed to the database.
+   - The voter's status is permanently updated to `VOTED` to prevent double-voting.
+
+---
+
+## 12. Relational Database Schema (19 Tables)
+
+The system is powered by a fully normalized MySQL relational schema managed via SQLAlchemy 2.0 ORM:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        CORE RELATIONAL SCHEMA                          │
+└────────────────────────────────────────────────────────────────────────┘
+
+  [users] 1 ──── 1 [election_commissioners]
+          1 ──── 1 [election_officers] ─── N [polling_stations]
+          1 ──── N [login_logs]
+
+  [regions] 1 ──── N [constituencies] 1 ──── N [polling_stations]
+                          │                           │
+                          │ 1                         │ 1
+                          ▼ N                         ▼ N
+  [elections] 1 ──── N [election_constituencies]   [voters]
+          │                                           │
+          │ 1                                         │ 1
+          ▼ N                                         ▼ N
+  [election_voter_statuses] ◀─────────────────────────┘
+          │
+          │ (Voter casts 1 vote per election)
+          ▼
+  [votes] 1 ──── 1 [digital_vvpats]
+     │
+     └── Candidate N ──── 1 [candidates] N ──── 1 [political_parties]
+
+  [otp_verifications] ── N ── [voters]
+  [audit_logs]        ── Logs all administrative and election events
+  [notifications]     ── User alerts and machine status updates
+  [settings]          ── Global operational parameters (session timeout, VVPAT seconds)
 ```
 
-### Start Frontend Development Server
-```bash
-cd client
-npm run dev
-# Client starts at http://localhost:5173
-```
-
-### Verify Both Are Running
-- Backend health check: http://localhost:5000/health → `{"status":"ok"}`
-- Frontend: http://localhost:5173 → Login page
-
----
-
-## 9. Opening the Web Application
-
-Open **http://localhost:5173** in your browser.
-
-You will see the **Login page** with a role selector:
-
-### Default Credentials (after seeding)
-
-| Role | Email | Password |
-|------|-------|----------|
-| Election Commissioner | commissioner@evm.gov.in | Admin@12345 |
-| Election Officer | officer1@evm.gov.in | Officer@12345 |
-
-### Available Interfaces
-
-1. **Election Commissioner** → `/admin` → Full management dashboard
-2. **Election Officer** → `/officer` → Station management + machine controls
-3. **Touchscreen Voting Machine** → `/voting-machine` → Full-screen EVM UI
+### Table Breakdown:
+| Table Name | Description | Key Constraints & Integrity Rules |
+| :--- | :--- | :--- |
+| `users` | Core credentials and role definitions | `email` (UNIQUE), `role` (`COMMISSIONER`, `OFFICER`) |
+| `election_commissioners`| Commissioner profile data | FK $\rightarrow$ `users.id` (CASCADE) |
+| `election_officers` | Officer profile data and station mapping | FK $\rightarrow$ `users.id`, FK $\rightarrow$ `polling_stations.id` |
+| `login_logs` | Login history and IP audit | FK $\rightarrow$ `users.id` |
+| `regions` | Top-level geographic administrative zones | `code` (UNIQUE), Soft delete (`deletedAt`) |
+| `constituencies` | Electoral constituencies under regions | FK $\rightarrow$ `regions.id`, `code` (UNIQUE) |
+| `polling_stations` | Physical booths with EVM machine status | FK $\rightarrow$ `constituencies.id`, `machineStatus` ENUM |
+| `elections` | Election definitions and global status | `status` (`DRAFT`, `SCHEDULED`, `ACTIVE`, `PAUSED`, `CLOSED`, `PUBLISHED`) |
+| `election_constituencies`| Association between elections & constituencies | Composite unique (`electionId`, `constituencyId`) |
+| `political_parties` | Registered political parties & symbols | `abbreviation` (UNIQUE) |
+| `candidates` | Registered election contenders | FK $\rightarrow$ `constituencies.id`, FK $\rightarrow$ `political_parties.id` |
+| `voters` | Certified electoral register | `voterId` (UNIQUE), `aadhaarHash` (UNIQUE), FK $\rightarrow$ `polling_stations.id` |
+| `election_voter_statuses`| Per-election voter eligibility and participation | Composite unique (`electionId`, `voterId`), `hasVoted` BOOLEAN |
+| `otp_verifications` | Temporary OTP challenge tokens | FK $\rightarrow$ `voterId`, `expiresAt`, `isVerified` |
+| `votes` | Anonymized ballots with cryptographic signatures| `ballotHash` (SHA-256), FK $\rightarrow$ `candidates.id`, ACID transactions |
+| `digital_vvpats` | Tamper-evident VVPAT paper trail records | `referenceNumber` (UNIQUE), FK $\rightarrow$ `votes.id` |
+| `audit_logs` | Immutable audit trail for all system actions | Timestamp, `userId`, `action`, `resource`, `ipAddress` |
+| `notifications` | System and machine alert notifications | FK $\rightarrow$ `users.id`, `isRead` |
+| `settings` | Dynamic system operational settings | `key` (UNIQUE), `group`, `value` |
 
 ---
 
-## 10. Build for Production
+## 13. API Documentation (Interactive Swagger)
 
-### Build Backend
-```bash
-cd server
-npm run build
-# Compiled to server/dist/
-npm start   # Run production build
-```
+FastAPI automatically serves interactive, production-ready OpenAPI documentation:
 
-### Build Frontend
-```bash
-cd client
-npm run build
-# Output in client/dist/
-```
+- **Swagger UI**: [http://localhost:5000/docs](http://localhost:5000/docs)
+- **ReDoc UI**: [http://localhost:5000/redoc](http://localhost:5000/redoc)
 
----
+### Summary of REST API Endpoints:
 
-## 11. API Documentation
+#### 🔐 Authentication & Session (`/api/auth`)
+- `POST /api/auth/login` – Authenticate Commissioner or Officer, return JWT tokens.
+- `POST /api/auth/logout` – Invalidate current session and log audit event.
+- `GET /api/auth/profile` – Retrieve current authenticated user profile.
+- `POST /api/auth/refresh` – Exchange refresh token for fresh access token.
 
-### Base URL: `http://localhost:5000/api`
+#### 🏛️ Elections Lifecycle (`/api/elections`)
+- `GET /api/elections` – List all elections with optional status filtering.
+- `POST /api/elections` – Create a new election (`COMMISSIONER` only).
+- `GET /api/elections/{id}` – Retrieve election details and linked constituencies.
+- `PUT /api/elections/{id}` – Update election metadata.
+- `PATCH /api/elections/{id}/status` – Transition state (`SCHEDULED`, `ACTIVE`, `CLOSED`, etc.).
+- `POST /api/elections/{id}/publish-results` – Calculate and certify final election tally.
+- `GET /api/elections/{id}/results` – Retrieve candidate vote breakdowns and winners.
+- `GET /api/elections/stats/dashboard` – Global dashboard analytics.
 
-#### Authentication
-| Method | URL | Description | Auth |
-|--------|-----|-------------|------|
-| POST | `/auth/login` | Login (commissioner or officer) | ❌ |
-| POST | `/auth/logout` | Logout | ✅ |
-| GET | `/auth/profile` | Get current user profile | ✅ |
+#### 📍 Hierarchy & Locations (`/api/regions`, `/api/constituencies`, `/api/polling-stations`)
+- `GET/POST /api/regions` – Manage geographical regions.
+- `GET/POST/PUT /api/constituencies` – Manage electoral constituencies.
+- `GET/POST/PUT /api/polling-stations` – Manage polling stations and EVM machine states.
+- `PATCH /api/polling-stations/{id}/machine-status` – Update kiosk operational status.
 
-#### Elections
-| Method | URL | Description | Role |
-|--------|-----|-------------|------|
-| GET | `/elections` | List all elections | Any |
-| GET | `/elections/:id` | Get election details | Any |
-| GET | `/elections/:id/stats` | Get election statistics | Any |
-| GET | `/elections/:id/results` | Get election results | Any |
-| GET | `/elections/stats/dashboard` | Dashboard statistics | Any |
-| POST | `/elections` | Create election | Commissioner |
-| PUT | `/elections/:id` | Update election | Commissioner |
-| PATCH | `/elections/:id/status` | Change status | Commissioner |
-| POST | `/elections/:id/publish-results` | Publish results | Commissioner |
-| DELETE | `/elections/:id` | Delete election | Commissioner |
+#### 👥 Candidates & Parties (`/api/candidates`, `/api/parties`)
+- `GET/POST /api/parties` – Register political parties.
+- `POST /api/parties/{id}/symbol` – Upload official party emblem.
+- `GET/POST /api/candidates` – Register candidates for a constituency.
+- `POST /api/candidates/{id}/photo` – Upload candidate photograph.
+- `POST /api/candidates/bulk-upload` – Bulk upload candidates via Excel spreadsheet.
 
-#### Constituencies
-| Method | URL | Description | Role |
-|--------|-----|-------------|------|
-| GET | `/constituencies` | List constituencies | Any |
-| POST | `/constituencies` | Create constituency | Commissioner |
-| PUT | `/constituencies/:id` | Update | Commissioner |
-| DELETE | `/constituencies/:id` | Delete | Commissioner |
+#### 🗳️ Voter Management (`/api/voters`)
+- `GET /api/voters` – Search and list registered voters (paginated).
+- `POST /api/voters` – Register voter with photo, Voter ID, and Aadhaar uniqueness validation.
+- `PUT /api/voters/{id}` – Update voter record.
+- `POST /api/voters/{id}/photo` – Upload or re-enroll biometric facial photo.
+- `POST /api/voters/bulk-upload` – Ingest voter registry from Excel file.
 
-#### Polling Stations
-| Method | URL | Description | Role |
-|--------|-----|-------------|------|
-| GET | `/polling-stations` | List stations | Any |
-| GET | `/polling-stations/:id/turnout` | Get turnout stats | Any |
-| POST | `/polling-stations` | Create | Commissioner |
-| PATCH | `/polling-stations/:id/machine-status` | Update machine status | Any |
-| DELETE | `/polling-stations/:id` | Delete | Commissioner |
+#### ⚡ EVM Voting Kiosk (`/api/voting`)
+- `POST /api/voting/verify/initiate` – Look up voter credentials and generate OTP challenge.
+- `POST /api/voting/verify/otp` – Validate entered OTP.
+- `POST /api/voting/verify/biometric` – Perform real OpenCV YuNet + SFace facial match.
+- `POST /api/voting/cast` – Cast anonymized ballot in ACID transaction, generate SHA-256 hash.
+- `GET /api/voting/vvpat/{referenceNumber}` – Retrieve Digital VVPAT slip details.
 
-#### Candidates & Parties
-| Method | URL | Description | Role |
-|--------|-----|-------------|------|
-| GET | `/candidates` | List candidates | Any |
-| POST | `/candidates` | Register candidate | Commissioner |
-| POST | `/candidates/:id/photo` | Upload photo | Commissioner |
-| GET | `/parties` | List parties | Any |
-| POST | `/parties` | Create party | Commissioner |
-| POST | `/parties/:id/symbol` | Upload symbol | Commissioner |
-
-#### Officers
-| Method | URL | Description | Role |
-|--------|-----|-------------|------|
-| GET | `/officers` | List officers | Commissioner |
-| POST | `/officers` | Register officer | Commissioner |
-| PUT | `/officers/:id` | Update officer | Commissioner |
-| DELETE | `/officers/:id` | Delete officer | Commissioner |
-
-#### Voters
-| Method | URL | Description | Role |
-|--------|-----|-------------|------|
-| GET | `/voters` | List voters (paginated) | Any |
-| POST | `/voters` | Register voter | Commissioner |
-| DELETE | `/voters/:id` | Remove voter | Commissioner |
-
-#### Voting Machine
-| Method | URL | Description | Auth |
-|--------|-----|-------------|------|
-| POST | `/voting/verify/initiate` | Start verification | ❌ |
-| POST | `/voting/verify/otp` | Verify OTP | ❌ |
-| POST | `/voting/verify/biometric` | Biometric simulation | ❌ |
-| POST | `/voting/cast` | Cast vote | ❌ |
-| GET | `/voting/vvpat/:referenceNumber` | Get VVPAT | ❌ |
-
-#### Reports (Commissioner only)
-| Method | URL | Description |
-|--------|-----|-------------|
-| GET | `/reports/election/:id/summary/pdf` | Election summary PDF |
-| GET | `/reports/election/:id/results/excel` | Results Excel |
-| GET | `/reports/station/:id/voters/excel` | Voters list Excel |
-| GET | `/reports/audit-log/pdf` | Audit log PDF |
+#### 📊 Reporting & Audits (`/api/reports`, `/api/audit-logs`)
+- `GET /api/reports/election/{id}/summary/pdf` – Generate election summary PDF.
+- `GET /api/reports/election/{id}/results/excel` – Download election results workbook.
+- `GET /api/reports/station/{id}/voters/excel` – Download polling station voter roll.
+- `GET /api/reports/audit-log/pdf` – Download cryptographically signed audit report.
+- `GET /api/audit-logs` – Query system audit trail with user and action filters.
 
 ---
 
-## 12. Database Documentation
+## 14. Security, Integrity & Auditing
 
-### Tables Overview
-
-| Table | Purpose |
-|-------|---------|
-| `users` | Authentication credentials and role |
-| `election_commissioners` | Commissioner profiles |
-| `election_officers` | Officer profiles + station assignment |
-| `elections` | Election definitions and status |
-| `constituencies` | Geographic constituencies |
-| `polling_stations` | Voting locations + machine status |
-| `political_parties` | Party registry |
-| `candidates` | Election candidates |
-| `voters` | Voter register |
-| `votes` | Cast votes (anonymized) |
-| `digital_vvpat` | VVPAT audit trail |
-| `otp_verifications` | OTP records |
-| `audit_logs` | System-wide audit trail |
-| `login_logs` | Login attempt history |
-| `notifications` | System notifications |
-| `settings` | Application configuration |
-
-### Key Relationships
-- `Election → Constituency → PollingStation`
-- `Constituency → Candidate ← PoliticalParty`
-- `PollingStation → Voter → Vote → DigitalVVPAT`
-- `User → ElectionOfficer → PollingStation`
+| Layer | Implementation |
+| :--- | :--- |
+| **Biometric Facial AI** | 128D embedding matching with OpenCV YuNet & SFace. Strictly prevents impersonation. |
+| **Voter Uniqueness** | Strict unique constraints on `voters.voterId` and `voters.aadhaarHash` at DB and API levels. |
+| **One Voter, One Vote**| Guarded by database unique index on `votes.voterId` and `election_voter_statuses.hasVoted`. |
+| **Ballot Anonymity** | The cast ballot stores only candidate reference, station reference, and cryptographic hash—never plaintext voter ID. |
+| **Ballot Hashing** | SHA-256 hash generated for every cast vote: `SHA256(voterToken + candidateId + timestamp + salt)`. |
+| **Digital VVPAT** | 7-second auto-preview followed by permanent record creation in `digital_vvpats`. |
+| **Password Security** | Bcrypt salted hashing with 12 rounds. Plaintext passwords are never stored. |
+| **Aadhaar Privacy** | Aadhaar numbers are salted and hashed using HMAC-SHA256 (`aadhaarHash`). Display masks (`XXXX-XXXX-1234`). |
+| **API Authorization** | PyJWT bearer tokens (HS256) enforcing role separation (`COMMISSIONER` vs `OFFICER`). |
+| **Audit Trails** | Every administrative change, state transition, and authentication attempt is stored in `audit_logs`. |
+| **ACID Transactions** | Vote recording and VVPAT insertion execute inside an atomic database transaction. |
 
 ---
 
-## 13. User Manual
+## 15. Troubleshooting & FAQs
 
-### Election Commissioner
+### Q1: I get `OperationalError: 2003: Can't connect to MySQL server on 'localhost:3306' (10061)`
+- **Cause**: The MySQL Windows service is stopped.
+- **Solution**:
+  1. Simply double-click **`start_mysql.bat`** in the project root.
+  2. Click **Yes** when Windows User Account Control (UAC) prompts for administrator rights.
+  3. The script will automatically start `MySQL97` or `MySQL` service.
+  4. Reload the backend.
 
-#### Create an Election
-1. Log in at http://localhost:5173 with Commissioner credentials
-2. Navigate to **Elections** in the sidebar
-3. Click **New Election**, fill in name, type, and scheduled date
-4. Click **Create Election**
+### Q2: Facial verification fails or shows "Camera Error"
+- **Cause**: Browser webcam permission denied, camera privacy shutter closed, or Lenovo Vantage camera privacy mode enabled.
+- **Solution**:
+  1. Check browser address bar and grant camera permissions to `http://localhost:5173`.
+  2. Ensure the physical privacy shutter on your laptop webcam is slid open.
+  3. On Lenovo laptops, open **Lenovo Vantage** and disable **Camera Privacy Mode**.
+  4. The client features built-in multi-camera detection that automatically prioritizes physical built-in webcams over disconnected virtual camera drivers.
 
-#### Full Election Setup Workflow
-1. Create **Constituencies** (link to election)
-2. Create **Polling Stations** (link to constituency)
-3. Create **Political Parties** (upload symbols)
-4. Register **Candidates** (link to constituency + party, upload photos)
-5. Register **Election Officers** (assign to polling stations)
-6. Register **Voters** (assign to constituency + station)
-7. Change election status to **Scheduled → Active**
-8. Monitor via Dashboard
+### Q3: Facial verification says ONNX models not found
+- **Cause**: Deep learning weights were not downloaded yet.
+- **Solution**: Run the automated downloader:
+  ```powershell
+  cd server
+  python scripts/download_models.py
+  ```
+  This creates `server/app/models_cv/` containing `face_detection_yunet_2023mar.onnx` and `face_recognition_sface_2021dec.onnx`.
 
-#### Publish Results
-1. Wait for election status to become **Closed**
-2. Navigate to **Elections**, click the **BarChart** icon
-3. Results immediately become visible on the **Results** page
+### Q4: Registering a voter shows "A voter with this Voter ID or Aadhaar Number already exists"
+- **Cause**: Uniqueness enforcement correctly identified a duplicate Voter ID or Aadhaar number.
+- **Solution**: Ensure each voter has a unique Voter ID (e.g. `DL/01/001/0025`) and a unique 12-digit Aadhaar number. The UI highlights duplicate fields in red with specific error toasts.
 
-### Election Officer
-
-#### Start Voting Session
-1. Log in with Officer credentials
-2. Click **Start Voting** on the dashboard
-3. Machine status changes to **ACTIVE**
-
-#### Machine Controls
-- **Lock Machine**: Temporarily prevent voting
-- **Pause Voting**: Suspend session (can resume)
-- **Close Polling**: Permanently end the session
-
-### Voter
-
-1. Open Voting Machine at http://localhost:5173/voting-machine
-2. Click **BEGIN VOTING**
-3. Select **Aadhaar** or **Voter ID** verification
-4. Enter your details and click **Verify & Send OTP**
-5. Enter the displayed OTP (simulation shows it on screen)
-6. Select your candidate and click **VOTE FOR [NAME]**
-7. Review the confirmation screen → click **Confirm Vote**
-8. View the **Digital VVPAT slip** (auto-dismisses in 7 seconds)
+### Q5: Voting Machine says "Machine is not active"
+- **Cause**: The polling station's EVM machine is locked or paused.
+- **Solution**:
+  1. Log in to the Officer Portal (`/officer`) with `officer1@evm.gov.in`.
+  2. Click **Start Voting / Activate Machine**.
+  3. Refresh the `/voting-machine` kiosk page.
 
 ---
 
-## 14. Security Features
+## 16. Academic Disclaimer
 
-| Feature | Implementation |
-|---------|---------------|
-| JWT Authentication | HS256 signed tokens, 8-hour expiry |
-| Password Hashing | bcrypt with 12 rounds |
-| Role-Based Access Control | Commissioner / Officer roles enforced per route |
-| SQL Injection Prevention | Prisma ORM parameterized queries |
-| Input Validation | Zod schemas on all API endpoints |
-| Security Headers | Helmet.js (CSP, HSTS, etc.) |
-| Rate Limiting | 200 requests per 15 minutes |
-| SHA-256 Vote Hash | Each vote generates a unique cryptographic hash |
-| One Voter One Vote | Database unique constraint on `votes.voterId` |
-| Audit Logging | All actions logged with user, IP, timestamp |
-| Result Locking | Results only visible after commissioner publishes |
-| CORS | Restricted to `CLIENT_URL` only |
-| Vote Integrity | Votes cast inside a database transaction (ACID) |
+This project is created exclusively for **educational and academic demonstration purposes** as a Database Management Systems (DBMS) coursework capstone.
+
+- It is **not** affiliated with, endorsed by, or connected to the **Election Commission of India (ECI)** or any government authority.
+- All Aadhaar validation, biometric verification, and OTP workflows are executed locally as simulations. No live government APIs or private citizen databases are contacted.
 
 ---
 
-## 15. Troubleshooting
+## 📄 License & Credits
 
-### Port already in use
-```bash
-# Change PORT in server/.env
-PORT=5001
-# Change port in client/vite.config.ts → server.port
-```
-
-### MySQL connection failed
-- Verify MySQL is running: `net start MySQL80`
-- Check `DATABASE_URL` in `server/.env`
-- Ensure database `voting_system` exists
-
-### Prisma migration errors
-```bash
-cd server
-npx prisma migrate reset   # Reset all migrations (dev only)
-npx prisma migrate dev
-```
-
-### Missing Prisma client
-```bash
-cd server
-npx prisma generate
-```
-
-### Environment variable issues
-- Ensure `server/.env` exists (not just `.env.example`)
-- Restart the server after changing `.env`
-
-### CORS errors
-- Verify `CLIENT_URL=http://localhost:5173` in `server/.env`
-- Ensure frontend and backend are running on correct ports
-
-### Voting machine shows "Machine not active"
-- Officer must log in and click **Start Voting** first
-- Or Commissioner must set polling station machine status to ACTIVE
-
-### Voter not found during verification
-- Ensure voter is seeded: `npm run db:seed`
-- Use Voter ID format: `DL/01/001/0001` through `DL/01/001/0020`
-
----
-
-## 16. Future Enhancements
-
-| Enhancement | Description |
-|-------------|-------------|
-| Real Aadhaar API | Integrate with UIDAI sandbox for real verification |
-| Fingerprint Device | Connect physical biometric scanner |
-| QR Code Verification | Scan voter QR code instead of manual entry |
-| SMS OTP | Integrate Twilio/AWS SNS for real SMS delivery |
-| Live Analytics | WebSocket-powered real-time dashboard |
-| Multi-language | Hindi, Tamil, Telugu, Bengali support |
-| PWA | Progressive Web App for offline resilience |
-| Cloud Deployment | AWS/Azure Kubernetes deployment guide |
-| Multi-factor Auth | TOTP (Google Authenticator) for commissioners |
-| Blockchain Audit | Immutable vote ledger using blockchain |
-| AI Anomaly Detection | Flag suspicious voting patterns |
-| Accessibility | Screen reader support, high contrast mode |
-
----
-
-## License
-
-This project is built for **educational purposes** as a Database Management Systems demonstration.
-
-© 2025 Smart EVM – Educational Simulation. Not affiliated with Election Commission of India.
+Developed with ❤️ as an advanced DBMS and Computer Vision demonstration project.  
+© 2025–2026 Smart EVM Project Team. All rights reserved.

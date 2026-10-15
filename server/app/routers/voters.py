@@ -153,12 +153,18 @@ def bulk_create_voters(payload: BulkVotersRequest, request: Request, current_use
     valid_cids = {c[0] for c in db.query(Constituency.id).filter(Constituency.deletedAt.is_(None)).all()}
     valid_sids = {s[0] for s in db.query(PollingStation.id).filter(PollingStation.deletedAt.is_(None)).all()}
 
+    existing_voter_ids = {
+        row[0].upper() for row in db.query(Voter.voterId).filter(Voter.deletedAt.is_(None)).all()
+    }
+    existing_aadhaar_hashes = {
+        row[0] for row in db.query(Voter.aadhaarHash).filter(Voter.aadhaarHash.isnot(None), Voter.deletedAt.is_(None)).all()
+    }
+
     for v_data in payload.voters:
         voter_id = str(v_data.get("voterId") or "").strip().upper()
         if not voter_id:
             continue
-        exists = db.query(Voter).filter(Voter.voterId == voter_id, Voter.deletedAt.is_(None)).first()
-        if exists:
+        if voter_id in existing_voter_ids:
             skipped += 1
             continue
 
@@ -174,6 +180,13 @@ def bulk_create_voters(payload: BulkVotersRequest, request: Request, current_use
 
         aadhaar = str(v_data.get("aadhaarNumber") or "").strip()
         ahash = hash_aadhaar(aadhaar) if len(aadhaar) == 12 else None
+        if ahash and ahash in existing_aadhaar_hashes:
+            skipped += 1
+            continue
+
+        existing_voter_ids.add(voter_id)
+        if ahash:
+            existing_aadhaar_hashes.add(ahash)
 
         v = Voter(
             constituencyId=cid,
@@ -211,18 +224,40 @@ def get_voter_by_id(voter_id: int, current_user: CurrentUser = Depends(get_curre
 @router.post("")
 @router.post("/")
 def create_voter(payload: CreateVoterRequest, request: Request, current_user: CurrentUser = Depends(require_roles(UserRole.COMMISSIONER)), db: Session = Depends(get_db)):
-    exists = db.query(Voter).filter(Voter.voterId == payload.voterId.strip().upper(), Voter.deletedAt.is_(None)).first()
-    if exists:
-        raise HTTPException(status_code=409, detail=f'Voter ID "{payload.voterId}" already exists.')
+    voter_id_clean = payload.voterId.strip().upper()
+    existing_voter = db.query(Voter).filter(
+        func.upper(Voter.voterId) == voter_id_clean,
+        Voter.deletedAt.is_(None)
+    ).first()
+    if existing_voter:
+        raise HTTPException(
+            status_code=409,
+            detail=f'A voter with Voter ID "{voter_id_clean}" already exists ({existing_voter.fullName}).'
+        )
+
+    ahash = None
+    if payload.aadhaarNumber and payload.aadhaarNumber.strip():
+        aadhaar_clean = payload.aadhaarNumber.strip()
+        if len(aadhaar_clean) == 12:
+            ahash = hash_aadhaar(aadhaar_clean)
+            existing_aadhaar = db.query(Voter).filter(
+                Voter.aadhaarHash == ahash,
+                Voter.deletedAt.is_(None)
+            ).first()
+            if existing_aadhaar:
+                masked = f"XXXX-XXXX-{aadhaar_clean[-4:]}"
+                raise HTTPException(
+                    status_code=409,
+                    detail=f'A voter with Aadhaar number {masked} already exists ({existing_aadhaar.fullName}, Voter ID: {existing_aadhaar.voterId}).'
+                )
 
     dob = datetime.fromisoformat(str(payload.dateOfBirth).replace("Z", "+00:00")) if isinstance(payload.dateOfBirth, str) else payload.dateOfBirth
-    ahash = hash_aadhaar(payload.aadhaarNumber.strip()) if payload.aadhaarNumber and len(payload.aadhaarNumber.strip()) == 12 else None
 
     v = Voter(
         constituencyId=payload.constituencyId,
         pollingStationId=payload.pollingStationId,
         fullName=payload.fullName.strip(),
-        voterId=payload.voterId.strip().upper(),
+        voterId=voter_id_clean,
         dateOfBirth=dob,
         gender=payload.gender,
         address=payload.address.strip(),
@@ -245,8 +280,42 @@ def update_voter(voter_id: int, payload: UpdateVoterRequest, current_user: Curre
     if not v:
         raise HTTPException(status_code=404, detail="Voter not found")
 
-    if payload.fullName is not None: v.fullName = payload.fullName.strip()
-    if payload.voterId is not None: v.voterId = payload.voterId.strip().upper()
+    if payload.fullName is not None:
+        v.fullName = payload.fullName.strip()
+
+    if payload.voterId is not None:
+        new_vid = payload.voterId.strip().upper()
+        existing = db.query(Voter).filter(
+            func.upper(Voter.voterId) == new_vid,
+            Voter.id != voter_id,
+            Voter.deletedAt.is_(None)
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f'A voter with Voter ID "{new_vid}" already exists ({existing.fullName}).'
+            )
+        v.voterId = new_vid
+
+    if payload.aadhaarNumber is not None:
+        aadhaar_clean = payload.aadhaarNumber.strip()
+        if len(aadhaar_clean) == 12:
+            new_ahash = hash_aadhaar(aadhaar_clean)
+            existing = db.query(Voter).filter(
+                Voter.aadhaarHash == new_ahash,
+                Voter.id != voter_id,
+                Voter.deletedAt.is_(None)
+            ).first()
+            if existing:
+                masked = f"XXXX-XXXX-{aadhaar_clean[-4:]}"
+                raise HTTPException(
+                    status_code=409,
+                    detail=f'A voter with Aadhaar number {masked} already exists ({existing.fullName}, Voter ID: {existing.voterId}).'
+                )
+            v.aadhaarHash = new_ahash
+        elif not aadhaar_clean:
+            v.aadhaarHash = None
+
     if payload.constituencyId is not None: v.constituencyId = payload.constituencyId
     if payload.pollingStationId is not None: v.pollingStationId = payload.pollingStationId
     if payload.address is not None: v.address = payload.address.strip()

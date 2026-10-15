@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus, Pencil, Trash2, Building2, ArrowRight, AlertCircle, FileSpreadsheet,
   Activity, CheckCircle2, Clock, Pause, Play, Square, Search, Radio,
@@ -56,7 +57,7 @@ export const PollingStationsPage: React.FC = () => {
   const { data: allConstituencies } = useAsync<Constituency[]>(fetchConstituencies);
 
   const fetchDashboardStats = useCallback(() => electionService.getDashboardStats(), []);
-  const { data: dashboardStats } = useAsync(fetchDashboardStats);
+  const { data: dashboardStats } = useAsync<{ activeElection?: { status: string } }>(fetchDashboardStats);
   const hasActiveElection = Boolean(dashboardStats?.activeElection && dashboardStats.activeElection.status === 'ACTIVE');
 
 

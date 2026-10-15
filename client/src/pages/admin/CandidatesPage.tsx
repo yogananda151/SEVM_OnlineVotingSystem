@@ -578,7 +578,7 @@ export const CandidatesPage: React.FC = () => {
             <div className="card p-3.5 bg-slate-900/60 border border-slate-800">
               <span className="text-xs text-slate-400">Independents</span>
               <p className="text-xl font-bold text-amber-400 mt-0.5">
-                {candidates?.filter((c) => c.isIndependent || !c.partyId).length || 0}
+                {candidates?.filter((c) => c.isIndependent || !c.party).length || 0}
               </p>
             </div>
             <div className="card p-3.5 bg-slate-900/60 border border-slate-800">
