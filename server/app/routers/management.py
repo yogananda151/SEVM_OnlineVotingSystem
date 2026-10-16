@@ -32,17 +32,12 @@ from app.services.audit_service import audit_service
 from app.utils.crypto import hash_password
 from app.utils.response import success_response
 
+from app.services.storage import storage_service
+
 router = APIRouter(prefix="/api", tags=["Management"])
 
 def save_uploaded_file(file: UploadFile, subfolder: str) -> str:
-    target_dir = os.path.join(settings.UPLOAD_PATH, subfolder)
-    os.makedirs(target_dir, exist_ok=True)
-    ext = os.path.splitext(file.filename or "")[1] or ".jpg"
-    unique_filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(target_dir, unique_filename)
-    with open(filepath, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    return f"/uploads/{subfolder}/{unique_filename}"
+    return storage_service.validate_and_save(file, subfolder)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REGIONS

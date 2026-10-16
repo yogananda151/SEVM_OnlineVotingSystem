@@ -1,3 +1,4 @@
+import os
 import json
 import urllib.request
 import urllib.error
@@ -26,9 +27,10 @@ def make_req(url, method="GET", data=None, token=None):
 
 def test_api():
     print("[*] Logging in as Commissioner...")
+    pwd = os.environ.get("COMMISSIONER_PASSWORD", "Admin@DevPass2025!")
     status, data = make_req(f"{BASE_URL}/auth/login", method="POST", data={
         "email": "commissioner@evm.gov.in",
-        "password": "Admin@12345"
+        "password": pwd
     })
     assert status == 200, f"Login failed: {data}"
     token = data["data"]["accessToken"]

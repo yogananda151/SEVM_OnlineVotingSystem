@@ -31,7 +31,8 @@
 13. [API Documentation (Interactive Swagger)](#13-api-documentation-interactive-swagger)
 14. [Security, Integrity & Auditing](#14-security-integrity--auditing)
 15. [Troubleshooting & FAQs](#15-troubleshooting--faqs)
-16. [Academic Disclaimer](#16-academic-disclaimer)
+16. [Cloud Deployment Guide (Vercel + Render + TiDB Cloud)](#16-cloud-deployment-guide-vercel--render--tidb-cloud)
+17. [Academic Disclaimer](#17-academic-disclaimer)
 
 ---
 
@@ -363,7 +364,7 @@ LOG_FILE=./logs/app.log
 ```
 
 > [!NOTE]
-> If your MySQL password contains an `@` sign (e.g. `Yoga@1234`), the application configuration automatically encodes it to `Yoga%401234` so SQLAlchemy parses the URL safely.
+> If your MySQL password contains special characters like `@` or `#` (e.g. `Pass@123`), the application configuration automatically encodes it so SQLAlchemy parses the URL safely.
 
 ---
 
@@ -375,33 +376,40 @@ Make sure your MySQL service is active. You can run:
 .\start_mysql.bat
 ```
 
-### 2. Create the Database
-Open MySQL command line or MySQL Workbench:
-```sql
-CREATE DATABASE IF NOT EXISTS voting_system 
-CHARACTER SET utf8mb4 
-COLLATE utf8mb4_unicode_ci;
+### 2. Create the Database Schema
+To initialize the database tables from SQLAlchemy metadata safely:
+```powershell
+cd server
+python scripts/init_db.py
 ```
+*(Or from project root: `npm run init-db`)*
 
-### 3. Seed Initial Master Data
-Run the database seeder to populate default settings, default commissioner & officer accounts, initial regions, constituencies, polling stations, parties, candidates, and sample voters:
+### 3. Seed Demonstration Master Data
+Run the database seeder to populate default settings, demonstration accounts, initial regions, constituencies, polling stations, synthetic parties, candidates, and sample voters:
 
 ```powershell
 cd server
+# Provide initial demonstration passwords (or enter when prompted):
+$env:SEED_COMMISSIONER_PASSWORD="YourSecureAdminPassword123!"
+$env:SEED_OFFICER_PASSWORD="YourSecureOfficerPassword123!"
 python scripts/seed.py
 ```
 *(Or from root: `npm run seed`)*
 
+> [!IMPORTANT]
+> **Credential Security & Rotation Notice:**  
+> If any local passwords, database connection strings, or JWT keys were previously exposed or tracked in Git history, immediately rotate your MySQL passwords and generate fresh JWT keys using `openssl rand -hex 32`. Never commit `.env` files to public version control.
+
 ---
 
-## 10. Default Credentials & Portals
+## 10. Demonstration Portals & Access
 
 After seeding the database, access the web application at **`http://localhost:5173`**:
 
-| Role | Username / Email | Password | Default Portal URL |
+| Role | Username / Email | Password Configuration | Default Portal URL |
 | :--- | :--- | :--- | :--- |
-| **Chief Election Commissioner** | `commissioner@evm.gov.in` | `Admin@12345` | `http://localhost:5173/admin` |
-| **Polling Station Officer** | `officer1@evm.gov.in` | `Officer@12345` | `http://localhost:5173/officer` |
+| **Chief Election Commissioner** | `commissioner@evm.gov.in` | Configured via `SEED_COMMISSIONER_PASSWORD` | `http://localhost:5173/admin` |
+| **Polling Station Officer** | `officer1@evm.gov.in` | Configured via `SEED_OFFICER_PASSWORD` | `http://localhost:5173/officer` |
 | **Touchscreen Voting Kiosk** | *(Public EVM)* | *(No login required)* | `http://localhost:5173/voting-machine` |
 | **Public VVPAT Verification** | *(Public)* | *(No login required)* | `http://localhost:5173/vvpat` |
 
@@ -653,7 +661,255 @@ FastAPI automatically serves interactive, production-ready OpenAPI documentation
 
 ---
 
-## 16. Academic Disclaimer
+## 16. Cloud Deployment Guide (Vercel + Render + TiDB Cloud)
+
+This guide provides the complete, production-ready procedure to deploy the **Smart EVM** system to the public internet for an academic project demonstration accessible from laptops, tablets, and smartphones over HTTPS.
+
+### 🌐 Target Cloud Architecture
+
+```
+┌────────────────────────────────────────────────────────┐
+│             Frontend Host: Vercel (HTTPS)              │
+│       React 18 • TypeScript • Vite • Tailwind CSS      │
+│  - Public Domain: https://smart-evm.vercel.app         │
+│  - Vercel Rewrites:                                    │
+│      /api/*     ──> https://smart-evm.onrender.com/api │
+│      /uploads/* ──> https://smart-evm.onrender.com/up* │
+│      /*         ──> /index.html (SPA Fallback)         │
+└───────────────────────────┬────────────────────────────┘
+                            │ HTTPS Proxied REST Calls
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│        Backend Host: Render Free Web Service           │
+│        FastAPI • Uvicorn ASGI • Python 3.10+           │
+│  - Public Endpoint: https://smart-evm.onrender.com     │
+│  - OpenCV-Python-Headless + YuNet & SFace ONNX Models  │
+│  - Ephemeral runtime storage: ./uploads                │
+└───────────────────────────┬────────────────────────────┘
+                            │ MySQL Wire Protocol (TLS 1.2+)
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│      Database Host: TiDB Cloud Starter (Serverless)    │
+│            MySQL 8.0-compatible Managed Database       │
+│  - Gateway: gateway01.ap-southeast-1.prod.aws...:4000  │
+│  - Enforced SSL/TLS Certificate Verification           │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Step 1: Provision TiDB Cloud Starter Database
+
+1. Sign up or log in at [TiDB Cloud](https://tidbcloud.com/).
+2. Click **Create Cluster** and select **TiDB Serverless (Free)**.
+3. Choose your preferred region (e.g., AWS / `ap-southeast-1` or `us-east-1`).
+4. Once created, click on your cluster $\rightarrow$ **Connect**.
+5. Create a dedicated database named `voting_system`:
+   - Under the SQL Editor / Web Console, execute:
+     ```sql
+     CREATE DATABASE IF NOT EXISTS voting_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+     ```
+6. Obtain your cluster connection credentials:
+   - **Host**: e.g., `gateway01.ap-southeast-1.prod.aws.tidbcloud.com`
+   - **Port**: `4000`
+   - **User**: e.g., `2xxxxxxxx.root`
+   - **Password**: *(The secure password generated for your cluster)*
+   - **Database**: `voting_system`
+
+> [!IMPORTANT]
+> **TiDB Cloud TLS Configuration for PyMySQL:**  
+> TiDB Cloud mandates TLS 1.2+. The application configuration in `app/config.py` automatically detects TiDB hosts and configures strict TLS verification using Python's standard operating system CA certificate store.  
+> Format your `DATABASE_URL` like this:
+> ```ini
+> DATABASE_URL=mysql+pymysql://<user>:<password>@<gateway-host>:4000/voting_system?ssl_verify_cert=true&ssl_verify_identity=true
+> ```
+> *(Note: Do **NOT** pass `ssl_mode=VERIFY_IDENTITY` in PyMySQL connection strings; PyMySQL does not support the `ssl_mode` keyword parameter and will fail. Our URL parser strips it automatically if pasted accidentally).*
+
+---
+
+### Step 2: Deploy Backend to Render Free Web Service
+
+1. Sign up or log in at [Render](https://render.com/).
+2. Click **New +** $\rightarrow$ **Web Service**.
+3. Connect your GitHub repository: `https://github.com/yogananda151/SEVM_OnlineVotingSystem`.
+4. Configure the service settings:
+   - **Name**: `smart-evm-backend` (or your preferred name)
+   - **Region**: Choose the region closest to your TiDB cluster (e.g., Singapore or Oregon)
+   - **Root Directory**: `server`
+   - **Runtime**: `Python 3`
+   - **Build Command**:
+     ```bash
+     pip install -r requirements.txt && python scripts/download_models.py
+     ```
+   - **Start Command**:
+     ```bash
+     uvicorn app.main:app --host 0.0.0.0 --port $PORT
+     ```
+     *(Or simply leave empty to use `server/Procfile`)*
+   - **Instance Type**: `Free`
+
+5. Add the following **Environment Variables** in the Render Dashboard (**Environment** tab):
+
+| Variable Name | Example / Placeholder Value | Description |
+| :--- | :--- | :--- |
+| `ENV` | `production` | Enforces production security checks |
+| `PORT` | `10000` | Port assigned by Render |
+| `HOST` | `0.0.0.0` | Network interface binding |
+| `DATABASE_URL` | `mysql+pymysql://<user>:<password>@<host>:4000/voting_system?ssl_verify_cert=true&ssl_verify_identity=true` | TiDB Cloud connection string |
+| `JWT_SECRET` | *(Generate 64 hex chars with `openssl rand -hex 32`)* | Access token signing secret |
+| `JWT_EXPIRES_IN` | `8h` | Access token lifespan |
+| `JWT_REFRESH_SECRET` | *(Generate 64 hex chars distinct from JWT_SECRET)* | Refresh token signing secret |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh token lifespan |
+| `AADHAAR_HMAC_SECRET` | *(Generate 64 hex chars distinct from JWT secrets)* | Aadhaar hashing salt secret |
+| `CLIENT_URL` | `https://your-app-name.vercel.app` | Allowed frontend origin for CORS |
+| `UPLOAD_PATH` | `./uploads` | Directory for uploaded images |
+| `MAX_FILE_SIZE` | `5242880` | Max file upload size (5 MB) |
+| `LOG_LEVEL` | `INFO` | Application log level |
+| `SEED_COMMISSIONER_PASSWORD`| `YourSecureAdminPass123!` | Initial Commissioner password |
+| `SEED_OFFICER_PASSWORD` | `YourSecureOfficerPass123!` | Initial Polling Officer password |
+
+6. Click **Create Web Service**. Wait for the build and deployment to finish.
+7. Note your Render service URL (e.g., `https://smart-evm-backend.onrender.com`).
+8. Verify deployment health by navigating to:
+   `https://smart-evm-backend.onrender.com/health`
+
+---
+
+### Step 3: Initialize and Seed TiDB Database
+
+Once the backend is deployed, initialize the database schema and demonstration data:
+
+#### Option A: Via Render Web Shell (Recommended)
+1. Go to your Render Web Service $\rightarrow$ **Shell** tab.
+2. Initialize the database schema (creates all 19 tables safely without dropping data):
+   ```bash
+   python scripts/init_db.py
+   ```
+3. Seed synthetic demonstration data (parties, candidates, sample voters, initial accounts):
+   ```bash
+   python scripts/seed.py
+   ```
+
+#### Option B: From Your Local Machine Pointed to TiDB
+1. In PowerShell, temporarily set `DATABASE_URL`, `SEED_COMMISSIONER_PASSWORD`, and `SEED_OFFICER_PASSWORD`:
+   ```powershell
+   $env:DATABASE_URL="mysql+pymysql://<user>:<password>@<gateway>:4000/voting_system?ssl_verify_cert=true&ssl_verify_identity=true"
+   $env:SEED_COMMISSIONER_PASSWORD="YourSecureAdminPass123!"
+   $env:SEED_OFFICER_PASSWORD="YourSecureOfficerPass123!"
+   cd server
+   .\venv\Scripts\python.exe scripts/init_db.py
+   .\venv\Scripts\python.exe scripts/seed.py
+   ```
+
+---
+
+### Step 4: Deploy Frontend to Vercel
+
+1. Open `client/vercel.json` in your local repository.
+2. Replace `YOUR_RENDER_BACKEND_URL.onrender.com` with your actual Render service hostname:
+   ```json
+   {
+     "$schema": "https://openapi.vercel.sh/vercel.json",
+     "rewrites": [
+       {
+         "source": "/api/:match*",
+         "destination": "https://smart-evm-backend.onrender.com/api/:match*"
+       },
+       {
+         "source": "/uploads/:match*",
+         "destination": "https://smart-evm-backend.onrender.com/uploads/:match*"
+       },
+       {
+         "source": "/(.*)",
+         "destination": "/index.html"
+       }
+     ]
+   }
+   ```
+3. Commit and push this change to your GitHub repository:
+   ```bash
+   git add client/vercel.json
+   git commit -m "Configure Vercel API and uploads rewrites to Render backend"
+   git push origin main
+   ```
+4. Sign up or log in at [Vercel](https://vercel.com/).
+5. Click **Add New...** $\rightarrow$ **Project**.
+6. Import your GitHub repository `yogananda151/SEVM_OnlineVotingSystem`.
+7. Configure Project Settings:
+   - **Root Directory**: Click Edit $\rightarrow$ select `client`
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+   - **Install Command**: `npm install`
+8. Click **Deploy**. Vercel will build and publish your frontend within ~60 seconds.
+9. Note your live production URL (e.g., `https://smart-evm.vercel.app`).
+
+---
+
+### Step 5: Update CORS Origin on Render
+
+1. Return to your **Render Web Service Dashboard** $\rightarrow$ **Environment** tab.
+2. Update `CLIENT_URL` to your exact Vercel deployment URL:
+   ```ini
+   CLIENT_URL=https://smart-evm.vercel.app
+   ```
+   *(Ensure there is **no** trailing slash).*
+3. Render will automatically redeploy with the updated CORS configuration.
+
+---
+
+### Step 6: OpenCV & Facial Recognition Model Considerations
+
+- **Headless OpenCV**: We use `opencv-python-headless>=4.9.0` in `requirements.txt`. This avoids missing `libGL.so.1` or X11 GUI shared library errors common on headless Linux containers.
+- **Model Sizes & RAM**:
+  - `face_detection_yunet_2023mar.onnx` is **232 KB**.
+  - `face_recognition_sface_2021dec.onnx` is **38.6 MB**.
+  - The models are pre-committed to Git in `server/app/models_cv/` and verified during build by `python scripts/download_models.py`.
+  - Facial inference uses ~150–250 MB RAM, well within Render's free tier 512 MB memory limit.
+- **Render Free Tier Cold Starts**:
+  - Render free web services spin down after 15 minutes of inactivity.
+  - When accessing the application after idle time, the first request will take **30–50 seconds** while the instance wakes up. Subsequent requests respond instantly.
+
+---
+
+### Step 7: Ephemeral File Storage Notice
+
+- On Render's free tier, the local filesystem is **ephemeral**. Any files written to `./uploads/` (such as new candidate photos uploaded via the admin portal) are persisted only for the lifetime of that container instance and will reset if the web service restarts or redeploys.
+- All core application data (voters, votes, cryptographic audit logs, election results, user credentials) is stored permanently in **TiDB Cloud** and is never lost.
+- For a commercial production deployment with durable file uploads, integrate an S3-compatible cloud bucket (AWS S3, Cloudflare R2, or Cloudinary). The application's `StorageService` (`app/services/storage.py`) is structured for pluggable durable storage backends.
+
+---
+
+### Step 8: Multi-Device Testing & HTTPS Camera Requirements
+
+1. **Accessing from Mobile / Laptop over HTTPS**:
+   - Open your Vercel deployment URL (e.g., `https://smart-evm.vercel.app`) on your mobile phone or external laptop.
+2. **Webcam Biometric Access Requirement**:
+   - Modern browsers (Google Chrome, Safari, Microsoft Edge, Firefox) strictly restrict `navigator.mediaDevices.getUserMedia` (webcam access) to **secure origins** (`https://` or `localhost`).
+   - Because Vercel provides automatic SSL certificates, accessing over `https://` enables live facial verification on mobile front cameras and laptop webcams without configuration.
+   - When prompted by the browser on first visit, tap **Allow** for camera access.
+3. **Demonstration Test Flow**:
+   - Navigate to `/` $\rightarrow$ Log in as Commissioner (`commissioner@evm.gov.in`).
+   - Transition election status to `ACTIVE`.
+   - Log in as Polling Officer (`officer1@evm.gov.in`) at `/officer` $\rightarrow$ Click **Activate Machine**.
+   - Open `/voting-machine` on another device or tab $\rightarrow$ Enter Voter ID `DL/01/001/0001` $\rightarrow$ Complete OTP verification $\rightarrow$ Verify face $\rightarrow$ Cast vote $\rightarrow$ Inspect the 7-second Digital VVPAT slip $\rightarrow$ Verify vote ledger audit at `/vvpat`.
+
+---
+
+### Step 9: Cloud Troubleshooting Checklist
+
+| Symptom | Cause | Solution |
+| :--- | :--- | :--- |
+| **Backend 502 Bad Gateway / Slow initial load** | Render free instance spinning up from idle | Wait 45 seconds for cold start. Verify service logs in Render. |
+| **CORS error in browser console** | `CLIENT_URL` does not match Vercel URL or has trailing slash | Ensure `CLIENT_URL=https://your-app.vercel.app` in Render without trailing slash. |
+| **Database connection error / OperationalError 2003** | TiDB cluster paused or credentials incorrect | Verify TiDB cluster status in TiDB console. Confirm user, password, and port `4000`. |
+| **Vercel 404 on page reload on deep routes (e.g. `/admin`)** | Missing SPA rewrite rule | Ensure `client/vercel.json` contains `"source": "/(.*)", "destination": "/index.html"`. |
+| **Webcam not activating on mobile device** | Accessed over insecure HTTP or permission blocked | Ensure URL starts with `https://`. In browser settings, ensure Camera permission is granted. |
+| **500 error on facial recognition verification** | Missing ONNX model files | Run `python scripts/download_models.py` in Render shell to verify `server/app/models_cv/`. |
+
+---
+
+## 17. Academic Disclaimer
 
 This project is created exclusively for **educational and academic demonstration purposes** as a Database Management Systems (DBMS) coursework capstone.
 

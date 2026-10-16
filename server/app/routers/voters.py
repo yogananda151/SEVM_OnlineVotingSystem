@@ -17,6 +17,7 @@ from app.services.voter_excel_service import voter_excel_service
 from app.services.audit_service import audit_service
 from app.utils.crypto import hash_aadhaar
 from app.utils.response import success_response, paginated_response
+from app.services.storage import storage_service
 
 router = APIRouter(prefix="/api/voters", tags=["Voters"])
 
@@ -338,15 +339,7 @@ def upload_voter_photo(voter_id: int, photo: UploadFile = File(...), current_use
     if not v:
         raise HTTPException(status_code=404, detail="Voter not found")
 
-    target_dir = os.path.join(settings.UPLOAD_PATH, "voters")
-    os.makedirs(target_dir, exist_ok=True)
-    ext = os.path.splitext(photo.filename or "")[1] or ".jpg"
-    unique_name = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(target_dir, unique_name)
-    with open(filepath, "wb") as f:
-        shutil.copyfileobj(photo.file, f)
-
-    v.photoUrl = f"/uploads/voters/{unique_name}"
+    v.photoUrl = storage_service.validate_and_save(photo, "voters")
     db.commit()
     db.refresh(v)
     return success_response(data=format_voter(v), message="Photo uploaded successfully")

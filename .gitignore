@@ -3,6 +3,20 @@ node_modules/
 /.pnp
 .pnp.js
 
+# Environment variable files (preserve committed templates)
+.env
+.env.*
+!.env.example
+*.env
+server/.env
+server/.env.*
+!server/.env.example
+server_node_backup/.env
+!server_node_backup/.env.example
+client/.env
+client/.env.*
+!client/.env.example
+
 # Logs
 logs/
 *.log
@@ -11,17 +25,18 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+server/logs/
 
 # Build output
 dist/
 dist-ssr/
 build/
 
-# Environment local overrides (preserve committed templates)
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Uploads & Ephemeral runtime media
+server/uploads/*
+!server/uploads/candidates/
+!server/uploads/parties/
+!server/uploads/voters/
 
 # Editor & OS files
 .DS_Store
@@ -41,12 +56,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 server_node_backup/node_modules/
+
 # Office lock files
 ~$*.xlsx
 ~$*.xls
 
 # Local DB Backups
 server/backups/
-
-
-

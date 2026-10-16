@@ -77,15 +77,24 @@ HOST=0.0.0.0
 
 *(Note: If your password contains `@`, it is automatically percent-encoded as `%40` by the application config).*
 
-### 4. Seed the Database
+### 4. Initialize Schema and Seed the Database
 
+To create database tables:
 ```powershell
+python scripts/init_db.py
+```
+
+To seed initial demonstration data (synthetic parties, candidates, and demonstration accounts):
+```powershell
+# Set initial demonstration passwords (or enter when prompted):
+$env:SEED_COMMISSIONER_PASSWORD="YourSecureAdminPassword123!"
+$env:SEED_OFFICER_PASSWORD="YourSecureOfficerPassword123!"
 python scripts/seed.py
 ```
 
-**Default Credentials:**
-- **Commissioner**: `commissioner@evm.gov.in` / `Admin@12345`
-- **Officer**: `officer1@evm.gov.in` / `Officer@12345`
+**Demonstration Accounts:**
+- **Commissioner**: `commissioner@evm.gov.in` (Password set via `SEED_COMMISSIONER_PASSWORD`)
+- **Officer**: `officer1@evm.gov.in` (Password set via `SEED_OFFICER_PASSWORD`)
 
 ---
 

@@ -85,9 +85,18 @@ def reset_database(create_backup: bool = True):
         print("  [+] Created default system settings")
 
         # 2. Chief Election Commissioner Admin User
+        comm_email = "commissioner@evm.gov.in"
+        comm_pwd = os.environ.get("SEED_COMMISSIONER_PASSWORD") or ("Admin@DevPass2025!" if settings.ENV != "production" else "")
+        if not comm_pwd:
+            import getpass
+            if sys.stdin.isatty():
+                comm_pwd = getpass.getpass("  Enter password for Chief Election Commissioner: ")
+            else:
+                raise ValueError("SEED_COMMISSIONER_PASSWORD is required in production environment.")
+
         comm_user = User(
-            email="commissioner@evm.gov.in",
-            passwordHash=hash_password("Admin@12345"),
+            email=comm_email,
+            passwordHash=hash_password(comm_pwd),
             role=UserRole.COMMISSIONER,
             isActive=True,
         )
@@ -103,7 +112,7 @@ def reset_database(create_backup: bool = True):
         )
         db.add(comm_profile)
         db.commit()
-        print("  [+] Created Chief Election Commissioner account")
+        print(f"  [+] Created Chief Election Commissioner account: {comm_email}")
 
         # 3. Initial Audit Log
         audit = AuditLog(
@@ -135,12 +144,12 @@ def reset_database(create_backup: bool = True):
             print(f"  {t.ljust(25)} : {count} rows")
 
     print("\n" + "=" * 60)
-    print("  LOGIN CREDENTIALS TO TEST FROM STARTING")
+    print("  RESET COMPLETE")
     print("=" * 60)
-    print("  Role       : Commissioner (Admin)")
-    print("  Email      : commissioner@evm.gov.in")
-    print("  Password   : Admin@12345")
-    print("  Web Portal : http://localhost:5173")
+    print(f"  Role       : Commissioner (Admin)")
+    print(f"  Email      : {comm_email}")
+    print(f"  Password   : [Configured securely via SEED_COMMISSIONER_PASSWORD]")
+    print(f"  Web Portal : {settings.CLIENT_URL}")
     print("=" * 60)
 
 

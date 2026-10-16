@@ -8,6 +8,7 @@
     "dev:server": "cd server && IF EXIST venv\\Scripts\\python.exe (venv\\Scripts\\python.exe run.py) ELSE (python run.py)",
     "dev:client": "cd client && npm run dev",
     "seed": "cd server && IF EXIST venv\\Scripts\\python.exe (venv\\Scripts\\python.exe scripts/seed.py) ELSE (python scripts/seed.py)",
+    "init-db": "cd server && IF EXIST venv\\Scripts\\python.exe (venv\\Scripts\\python.exe scripts/init_db.py) ELSE (python scripts/init_db.py)",
     "build:client": "cd client && npm run build"
   },
   "devDependencies": {
