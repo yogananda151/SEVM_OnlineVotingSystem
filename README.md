@@ -922,3 +922,5 @@ This project is created exclusively for **educational and academic demonstration
 
 Developed with ❤️ as an advanced DBMS and Computer Vision demonstration project.  
 © 2025–2026 Smart EVM Project Team. All rights reserved.
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yogananda151/SEVM_OnlineVotingSystem)
+
