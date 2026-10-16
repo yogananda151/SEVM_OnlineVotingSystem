@@ -343,13 +343,13 @@ HOST=0.0.0.0
 DATABASE_URL=mysql+pymysql://root:YourPassword@localhost:3306/voting_system
 
 # JWT Authentication
-JWT_SECRET=smart_evm_super_secret_jwt_key_2025_min_32_chars
+JWT_SECRET=<random_access_token_signing_key>
 JWT_EXPIRES_IN=8h
-JWT_REFRESH_SECRET=smart_evm_refresh_secret_key_2025_min_32_chars
+JWT_REFRESH_SECRET=<different_random_refresh_token_signing_key>
 JWT_REFRESH_EXPIRES_IN=7d
 
 # Aadhaar Simulation HMAC Secret
-AADHAAR_HMAC_SECRET=smart_evm_aadhaar_hmac_secret_2025_change_in_production
+AADHAAR_HMAC_SECRET=<another_different_random_hmac_key>
 
 # Client Application URL (CORS origin)
 CLIENT_URL=http://localhost:5173

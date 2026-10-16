@@ -118,20 +118,30 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> List[str]:
-        """Returns clean list of allowed CORS origins without trailing slashes."""
+        """Return development origins locally and configured origins in production."""
+
+        configured_origins = []
+
+        if self.CLIENT_URL:
+            configured_origins = [
+                origin.strip().rstrip("/")
+                for origin in self.CLIENT_URL.split(",")
+                if origin.strip()
+            ]
+
+        # In production, allow only explicitly configured website origins.
+        if self.ENV.lower() == "production":
+            return list(dict.fromkeys(configured_origins))
+
+        # Local development origins.
         default_dev_origins = [
             "http://localhost:5173",
             "http://127.0.0.1:5173",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
         ]
-        origins = list(default_dev_origins)
-        if self.CLIENT_URL:
-            for part in self.CLIENT_URL.split(","):
-                cleaned = part.strip().rstrip("/")
-                if cleaned and cleaned not in origins:
-                    origins.append(cleaned)
-        return origins
+
+        return list(dict.fromkeys(default_dev_origins + configured_origins))
 
     def _parse_database_url_details(self) -> Tuple[str, Dict[str, Any], bool]:
         """

@@ -32,11 +32,8 @@ dist/
 dist-ssr/
 build/
 
-# Uploads & Ephemeral runtime media
-server/uploads/*
-!server/uploads/candidates/
-!server/uploads/parties/
-!server/uploads/voters/
+# Uploaded media and biometric-related images must not be committed
+server/uploads/
 
 # Editor & OS files
 .DS_Store
